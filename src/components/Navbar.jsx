@@ -1,7 +1,7 @@
 import React from 'react';
-import { Server, Plus, Activity, RefreshCw, Cpu, HardDrive } from 'lucide-react';
+import { Server, Plus, Activity, RefreshCw, Cpu, HardDrive, Tv, Monitor } from 'lucide-react';
 
-export default function Navbar({ onOpenAddModal, totalServers, isConnected, onRefresh }) {
+export default function Navbar({ onOpenAddModal, totalServers, isConnected, onRefresh, isTvMode, onToggleTvMode }) {
   return (
     <header className="glass-card" style={{ borderRadius: '0 0 20px 20px', padding: '16px 28px', marginBottom: '28px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
@@ -21,7 +21,7 @@ export default function Navbar({ onOpenAddModal, totalServers, isConnected, onRe
           </div>
           <div>
             <h1 className="gradient-text" style={{ fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.5px' }}>
-              VPS Monitor
+              VPS & POD Monitor
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
               Real-time Server Bandwidth, CPU & RAM Monitoring
@@ -30,8 +30,23 @@ export default function Navbar({ onOpenAddModal, totalServers, isConnected, onRe
         </div>
 
         {/* Live Status Indicators & Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           
+          {/* TV / NOC Wall Display Mode Toggle */}
+          <button
+            onClick={onToggleTvMode}
+            className="btn-secondary"
+            style={{
+              borderColor: isTvMode ? '#00f2fe' : 'var(--border-color)',
+              background: isTvMode ? 'rgba(0, 242, 254, 0.15)' : 'rgba(255, 255, 255, 0.06)',
+              color: isTvMode ? '#00f2fe' : 'var(--text-main)'
+            }}
+            title="Toggle TV / Wall Monitor Full View"
+          >
+            <Tv size={16} />
+            <span>{isTvMode ? 'Normal View' : 'TV Monitor Mode'}</span>
+          </button>
+
           {/* Socket status indicator */}
           <div style={{
             display: 'flex',

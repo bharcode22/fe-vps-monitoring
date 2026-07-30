@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Cpu, HardDrive, Wifi, Server, Trash2, Activity, ArrowDown, ArrowUp, BarChart2, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Cpu, HardDrive, Wifi, Server, Trash2, Activity, ArrowDown, ArrowUp, BarChart2, ShieldCheck, ShieldAlert, Box, ChevronUp, ChevronDown, Zap } from 'lucide-react';
 import MetricsChart from './MetricsChart';
 import { BACKEND_URL } from '../config';
 
-export default function ServerCard({ server, onDelete }) {
+export default function ServerCard({ server, onDelete, onMoveUp, onMoveDown, isFirst, isLast }) {
   const [activeChartTab, setActiveChartTab] = useState('bandwidth');
   const [historyData, setHistoryData] = useState([]);
   const [showChart, setShowChart] = useState(false);
 
   const metrics = server.currentMetrics || {};
   const isOnline = metrics.status === 'online';
+  const isPod = server.type === 'pod';
 
   // Fetch history when chart tab is opened
   useEffect(() => {
@@ -40,24 +41,46 @@ export default function ServerCard({ server, onDelete }) {
   };
 
   return (
-    <div className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div className="glass-card" style={{
+      padding: '24px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '20px',
+      border: isPod ? '1px solid rgba(192, 132, 252, 0.25)' : '1px solid var(--border-color)',
+      position: 'relative'
+    }}>
       
       {/* Server Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            border: '1px solid var(--border-color)',
+            background: isPod ? 'rgba(192, 132, 252, 0.12)' : 'rgba(0, 242, 254, 0.12)',
+            border: `1px solid ${isPod ? 'rgba(192, 132, 252, 0.3)' : 'rgba(0, 242, 254, 0.3)'}`,
             padding: '10px',
             borderRadius: '12px'
           }}>
-            <Server size={22} color={isOnline ? '#00f2fe' : '#ef4444'} />
+            {isPod ? <Box size={22} color="#c084fc" /> : <Server size={22} color={isOnline ? '#00f2fe' : '#ef4444'} />}
           </div>
           <div>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 600, color: '#fff' }}>
-              {server.name}
-            </h3>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: '#fff' }}>
+                {server.name}
+              </h3>
+              {/* Type Badge */}
+              <span style={{
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                padding: '2px 8px',
+                borderRadius: '6px',
+                background: isPod ? 'rgba(192, 132, 252, 0.2)' : 'rgba(0, 242, 254, 0.2)',
+                color: isPod ? '#c084fc' : '#00f2fe',
+                border: `1px solid ${isPod ? 'rgba(192, 132, 252, 0.3)' : 'rgba(0, 242, 254, 0.3)'}`
+              }}>
+                {isPod ? `📦 POD ${server.pod_version ? server.pod_version.toUpperCase() : 'V3'}` : '🖥️ VPS'}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px' }}>
               <span className="font-mono">{server.host}:{server.port || 22}</span>
               {server.is_local === 1 && (
                 <span style={{ background: 'rgba(139, 92, 246, 0.2)', color: '#c084fc', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem' }}>
@@ -68,8 +91,41 @@ export default function ServerCard({ server, onDelete }) {
           </div>
         </div>
 
-        {/* Status Badge & Actions */}
+        {/* Status Badge & Re-order Controls & Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          
+          {/* Card Order Position Shift Controls */}
+          <div style={{ display: 'flex', gap: '2px', background: 'rgba(0,0,0,0.3)', padding: '2px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+            <button
+              onClick={onMoveUp}
+              disabled={isFirst}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: isFirst ? 'var(--text-dim)' : 'var(--text-muted)',
+                cursor: isFirst ? 'not-allowed' : 'pointer',
+                padding: '4px'
+              }}
+              title="Geser ke Atas/Kiri"
+            >
+              <ChevronUp size={16} />
+            </button>
+            <button
+              onClick={onMoveDown}
+              disabled={isLast}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: isLast ? 'var(--text-dim)' : 'var(--text-muted)',
+                cursor: isLast ? 'not-allowed' : 'pointer',
+                padding: '4px'
+              }}
+              title="Geser ke Bawah/Kanan"
+            >
+              <ChevronDown size={16} />
+            </button>
+          </div>
+
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -92,7 +148,7 @@ export default function ServerCard({ server, onDelete }) {
               onClick={() => onDelete(server.id, server.name)}
               className="btn-danger"
               style={{ padding: '6px 10px' }}
-              title="Hapus VPS"
+              title="Hapus Server"
             >
               <Trash2 size={15} />
             </button>
@@ -214,6 +270,36 @@ export default function ServerCard({ server, onDelete }) {
           </div>
         </div>
 
+        {/* GPU Activity Card */}
+        <div style={{
+          background: 'rgba(16, 185, 129, 0.04)',
+          border: '1px solid rgba(16, 185, 129, 0.2)',
+          borderRadius: '12px',
+          padding: '14px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Zap size={15} color="#10b981" /> GPU Load
+            </span>
+            <span className="font-mono" style={{ fontWeight: 600, color: '#10b981', fontSize: '0.95rem' }}>
+              {metrics.gpu_usage || metrics.gpuUsage || 0}%
+            </span>
+          </div>
+          <div className="progress-bar-bg">
+            <div
+              className="progress-bar-fill"
+              style={{
+                width: `${Math.min(100, metrics.gpu_usage || metrics.gpuUsage || 0)}%`,
+                background: 'linear-gradient(90deg, #059669, #10b981)'
+              }}
+            ></div>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '6px' }} className="font-mono">
+            <span>{metrics.gpu_name && metrics.gpu_name !== 'N/A' ? metrics.gpu_name : 'No GPU / N/A'}</span>
+            {metrics.gpu_temp ? <span>{metrics.gpu_temp}°C</span> : null}
+          </div>
+        </div>
+
       </div>
 
       {/* Chart Toggle Footer */}
@@ -273,6 +359,21 @@ export default function ServerCard({ server, onDelete }) {
               }}
             >
               RAM
+            </button>
+            <button
+              onClick={() => setActiveChartTab('gpu')}
+              style={{
+                background: activeChartTab === 'gpu' ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
+                color: activeChartTab === 'gpu' ? '#10b981' : 'var(--text-muted)',
+                border: 'none',
+                padding: '4px 10px',
+                borderRadius: '6px',
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                fontWeight: 500
+              }}
+            >
+              GPU
             </button>
           </div>
         )}

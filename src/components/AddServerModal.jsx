@@ -10,7 +10,9 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded }) {
     username: 'root',
     auth_type: 'password',
     password: '',
-    private_key: ''
+    private_key: '',
+    type: 'vps',
+    pod_version: 'v3'
   });
 
   const [testing, setTesting] = useState(false);
@@ -120,7 +122,97 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded }) {
         )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          
+
+          {/* Server Type Selection (VPS vs POD) */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
+              Tipe Infrastruktur *
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, type: 'vps' })}
+                style={{
+                  padding: '10px',
+                  borderRadius: '8px',
+                  border: `1px solid ${formData.type === 'vps' ? 'var(--primary-cyan)' : 'var(--border-color)'}`,
+                  background: formData.type === 'vps' ? 'rgba(0, 242, 254, 0.15)' : 'rgba(0,0,0,0.3)',
+                  color: formData.type === 'vps' ? '#00f2fe' : 'var(--text-muted)',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                🖥️ VPS Server
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, type: 'pod' })}
+                style={{
+                  padding: '10px',
+                  borderRadius: '8px',
+                  border: `1px solid ${formData.type === 'pod' ? '#c084fc' : 'var(--border-color)'}`,
+                  background: formData.type === 'pod' ? 'rgba(192, 132, 252, 0.15)' : 'rgba(0,0,0,0.3)',
+                  color: formData.type === 'pod' ? '#c084fc' : 'var(--text-muted)',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                📦 POD Container
+              </button>
+            </div>
+          </div>
+
+          {/* POD Version Selection (v2 vs v3) */}
+          {formData.type === 'pod' && (
+            <div style={{ background: 'rgba(192, 132, 252, 0.08)', border: '1px solid rgba(192, 132, 252, 0.2)', padding: '12px', borderRadius: '10px' }}>
+              <label style={{ display: 'block', fontSize: '0.85rem', color: '#c084fc', marginBottom: '8px', fontWeight: 600 }}>
+                Versi POD *
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, pod_version: 'v3' })}
+                  style={{
+                    padding: '8px',
+                    borderRadius: '6px',
+                    border: `1px solid ${formData.pod_version === 'v3' ? '#c084fc' : 'var(--border-color)'}`,
+                    background: formData.pod_version === 'v3' ? 'rgba(192, 132, 252, 0.25)' : 'rgba(0,0,0,0.4)',
+                    color: formData.pod_version === 'v3' ? '#fff' : 'var(--text-muted)',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: '0.85rem'
+                  }}
+                >
+                  ⚡ Versi 3 (v3 - Terbaru)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, pod_version: 'v2' })}
+                  style={{
+                    padding: '8px',
+                    borderRadius: '6px',
+                    border: `1px solid ${formData.pod_version === 'v2' ? '#f59e0b' : 'var(--border-color)'}`,
+                    background: formData.pod_version === 'v2' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(0,0,0,0.4)',
+                    color: formData.pod_version === 'v2' ? '#fff' : 'var(--text-muted)',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: '0.85rem'
+                  }}
+                >
+                  🐢 Versi 2 (v2 - Legacy)
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Server Name */}
           <div>
             <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
@@ -129,7 +221,7 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded }) {
             <input
               type="text"
               name="name"
-              placeholder="Contoh: VPS Singapore - Web Server"
+              placeholder={formData.type === 'vps' ? "Contoh: VPS Singapore - Web Server" : "Contoh: POD Node 08 - API Container"}
               value={formData.name}
               onChange={handleChange}
               style={{

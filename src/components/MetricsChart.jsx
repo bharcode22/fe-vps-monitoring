@@ -8,13 +8,15 @@ import {
   Tooltip,
   CartesianGrid
 } from 'recharts';
-import { Activity, Wifi, Cpu, HardDrive } from 'lucide-react';
+import { Activity, Wifi, Cpu, HardDrive, Zap } from 'lucide-react';
 
 export default function MetricsChart({ historyData, serverName, activeMetric = 'bandwidth' }) {
   const formattedData = (historyData || []).map(item => ({
     time: new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
     cpu: item.cpu_usage,
     ram: item.ram_usage,
+    gpu: item.gpu_usage || 0,
+    gpuMem: item.gpu_memory_usage || 0,
     rxSpeed: item.bandwidth_rx_speed,
     txSpeed: item.bandwidth_tx_speed,
     disk: item.disk_usage
@@ -86,6 +88,33 @@ export default function MetricsChart({ historyData, serverName, activeMetric = '
               }}
             />
             <Area type="monotone" dataKey="cpu" name="CPU Load" stroke="#38bdf8" strokeWidth={2} fillOpacity={1} fill="url(#colorCpu)" />
+          </AreaChart>
+        ) : activeMetric === 'gpu' ? (
+          <AreaChart data={formattedData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <defs>
+              <linearGradient id="colorGpu" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
+                <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+              </linearGradient>
+              <linearGradient id="colorGpuMem" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
+                <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+            <XAxis dataKey="time" stroke="#64748b" fontSize={11} tickLine={false} />
+            <YAxis domain={[0, 100]} stroke="#64748b" fontSize={11} tickLine={false} unit="%" />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                borderColor: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: '8px',
+                color: '#fff',
+                fontSize: '12px'
+              }}
+            />
+            <Area type="monotone" dataKey="gpu" name="GPU Core Load" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorGpu)" />
+            <Area type="monotone" dataKey="gpuMem" name="GPU VRAM Usage" stroke="#f59e0b" strokeWidth={2} fillOpacity={1} fill="url(#colorGpuMem)" />
           </AreaChart>
         ) : (
           <AreaChart data={formattedData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
