@@ -10,6 +10,7 @@ export default function App() {
   const [servers, setServers] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingServer, setEditingServer] = useState(null);
   const [filterType, setFilterType] = useState('all'); // 'all' | 'vps' | 'pod'
   const [isTvMode, setIsTvMode] = useState(false);
   const [customOrder, setCustomOrder] = useState(() => {
@@ -133,8 +134,9 @@ export default function App() {
     ? Math.round(servers.reduce((acc, s) => acc + (s.currentMetrics?.cpu_usage || s.currentMetrics?.cpuUsage || 0), 0) / servers.length * 10) / 10
     : 0;
 
-  const avgGpu = servers.length > 0
-    ? Math.round(servers.reduce((acc, s) => acc + (s.currentMetrics?.gpu_usage || s.currentMetrics?.gpuUsage || 0), 0) / servers.length * 10) / 10
+  const gpuServers = servers.filter(s => s.currentMetrics?.gpu_name && s.currentMetrics.gpu_name !== 'N/A' && s.currentMetrics.gpu_name !== 'No GPU / N/A');
+  const avgGpu = gpuServers.length > 0
+    ? Math.round(gpuServers.reduce((acc, s) => acc + (s.currentMetrics?.gpu_usage || s.currentMetrics?.gpuUsage || 0), 0) / gpuServers.length * 10) / 10
     : 0;
 
   return (
@@ -346,6 +348,7 @@ export default function App() {
                 key={server.id}
                 server={server}
                 onDelete={handleDeleteServer}
+                onEdit={(srv) => setEditingServer(srv)}
                 onMoveUp={() => handleMoveUp(idx, displayedServers)}
                 onMoveDown={() => handleMoveDown(idx, displayedServers)}
                 isFirst={idx === 0}
@@ -357,10 +360,14 @@ export default function App() {
 
       </main>
 
-      {/* Add VPS / POD Modal */}
+      {/* Add / Edit VPS / POD Modal */}
       <AddServerModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
+        isOpen={isAddModalOpen || Boolean(editingServer)}
+        onClose={() => {
+          setIsAddModalOpen(false);
+          setEditingServer(null);
+        }}
+        serverToEdit={editingServer}
         onServerAdded={fetchServers}
       />
 

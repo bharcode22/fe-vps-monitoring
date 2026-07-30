@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
-import { X, Server, Key, Lock, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Server, Key, Lock, CheckCircle, AlertCircle, Loader2, Edit3 } from 'lucide-react';
 import { BACKEND_URL } from '../config';
 
-export default function AddServerModal({ isOpen, onClose, onServerAdded }) {
+export default function AddServerModal({ isOpen, onClose, onServerAdded, serverToEdit = null }) {
+  const isEditMode = Boolean(serverToEdit);
+
   const [formData, setFormData] = useState({
     name: '',
     host: '',
@@ -19,6 +21,36 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded }) {
   const [testResult, setTestResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  useEffect(() => {
+    if (serverToEdit) {
+      setFormData({
+        name: serverToEdit.name || '',
+        host: serverToEdit.host || '',
+        port: serverToEdit.port || 22,
+        username: serverToEdit.username || 'root',
+        auth_type: serverToEdit.auth_type || 'password',
+        password: '', // Leave blank unless changing
+        private_key: '',
+        type: serverToEdit.type || 'vps',
+        pod_version: serverToEdit.pod_version || 'v3'
+      });
+    } else {
+      setFormData({
+        name: '',
+        host: '',
+        port: 22,
+        username: 'root',
+        auth_type: 'password',
+        password: '',
+        private_key: '',
+        type: 'vps',
+        pod_version: 'v3'
+      });
+    }
+    setTestResult(null);
+    setErrorMsg('');
+  }, [serverToEdit, isOpen]);
 
   if (!isOpen) return null;
 
@@ -64,8 +96,14 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded }) {
     setErrorMsg('');
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/vps`, {
-        method: 'POST',
+      const url = isEditMode
+        ? `${BACKEND_URL}/api/vps/${serverToEdit.id}`
+        : `${BACKEND_URL}/api/vps`;
+      
+      const method = isEditMode ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
@@ -95,8 +133,10 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded }) {
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Server color="#00f2fe" size={24} />
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Tambah VPS Target</h2>
+            {isEditMode ? <Edit3 color="#00f2fe" size={24} /> : <Server color="#00f2fe" size={24} />}
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>
+              {isEditMode ? 'Edit Konfigurasi Server' : 'Tambah VPS Target'}
+            </h2>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
             <X size={20} />
@@ -418,7 +458,7 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded }) {
                 Batal
               </button>
               <button type="submit" className="btn-primary" disabled={submitting}>
-                {submitting ? 'Menyimpan...' : 'Simpan VPS'}
+                {submitting ? 'Menyimpan...' : (isEditMode ? 'Simpan Perubahan' : 'Simpan VPS')}
               </button>
             </div>
           </div>

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Cpu, HardDrive, Wifi, Server, Trash2, Activity, ArrowDown, ArrowUp, BarChart2, ShieldCheck, ShieldAlert, Box, ChevronUp, ChevronDown, Zap } from 'lucide-react';
+import { Cpu, HardDrive, Wifi, Server, Trash2, Activity, ArrowDown, ArrowUp, BarChart2, ShieldCheck, ShieldAlert, Box, ChevronUp, ChevronDown, Zap, Edit3 } from 'lucide-react';
 import MetricsChart from './MetricsChart';
 import { BACKEND_URL } from '../config';
 
-export default function ServerCard({ server, onDelete, onMoveUp, onMoveDown, isFirst, isLast }) {
+export default function ServerCard({ server, onDelete, onEdit, onMoveUp, onMoveDown, isFirst, isLast }) {
   const [activeChartTab, setActiveChartTab] = useState('bandwidth');
   const [historyData, setHistoryData] = useState([]);
   const [showChart, setShowChart] = useState(false);
@@ -144,14 +144,24 @@ export default function ServerCard({ server, onDelete, onMoveUp, onMoveDown, isF
           </div>
 
           {server.is_local !== 1 && (
-            <button
-              onClick={() => onDelete(server.id, server.name)}
-              className="btn-danger"
-              style={{ padding: '6px 10px' }}
-              title="Hapus Server"
-            >
-              <Trash2 size={15} />
-            </button>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button
+                onClick={() => onEdit(server)}
+                className="btn-secondary"
+                style={{ padding: '6px 10px' }}
+                title="Edit Konfigurasi Server"
+              >
+                <Edit3 size={15} color="#00f2fe" />
+              </button>
+              <button
+                onClick={() => onDelete(server.id, server.name)}
+                className="btn-danger"
+                style={{ padding: '6px 10px' }}
+                title="Hapus Server"
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -170,9 +180,14 @@ export default function ServerCard({ server, onDelete, onMoveUp, onMoveDown, isF
             <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Cpu size={15} color="#38bdf8" /> CPU Load
             </span>
-            <span className="font-mono" style={{ fontWeight: 600, color: '#fff', fontSize: '0.95rem' }}>
-              {metrics.cpu_usage || metrics.cpuUsage || 0}%
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.7rem', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', padding: '1px 6px', borderRadius: '4px', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
+                {metrics.cpu_cores || metrics.cpuCores || 1} Cores
+              </span>
+              <span className="font-mono" style={{ fontWeight: 600, color: '#fff', fontSize: '0.95rem' }}>
+                {metrics.cpu_usage || metrics.cpuUsage || 0}%
+              </span>
+            </div>
           </div>
           <div className="progress-bar-bg">
             <div
@@ -209,8 +224,9 @@ export default function ServerCard({ server, onDelete, onMoveUp, onMoveDown, isF
               }}
             ></div>
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginTop: '6px', textAlign: 'right' }} className="font-mono">
-            {metrics.ram_used_mb || metrics.ramUsedMb || 0} MB / {metrics.ram_total_mb || metrics.ramTotalMb || 0} MB
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '6px' }} className="font-mono">
+            <span>Terpakai: {metrics.ram_used_mb || metrics.ramUsedMb || 0} MB</span>
+            <span style={{ color: '#c084fc', fontWeight: 600 }}>Sisa: {metrics.ram_free_mb || metrics.ramFreeMb || Math.max(0, (metrics.ram_total_mb || 0) - (metrics.ram_used_mb || 0))} MB</span>
           </div>
         </div>
 
@@ -253,7 +269,7 @@ export default function ServerCard({ server, onDelete, onMoveUp, onMoveDown, isF
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
             <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <HardDrive size={15} color="#10b981" /> Disk Usage
+              <HardDrive size={15} color="#10b981" /> Disk Storage
             </span>
             <span className="font-mono" style={{ fontWeight: 600, color: '#fff', fontSize: '0.95rem' }}>
               {metrics.disk_usage || metrics.diskUsage || 0}%
@@ -268,37 +284,49 @@ export default function ServerCard({ server, onDelete, onMoveUp, onMoveDown, isF
               }}
             ></div>
           </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '6px' }} className="font-mono">
+            <span>Terpakai: {metrics.disk_used_gb || metrics.diskUsedGb || 0} GB</span>
+            <span style={{ color: '#10b981', fontWeight: 600 }}>Sisa: {metrics.disk_free_gb || metrics.diskFreeGb || 0} GB</span>
+          </div>
         </div>
 
         {/* GPU Activity Card */}
-        <div style={{
-          background: 'rgba(16, 185, 129, 0.04)',
-          border: '1px solid rgba(16, 185, 129, 0.2)',
-          borderRadius: '12px',
-          padding: '14px'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Zap size={15} color="#10b981" /> GPU Load
-            </span>
-            <span className="font-mono" style={{ fontWeight: 600, color: '#10b981', fontSize: '0.95rem' }}>
-              {metrics.gpu_usage || metrics.gpuUsage || 0}%
-            </span>
-          </div>
-          <div className="progress-bar-bg">
-            <div
-              className="progress-bar-fill"
-              style={{
-                width: `${Math.min(100, metrics.gpu_usage || metrics.gpuUsage || 0)}%`,
-                background: 'linear-gradient(90deg, #059669, #10b981)'
-              }}
-            ></div>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '6px' }} className="font-mono">
-            <span>{metrics.gpu_name && metrics.gpu_name !== 'N/A' ? metrics.gpu_name : 'No GPU / N/A'}</span>
-            {metrics.gpu_temp ? <span>{metrics.gpu_temp}°C</span> : null}
-          </div>
-        </div>
+        {(() => {
+          const hasGpu = Boolean(metrics.gpu_name && metrics.gpu_name !== 'N/A' && metrics.gpu_name !== 'No GPU / N/A' && metrics.gpu_name.trim() !== '');
+          const displayGpuUsage = hasGpu ? (metrics.gpu_usage || metrics.gpuUsage || 0) : 0;
+
+          return (
+            <div style={{
+              background: hasGpu ? 'rgba(16, 185, 129, 0.04)' : 'rgba(255, 255, 255, 0.02)',
+              border: `1px solid ${hasGpu ? 'rgba(16, 185, 129, 0.2)' : 'var(--border-color)'}`,
+              borderRadius: '12px',
+              padding: '14px',
+              opacity: hasGpu ? 1 : 0.65
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Zap size={15} color={hasGpu ? '#10b981' : '#64748b'} /> GPU Load
+                </span>
+                <span className="font-mono" style={{ fontWeight: 600, color: hasGpu ? '#10b981' : 'var(--text-muted)', fontSize: '0.95rem' }}>
+                  {displayGpuUsage}%
+                </span>
+              </div>
+              <div className="progress-bar-bg">
+                <div
+                  className="progress-bar-fill"
+                  style={{
+                    width: `${Math.min(100, displayGpuUsage)}%`,
+                    background: hasGpu ? 'linear-gradient(90deg, #059669, #10b981)' : '#334155'
+                  }}
+                ></div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '6px' }} className="font-mono">
+                <span>{hasGpu ? metrics.gpu_name : 'Tidak Ada GPU (N/A)'}</span>
+                {hasGpu && metrics.gpu_temp ? <span>{metrics.gpu_temp}°C</span> : null}
+              </div>
+            </div>
+          );
+        })()}
 
       </div>
 
