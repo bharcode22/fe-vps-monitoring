@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { X, Server, Key, Lock, CheckCircle, AlertCircle, Loader2, Edit3 } from 'lucide-react';
 import { BACKEND_URL } from '../config';
+import { useLanguage } from '../context/LanguageContext';
+import { testConnectionApi, createServerApi, updateServerApi } from '../api/vpsApi';
 
 export default function AddServerModal({ isOpen, onClose, onServerAdded, serverToEdit = null }) {
+  const { t } = useLanguage();
   const isEditMode = Boolean(serverToEdit);
 
   const [formData, setFormData] = useState({
     name: '',
     host: '',
     port: 22,
-    username: 'root',
+    username: 'pod',
     auth_type: 'password',
     password: '',
     private_key: '',
@@ -28,7 +31,7 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
         name: serverToEdit.name || '',
         host: serverToEdit.host || '',
         port: serverToEdit.port || 22,
-        username: serverToEdit.username || 'root',
+        username: serverToEdit.username || 'pod',
         auth_type: serverToEdit.auth_type || 'password',
         password: '', // Leave blank unless changing
         private_key: '',
@@ -40,7 +43,7 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
         name: '',
         host: '',
         port: 22,
-        username: 'root',
+        username: 'pod',
         auth_type: 'password',
         password: '',
         private_key: '',
@@ -70,16 +73,12 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
     setTestResult(null);
     setErrorMsg('');
 
+
     try {
-      const res = await fetch(`${BACKEND_URL}/api/vps/test-connection`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-      const data = await res.json();
+      const data = await testConnectionApi(formData);
       setTestResult(data);
     } catch (err) {
-      setTestResult({ success: false, message: 'Gagal terhubung ke backend server.' });
+      setTestResult({ success: false, message: err.message || 'Gagal terhubung ke backend server.' });
     } finally {
       setTesting(false);
     }
@@ -96,46 +95,38 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
     setErrorMsg('');
 
     try {
-      const url = isEditMode
-        ? `${BACKEND_URL}/api/vps/${serverToEdit.id}`
-        : `${BACKEND_URL}/api/vps`;
-      
-      const method = isEditMode ? 'PUT' : 'POST';
-
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-      const data = await res.json();
-      if (data.success) {
-        onServerAdded();
-        onClose();
+      if (isEditMode) {
+        await updateServerApi(serverToEdit.id, formData);
       } else {
-        setErrorMsg(data.error || 'Gagal menyimpan VPS.');
+        await createServerApi(formData);
       }
+      onServerAdded();
+      onClose();
     } catch (err) {
-      setErrorMsg('Terjadi kesalahan saat menyimpan data.');
+      setErrorMsg(err.message || 'Gagal menyimpan VPS.');
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="glass-card" style={{
-        width: '100%',
-        maxWidth: '540px',
-        padding: '28px',
-        maxHeight: '90vh',
-        overflowY: 'auto'
-      }}>
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        className="glass-card modal-aos-content"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '90vw',
+          maxWidth: '840px',
+          padding: '34px',
+          maxHeight: '90vh',
+          overflowY: 'auto'
+        }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {isEditMode ? <Edit3 color="#00f2fe" size={24} /> : <Server color="#00f2fe" size={24} />}
             <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>
-              {isEditMode ? 'Edit Konfigurasi Server' : 'Tambah VPS Target'}
+              {isEditMode ? t('editServerTitle') : t('addServerTitle')}
             </h2>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
@@ -166,7 +157,7 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
           {/* Server Type Selection (VPS vs POD) */}
           <div>
             <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
-              Tipe Infrastruktur *
+              {t('infrastructureType')} *
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               <button
@@ -186,7 +177,7 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
                   gap: '8px'
                 }}
               >
-                🖥️ VPS Server
+                {t('vpsServer')}
               </button>
               <button
                 type="button"
@@ -205,7 +196,7 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
                   gap: '8px'
                 }}
               >
-                📦 POD Container
+                {t('podContainer')}
               </button>
             </div>
           </div>
@@ -214,7 +205,7 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
           {formData.type === 'pod' && (
             <div style={{ background: 'rgba(192, 132, 252, 0.08)', border: '1px solid rgba(192, 132, 252, 0.2)', padding: '12px', borderRadius: '10px' }}>
               <label style={{ display: 'block', fontSize: '0.85rem', color: '#c084fc', marginBottom: '8px', fontWeight: 600 }}>
-                Versi POD *
+                {t('podVersion')} *
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <button
@@ -231,7 +222,7 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
                     fontSize: '0.85rem'
                   }}
                 >
-                  ⚡ Versi 3 (v3 - Terbaru)
+                  {t('v3Version')}
                 </button>
                 <button
                   type="button"
@@ -247,7 +238,7 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
                     fontSize: '0.85rem'
                   }}
                 >
-                  🐢 Versi 2 (v2 - Legacy)
+                  {t('v2Version')}
                 </button>
               </div>
             </div>
@@ -256,12 +247,12 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
           {/* Server Name */}
           <div>
             <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
-              Nama Server / Label *
+              {t('serverName')} *
             </label>
             <input
               type="text"
               name="name"
-              placeholder={formData.type === 'vps' ? "Contoh: VPS Singapore - Web Server" : "Contoh: POD Node 08 - API Container"}
+              placeholder={formData.type === 'vps' ? t('vpsNamePlaceholder') : t('podNamePlaceholder')}
               value={formData.name}
               onChange={handleChange}
               style={{
@@ -281,12 +272,12 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                IP Address / Hostname *
+                {t('ipAddressHost')} *
               </label>
               <input
                 type="text"
                 name="host"
-                placeholder="192.168.1.100 atau vps.myhost.com"
+                placeholder={t('ipAddressPlaceholder')}
                 value={formData.host}
                 onChange={handleChange}
                 className="font-mono"
@@ -305,7 +296,7 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
 
             <div>
               <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                SSH Port
+                {t('sshPort')}
               </label>
               <input
                 type="number"
@@ -330,7 +321,7 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                SSH Username
+                {t('sshUsername')}
               </label>
               <input
                 type="text"
@@ -352,7 +343,7 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
 
             <div>
               <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                Metode Autentikasi
+                {t('authMethod')}
               </label>
               <select
                 name="auth_type"
@@ -368,8 +359,8 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
                   outline: 'none'
                 }}
               >
-                <option value="password">Password SSH</option>
-                <option value="key">Private Key (.pem/rsa)</option>
+                <option value="password">{t('passwordAuth')}</option>
+                <option value="key">{t('keyAuth')}</option>
               </select>
             </div>
           </div>
@@ -378,12 +369,12 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
           {formData.auth_type === 'password' ? (
             <div>
               <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                Password SSH
+                {t('sshPassword')}
               </label>
               <input
                 type="password"
                 name="password"
-                placeholder="Masukkan password SSH server"
+                placeholder={t('passwordPlaceholder')}
                 value={formData.password}
                 onChange={handleChange}
                 style={{
@@ -400,12 +391,12 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
           ) : (
             <div>
               <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                SSH Private Key (OpenSSH Format)
+                {t('sshPrivateKey')}
               </label>
               <textarea
                 name="private_key"
                 rows={4}
-                placeholder="-----BEGIN RSA PRIVATE KEY-----..."
+                placeholder={t('privateKeyPlaceholder')}
                 value={formData.private_key}
                 onChange={handleChange}
                 className="font-mono"
@@ -450,15 +441,15 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
               disabled={testing}
             >
               {testing ? <Loader2 className="animate-spin" size={16} /> : <Server size={16} />}
-              <span>{testing ? 'Menguji SSH...' : 'Uji Koneksi'}</span>
+              <span>{testing ? t('testingSsh') : t('testConnection')}</span>
             </button>
 
             <div style={{ display: 'flex', gap: '10px' }}>
               <button type="button" onClick={onClose} className="btn-secondary">
-                Batal
+                {t('cancel')}
               </button>
               <button type="submit" className="btn-primary" disabled={submitting}>
-                {submitting ? 'Menyimpan...' : (isEditMode ? 'Simpan Perubahan' : 'Simpan VPS')}
+                {submitting ? t('saving') : (isEditMode ? t('saveChanges') : t('saveVps'))}
               </button>
             </div>
           </div>

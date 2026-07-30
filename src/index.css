@@ -7,7 +7,7 @@
   --bg-glass: rgba(15, 23, 42, 0.65);
   --border-color: rgba(255, 255, 255, 0.08);
   --border-accent: rgba(56, 189, 248, 0.3);
-  
+
   --primary-cyan: #00f2fe;
   --primary-blue: #4facfe;
   --accent-purple: #8b5cf6;
@@ -32,7 +32,7 @@ body {
   color: var(--text-main);
   min-height: 100vh;
   overflow-x: hidden;
-  background-image: 
+  background-image:
     radial-gradient(circle at 15% 15%, rgba(0, 242, 254, 0.05) 0%, transparent 45%),
     radial-gradient(circle at 85% 85%, rgba(139, 92, 246, 0.05) 0%, transparent 45%);
   background-attachment: fixed;
@@ -43,13 +43,16 @@ body {
   width: 8px;
   height: 8px;
 }
+
 ::-webkit-scrollbar-track {
   background: rgba(10, 13, 20, 0.5);
 }
+
 ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.15);
   border-radius: 4px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }
@@ -110,10 +113,12 @@ body {
     transform: scale(0.95);
     opacity: 0.8;
   }
+
   70% {
     transform: scale(1.5);
     opacity: 0;
   }
+
   100% {
     transform: scale(0.95);
     opacity: 0;
@@ -124,12 +129,14 @@ body {
 .gradient-text {
   background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .gradient-text-purple {
   background: linear-gradient(135deg, #c084fc 0%, #8b5cf6 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -203,15 +210,65 @@ body {
   transition: width 0.5s ease;
 }
 
-/* Modal Overlay */
+/* Modal Overlay & AOS Animations */
+@keyframes backdropFadeIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(10px);
+  }
+}
+
+@keyframes modalAosZoomIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(18px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
+  animation: backdropFadeIn 0.25s ease forwards;
+}
+
+.modal-aos-content {
+  animation: modalAosZoomIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Shimmer Skeleton Loading Animation */
+@keyframes skeletonShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-box {
+  background: linear-gradient(90deg,
+      rgba(255, 255, 255, 0.03) 25%,
+      rgba(255, 255, 255, 0.08) 37%,
+      rgba(255, 255, 255, 0.03) 63%);
+  background-size: 400% 100%;
+  animation: skeletonShimmer 1.4s ease infinite;
+  border-radius: 8px;
 }
