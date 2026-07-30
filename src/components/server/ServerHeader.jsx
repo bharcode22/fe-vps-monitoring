@@ -1,5 +1,5 @@
 import React from 'react';
-import { Server, Box, ChevronUp, ChevronDown, Edit3, Trash2, GripVertical } from 'lucide-react';
+import { Server, Box, Database, HardDrive, ChevronUp, ChevronDown, Edit3, Trash2, GripVertical } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function ServerHeader({
@@ -17,6 +17,42 @@ export default function ServerHeader({
   const { isAuthenticated } = useAuth();
   const podVersionText = server.pod_version ? server.pod_version.toUpperCase() : 'V3';
 
+  const isPostgres = server.type === 'postgresql';
+  const isMinio = server.type === 'minio';
+  const isS3 = server.type === 's3';
+
+  let badgeText = '🖥️ VPS';
+  let badgeColor = '#00f2fe';
+  let badgeBg = 'rgba(0, 242, 254, 0.2)';
+  let badgeBorder = 'rgba(0, 242, 254, 0.3)';
+  let HeaderIcon = Server;
+
+  if (isPod) {
+    badgeText = `📦 POD ${podVersionText}`;
+    badgeColor = '#c084fc';
+    badgeBg = 'rgba(192, 132, 252, 0.2)';
+    badgeBorder = 'rgba(192, 132, 252, 0.3)';
+    HeaderIcon = Box;
+  } else if (isPostgres) {
+    badgeText = '🐘 PostgreSQL';
+    badgeColor = '#38bdf8';
+    badgeBg = 'rgba(56, 189, 248, 0.2)';
+    badgeBorder = 'rgba(56, 189, 248, 0.3)';
+    HeaderIcon = Database;
+  } else if (isMinio) {
+    badgeText = '🪣 MinIO Storage';
+    badgeColor = '#f59e0b';
+    badgeBg = 'rgba(245, 158, 11, 0.2)';
+    badgeBorder = 'rgba(245, 158, 11, 0.3)';
+    HeaderIcon = HardDrive;
+  } else if (isS3) {
+    badgeText = '☁️ AWS S3';
+    badgeColor = '#ec4899';
+    badgeBg = 'rgba(236, 72, 153, 0.2)';
+    badgeBorder = 'rgba(236, 72, 153, 0.3)';
+    HeaderIcon = HardDrive;
+  }
+
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -24,12 +60,12 @@ export default function ServerHeader({
           <GripVertical size={20} color="var(--text-dim)" style={{ cursor: 'grab', opacity: 0.7 }} title="Tahan & geser untuk mengubah urutan" />
         )}
         <div style={{
-          background: isPod ? 'rgba(192, 132, 252, 0.15)' : (isOnline ? 'rgba(0, 242, 254, 0.15)' : 'rgba(239, 68, 68, 0.15)'),
-          border: `1px solid ${isPod ? 'rgba(192, 132, 252, 0.3)' : (isOnline ? 'rgba(0, 242, 254, 0.3)' : 'rgba(239, 68, 68, 0.3)')}`,
+          background: badgeBg,
+          border: `1px solid ${badgeBorder}`,
           padding: '10px',
           borderRadius: '12px'
         }}>
-          {isPod ? <Box size={22} color="#c084fc" /> : <Server size={22} color={isOnline ? '#00f2fe' : '#ef4444'} />}
+          <HeaderIcon size={22} color={badgeColor} />
         </div>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -43,11 +79,11 @@ export default function ServerHeader({
               textTransform: 'uppercase',
               padding: '2px 8px',
               borderRadius: '6px',
-              background: isPod ? 'rgba(192, 132, 252, 0.2)' : 'rgba(0, 242, 254, 0.2)',
-              color: isPod ? '#c084fc' : '#00f2fe',
-              border: `1px solid ${isPod ? 'rgba(192, 132, 252, 0.3)' : 'rgba(0, 242, 254, 0.3)'}`
+              background: badgeBg,
+              color: badgeColor,
+              border: `1px solid ${badgeBorder}`
             }}>
-              {isPod ? `📦 POD ${podVersionText}` : '🖥️ VPS'}
+              {badgeText}
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px' }}>

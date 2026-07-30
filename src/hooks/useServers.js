@@ -102,17 +102,21 @@ export function useServers() {
       }
     }
 
+    if (filterType === 'vps_pod') return (s.type || 'vps') === 'vps' || s.type === 'pod';
     if (filterType === 'vps') return (s.type || 'vps') === 'vps';
     if (filterType === 'pod') return s.type === 'pod';
-    if (filterType === 'pod_v3') return s.type === 'pod' && (s.pod_version === 'v3' || !s.pod_version);
-    if (filterType === 'pod_v2') return s.type === 'pod' && s.pod_version === 'v2';
+    if (filterType === 'postgresql') return s.type === 'postgresql';
+    if (filterType === 'minio') return s.type === 'minio';
+    if (filterType === 's3') return s.type === 's3';
     return true; // 'all'
   });
 
   const vpsCount = servers.filter(s => (s.type || 'vps') === 'vps').length;
   const podCount = servers.filter(s => s.type === 'pod').length;
-  const podV3Count = servers.filter(s => s.type === 'pod' && (s.pod_version === 'v3' || !s.pod_version)).length;
-  const podV2Count = servers.filter(s => s.type === 'pod' && s.pod_version === 'v2').length;
+  const vpsPodCount = vpsCount + podCount;
+  const postgresCount = servers.filter(s => s.type === 'postgresql').length;
+  const minioCount = servers.filter(s => s.type === 'minio').length;
+  const s3Count = servers.filter(s => s.type === 's3').length;
 
   // Sync server order from backend DB on mount
   useEffect(() => {
@@ -140,8 +144,10 @@ export function useServers() {
     setSearchQuery,
     vpsCount,
     podCount,
-    podV3Count,
-    podV2Count,
+    vpsPodCount,
+    postgresCount,
+    minioCount,
+    s3Count,
     fetchServers,
     handleMetricsUpdate,
     handleDeleteServer,

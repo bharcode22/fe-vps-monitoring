@@ -176,3 +176,17 @@ export async function fetchDockerLogsApi(serverId, containerName) {
   if (!data.success) throw new Error(data.error || 'Gagal mengambil log container');
   return data.data;
 }
+
+/**
+ * Execute bash script (/home/pod/scripts/exec/auto-script.sh or kill-process.sh) on VPS (Admin only)
+ */
+export async function runVpsScriptApi(serverId, scriptName) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/${serverId}/scripts/run`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ scriptName })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || `Gagal mengeksekusi skrip ${scriptName}`);
+  return data.data;
+}

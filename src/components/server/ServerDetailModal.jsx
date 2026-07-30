@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { X, Server, Box, Cpu, HardDrive, ArrowDown, ArrowUp, Zap, Clock, ShieldCheck, Edit3, Activity } from 'lucide-react';
+import { X, Server, Box, Cpu, HardDrive, ArrowDown, ArrowUp, Zap, Clock, ShieldCheck, Edit3, Activity, FileCode } from 'lucide-react';
 import MetricsChart from '../MetricsChart';
 import { fetchServerHistoryApi } from '../../api/vpsApi';
 import { formatMbToGb } from '../../utils/formatters';
 import { useAuth } from '../../context/AuthContext';
 import DockerContainerTab from './DockerContainerTab';
+import ScriptExecTab from './ScriptExecTab';
 
 export default function ServerDetailModal({ server, onClose, onEdit }) {
   const { isAuthenticated } = useAuth();
-  const [viewMode, setViewMode] = useState('metrics'); // 'metrics' | 'docker'
+  const [viewMode, setViewMode] = useState('metrics'); // 'metrics' | 'docker' | 'scripts'
   const [activeTab, setActiveTab] = useState('bandwidth');
   const [historyData, setHistoryData] = useState([]);
 
@@ -203,12 +204,34 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
             >
               <Box size={16} /> 🐳 Docker Apps (Manage)
             </button>
+
+            <button
+              onClick={() => setViewMode('scripts')}
+              style={{
+                background: viewMode === 'scripts' ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : 'rgba(255,255,255,0.05)',
+                color: viewMode === 'scripts' ? '#0b0f19' : 'var(--text-muted)',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: '10px',
+                fontSize: '0.88rem',
+                cursor: 'pointer',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <FileCode size={16} /> ⚡ Exec Scripts (kill-process ➡️ auto-script)
+            </button>
           </div>
         )}
 
         {/* Dynamic Content View */}
         {viewMode === 'docker' && isAuthenticated ? (
           <DockerContainerTab serverId={server.id} />
+        ) : viewMode === 'scripts' && isAuthenticated ? (
+          <ScriptExecTab serverId={server.id} />
         ) : (
           <div>
             {/* Real-time Current Metrics Grid */}

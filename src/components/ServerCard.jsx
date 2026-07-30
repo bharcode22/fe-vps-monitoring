@@ -117,33 +117,95 @@ export default function ServerCard({
       />
 
       {/* Metrics Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
-        <CpuMetricCard
-          cpuUsage={metrics.cpu_usage || metrics.cpuUsage || 0}
-          cpuCores={metrics.cpu_cores || metrics.cpuCores || 1}
-        />
-        
-        <RamMetricCard
-          ramUsage={metrics.ram_usage || metrics.ramUsage || 0}
-          ramUsedMb={metrics.ram_used_mb || metrics.ramUsedMb || 0}
-          ramFreeMb={metrics.ram_free_mb || metrics.ramFreeMb || 0}
-        />
+      {server.type === 'postgresql' ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
+          <div style={{ background: 'rgba(56, 189, 248, 0.05)', border: '1px solid rgba(56, 189, 248, 0.2)', borderRadius: '14px', padding: '16px' }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Koneksi Aktif</div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#38bdf8' }}>
+              {metrics.activeConnections ?? 0} <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-muted)' }}>/ {metrics.totalConnections ?? 0} Total</span>
+            </div>
+          </div>
 
-        <DownloadSpeedCard speed={metrics.bandwidth_rx_speed || metrics.bandwidthRxSpeed || 0} />
-        <UploadSpeedCard speed={metrics.bandwidth_tx_speed || metrics.bandwidthTxSpeed || 0} />
+          <div style={{ background: 'rgba(56, 189, 248, 0.05)', border: '1px solid rgba(56, 189, 248, 0.2)', borderRadius: '14px', padding: '16px' }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Ukuran Database</div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#38bdf8' }}>
+              {metrics.ramUsedMb || metrics.ram_used_mb ? `${metrics.ramUsedMb || metrics.ram_used_mb} MB` : '0 MB'}
+            </div>
+          </div>
 
-        <DiskMetricCard
-          diskUsage={metrics.disk_usage || metrics.diskUsage || 0}
-          diskUsedGb={metrics.disk_used_gb || metrics.diskUsedGb || 0}
-          diskFreeGb={metrics.disk_free_gb || metrics.diskFreeGb || 0}
-        />
+          <div style={{ background: 'rgba(56, 189, 248, 0.05)', border: '1px solid rgba(56, 189, 248, 0.2)', borderRadius: '14px', padding: '16px' }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Total Transaksi</div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#38bdf8' }}>
+              {metrics.totalTransactions ? metrics.totalTransactions.toLocaleString() : 0}
+            </div>
+          </div>
 
-        <GpuMetricCard
-          gpuUsage={metrics.gpu_usage || metrics.gpuUsage || 0}
-          gpuName={metrics.gpu_name || metrics.gpuName || ''}
-          gpuTemp={metrics.gpu_temp || metrics.gpuTemp || 0}
-        />
-      </div>
+          <div style={{ background: 'rgba(56, 189, 248, 0.05)', border: '1px solid rgba(56, 189, 248, 0.2)', borderRadius: '14px', padding: '16px' }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Latensi Ping DB</div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#38bdf8' }}>
+              {metrics.pingMs ?? metrics.ping_ms ?? 0} <span style={{ fontSize: '0.8rem' }}>ms</span>
+            </div>
+          </div>
+        </div>
+      ) : (server.type === 'minio' || server.type === 's3') ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
+          <div style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: '14px', padding: '16px' }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Total Bucket</div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f59e0b' }}>
+              {metrics.totalBuckets ?? 0} <span style={{ fontSize: '0.8rem' }}>Bucket</span>
+            </div>
+          </div>
+
+          <div style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: '14px', padding: '16px' }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Jumlah File (Objects)</div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f59e0b' }}>
+              {metrics.totalObjects ? metrics.totalObjects.toLocaleString() : 0}
+            </div>
+          </div>
+
+          <div style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: '14px', padding: '16px' }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Ukuran Storage Terpakai</div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f59e0b' }}>
+              {metrics.diskUsedGb || metrics.disk_used_gb ? `${metrics.diskUsedGb || metrics.disk_used_gb} GB` : `${metrics.ramUsedMb || metrics.ram_used_mb || 0} MB`}
+            </div>
+          </div>
+
+          <div style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: '14px', padding: '16px' }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Latensi S3 Endpoint</div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f59e0b' }}>
+              {metrics.pingMs ?? metrics.ping_ms ?? 0} <span style={{ fontSize: '0.8rem' }}>ms</span>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
+          <CpuMetricCard
+            cpuUsage={metrics.cpu_usage || metrics.cpuUsage || 0}
+            cpuCores={metrics.cpu_cores || metrics.cpuCores || 1}
+          />
+          
+          <RamMetricCard
+            ramUsage={metrics.ram_usage || metrics.ramUsage || 0}
+            ramUsedMb={metrics.ram_used_mb || metrics.ramUsedMb || 0}
+            ramFreeMb={metrics.ram_free_mb || metrics.ramFreeMb || 0}
+          />
+
+          <DownloadSpeedCard speed={metrics.bandwidth_rx_speed || metrics.bandwidthRxSpeed || 0} />
+          <UploadSpeedCard speed={metrics.bandwidth_tx_speed || metrics.bandwidthTxSpeed || 0} />
+
+          <DiskMetricCard
+            diskUsage={metrics.disk_usage || metrics.diskUsage || 0}
+            diskUsedGb={metrics.disk_used_gb || metrics.diskUsedGb || 0}
+            diskFreeGb={metrics.disk_free_gb || metrics.diskFreeGb || 0}
+          />
+
+          <GpuMetricCard
+            gpuUsage={metrics.gpu_usage || metrics.gpuUsage || 0}
+            gpuName={metrics.gpu_name || metrics.gpuName || ''}
+            gpuTemp={metrics.gpu_temp || metrics.gpuTemp || 0}
+          />
+        </div>
+      )}
 
       {/* Chart Toggle Footer */}
       <div
