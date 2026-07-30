@@ -225,8 +225,16 @@ export default function ServerCard({ server, onDelete, onEdit, onMoveUp, onMoveD
             ></div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '6px' }} className="font-mono">
-            <span>Terpakai: {metrics.ram_used_mb || metrics.ramUsedMb || 0} MB</span>
-            <span style={{ color: '#c084fc', fontWeight: 600 }}>Sisa: {metrics.ram_free_mb || metrics.ramFreeMb || Math.max(0, (metrics.ram_total_mb || 0) - (metrics.ram_used_mb || 0))} MB</span>
+            <span>
+              Terpakai: {((metrics.ram_used_mb || metrics.ramUsedMb || 0) >= 1024) 
+                ? `${Math.round(((metrics.ram_used_mb || metrics.ramUsedMb || 0) / 1024) * 100) / 100} GB` 
+                : `${metrics.ram_used_mb || metrics.ramUsedMb || 0} MB`}
+            </span>
+            <span style={{ color: '#c084fc', fontWeight: 600 }}>
+              Sisa: {((metrics.ram_free_mb || metrics.ramFreeMb || 0) >= 1024) 
+                ? `${Math.round(((metrics.ram_free_mb || metrics.ramFreeMb || 0) / 1024) * 100) / 100} GB` 
+                : `${metrics.ram_free_mb || metrics.ramFreeMb || 0} MB`}
+            </span>
           </div>
         </div>
 
