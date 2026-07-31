@@ -1,8 +1,70 @@
 import React, { useState, useEffect } from 'react';
-import { Box, RefreshCw, RotateCcw, Terminal, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
-import { fetchDockerContainersApi, restartDockerContainerApi } from '../../api/vpsApi';
+import { Box, RefreshCw, RotateCcw, Square, Terminal, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { fetchDockerContainersApi, restartDockerContainerApi, stopDockerContainerApi } from '../../api/vpsApi';
 import DockerLogModal from './DockerLogModal';
 import { useLanguage } from '../../context/LanguageContext';
+
+const SkeletonDockerTable = () => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    {/* Tab Header Controls Skeleton */}
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="skeleton-box" style={{ width: '20px', height: '20px', borderRadius: '4px' }}></div>
+        <div className="skeleton-box" style={{ width: '160px', height: '22px', borderRadius: '6px' }}></div>
+      </div>
+      <div className="skeleton-box" style={{ width: '110px', height: '34px', borderRadius: '8px' }}></div>
+    </div>
+
+    {/* Table Card Skeleton Container */}
+    <div className="glass-card" style={{ padding: '0', overflow: 'hidden', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: 'rgba(0, 0, 0, 0.4)', borderBottom: '1px solid var(--border-color)' }}>
+              <th style={{ padding: '12px 14px', textAlign: 'left' }}><div className="skeleton-box" style={{ width: '110px', height: '14px', borderRadius: '4px' }}></div></th>
+              <th style={{ padding: '12px 14px', textAlign: 'left' }}><div className="skeleton-box" style={{ width: '90px', height: '14px', borderRadius: '4px' }}></div></th>
+              <th style={{ padding: '12px 14px', textAlign: 'left' }}><div className="skeleton-box" style={{ width: '70px', height: '14px', borderRadius: '4px' }}></div></th>
+              <th style={{ padding: '12px 14px', textAlign: 'left' }}><div className="skeleton-box" style={{ width: '100px', height: '14px', borderRadius: '4px' }}></div></th>
+              <th style={{ padding: '12px 14px', textAlign: 'right' }}><div className="skeleton-box" style={{ width: '80px', height: '14px', borderRadius: '4px', marginLeft: 'auto' }}></div></th>
+            </tr>
+          </thead>
+          <tbody>
+            {[1, 2, 3, 4].map((i) => (
+              <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                {/* Container Name & ID */}
+                <td style={{ padding: '14px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div className="skeleton-box" style={{ width: '150px', height: '16px', borderRadius: '4px' }}></div>
+                    <div className="skeleton-box" style={{ width: '80px', height: '12px', borderRadius: '4px' }}></div>
+                  </div>
+                </td>
+                {/* Image Tag */}
+                <td style={{ padding: '14px' }}>
+                  <div className="skeleton-box" style={{ width: '120px', height: '14px', borderRadius: '4px' }}></div>
+                </td>
+                {/* Status Badge */}
+                <td style={{ padding: '14px' }}>
+                  <div className="skeleton-box" style={{ width: '85px', height: '24px', borderRadius: '20px' }}></div>
+                </td>
+                {/* Ports */}
+                <td style={{ padding: '14px' }}>
+                  <div className="skeleton-box" style={{ width: '110px', height: '14px', borderRadius: '4px' }}></div>
+                </td>
+                {/* Action Buttons */}
+                <td style={{ padding: '14px', textAlign: 'right' }}>
+                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                    <div className="skeleton-box" style={{ width: '80px', height: '32px', borderRadius: '8px' }}></div>
+                    <div className="skeleton-box" style={{ width: '34px', height: '32px', borderRadius: '8px' }}></div>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+);
 
 export default function DockerContainerTab({ serverId }) {
   const { t } = useLanguage();
@@ -10,8 +72,9 @@ export default function DockerContainerTab({ serverId }) {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   const [restartingContainer, setRestartingContainer] = useState('');
+  const [stoppingContainer, setStoppingContainer] = useState('');
   const [actionSuccessMsg, setActionSuccessMsg] = useState('');
-  
+
   // Selected container for log modal
   const [selectedLogContainer, setSelectedLogContainer] = useState(null);
 
@@ -49,18 +112,29 @@ export default function DockerContainerTab({ serverId }) {
     }
   };
 
+  const handleStop = async (containerName) => {
+    if (!window.confirm(`Apakah Anda yakin ingin menghentikan (docker stop) container "${containerName}"?`)) return;
+    setStoppingContainer(containerName);
+    setActionSuccessMsg('');
+    setErrorMsg('');
+    try {
+      await stopDockerContainerApi(serverId, containerName);
+      setActionSuccessMsg(`Container ${containerName} berhasil dihentikan (stop).`);
+      loadContainers();
+    } catch (err) {
+      setErrorMsg(err.message || `Gagal menghentikan container ${containerName}`);
+    } finally {
+      setStoppingContainer('');
+    }
+  };
+
   if (loading) {
-    return (
-      <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
-        <Loader2 className="animate-spin" size={24} style={{ margin: '0 auto 12px auto', display: 'block', color: '#00f2fe' }} />
-        Memuat daftar aplikasi Docker (docker ps -a)...
-      </div>
-    );
+    return <SkeletonDockerTable />;
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      
+
       {/* Tab Header & Controls */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -130,10 +204,11 @@ export default function DockerContainerTab({ serverId }) {
                 const isRunning = (c.state || '').toLowerCase() === 'running';
                 const isExited = (c.state || '').toLowerCase() === 'exited';
                 const isRestartingThis = restartingContainer === c.name;
+                const isStoppingThis = stoppingContainer === c.name;
 
                 return (
                   <tr key={c.id || index} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    
+
                     {/* Container Name & ID */}
                     <td style={{ padding: '12px 14px' }}>
                       <div style={{ fontWeight: 600, color: '#fff' }} className="font-mono">{c.name}</div>
@@ -172,7 +247,7 @@ export default function DockerContainerTab({ serverId }) {
                     {/* Admin Action Buttons */}
                     <td style={{ padding: '12px 14px', textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                        
+
                         {/* Log Console Button */}
                         <button
                           onClick={() => setSelectedLogContainer(c.name)}
@@ -184,10 +259,34 @@ export default function DockerContainerTab({ serverId }) {
                           <span>Logs</span>
                         </button>
 
+                        {/* Stop Button */}
+                        <button
+                          onClick={() => handleStop(c.name)}
+                          disabled={isStoppingThis || isRestartingThis || !isRunning}
+                          className="btn-secondary"
+                          style={{
+                            padding: '5px 10px',
+                            fontSize: '0.78rem',
+                            borderColor: 'rgba(239, 68, 68, 0.4)',
+                            color: '#ef4444',
+                            background: 'rgba(239, 68, 68, 0.1)',
+                            opacity: (!isRunning && !isStoppingThis) ? 0.5 : 1,
+                            cursor: (!isRunning && !isStoppingThis) ? 'not-allowed' : 'pointer'
+                          }}
+                          title="Hentikan (docker stop) Container Ini"
+                        >
+                          {isStoppingThis ? (
+                            <Loader2 className="animate-spin" size={14} />
+                          ) : (
+                            <Square size={14} />
+                          )}
+                          <span>{isStoppingThis ? 'Stopping...' : 'Stop'}</span>
+                        </button>
+
                         {/* Restart Button */}
                         <button
                           onClick={() => handleRestart(c.name)}
-                          disabled={isRestartingThis}
+                          disabled={isRestartingThis || isStoppingThis}
                           className="btn-secondary"
                           style={{
                             padding: '5px 10px',

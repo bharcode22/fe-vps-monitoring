@@ -166,10 +166,10 @@ export default function ServerHeader({
               <Edit3 size={15} color="#00f2fe" />
             </button>
             <button
-              onClick={(e) => { e.stopPropagation(); onDelete(server.id, server.name); }}
+              onClick={(e) => { e.stopPropagation(); onDelete(server.id, server.name, server.type); }}
               className="btn-danger"
               style={{ padding: '6px 10px' }}
-              title="Hapus Server"
+              title="Hapus Layanan"
             >
               <Trash2 size={15} />
             </button>

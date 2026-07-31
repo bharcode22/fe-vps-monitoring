@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { X, Server, Box, Cpu, HardDrive, ArrowDown, ArrowUp, Zap, Clock, ShieldCheck, Edit3, Activity, FileCode } from 'lucide-react';
+import { X, Server, Box, Cpu, HardDrive, ArrowDown, ArrowUp, Zap, Clock, ShieldCheck, Edit3, Activity, FileCode, Music } from 'lucide-react';
 import MetricsChart from '../MetricsChart';
 import { fetchServerHistoryApi } from '../../api/vpsApi';
 import { formatMbToGb } from '../../utils/formatters';
 import { useAuth } from '../../context/AuthContext';
 import DockerContainerTab from './DockerContainerTab';
 import ScriptExecTab from './ScriptExecTab';
+import SoundsTab from './SoundsTab';
 
 export default function ServerDetailModal({ server, onClose, onEdit }) {
   const { isAuthenticated } = useAuth();
@@ -224,6 +225,26 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
             >
               <FileCode size={16} /> ⚡ Exec Scripts (kill-process ➡️ auto-script)
             </button>
+
+            <button
+              onClick={() => setViewMode('sounds')}
+              style={{
+                background: viewMode === 'sounds' ? 'linear-gradient(135deg, #00f2fe 0%, #4facfe 100%)' : 'rgba(255,255,255,0.05)',
+                color: viewMode === 'sounds' ? '#0b0f19' : 'var(--text-muted)',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: '10px',
+                fontSize: '0.88rem',
+                cursor: 'pointer',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <Music size={16} /> 🎵 Sounds Metadata
+            </button>
           </div>
         )}
 
@@ -232,11 +253,13 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
           <DockerContainerTab serverId={server.id} />
         ) : viewMode === 'scripts' && isAuthenticated ? (
           <ScriptExecTab serverId={server.id} />
+        ) : viewMode === 'sounds' && isAuthenticated ? (
+          <SoundsTab serverId={server.id} />
         ) : (
           <div>
             {/* Real-time Current Metrics Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '24px' }}>
-              
+
               {/* CPU Card */}
               <div style={{ background: 'rgba(56, 189, 248, 0.04)', border: '1px solid rgba(56, 189, 248, 0.15)', borderRadius: '14px', padding: '16px' }}>
                 <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>

@@ -3,8 +3,23 @@ import { fetchServersApi, deleteServerApi, fetchSettingsApi, saveSettingApi } fr
 
 export function useServers() {
   const [servers, setServers] = useState([]);
+  const [allServers, setAllServers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filterType, setFilterType] = useState('all'); // 'all' | 'vps' | 'pod' | 'pod_v3' | 'pod_v2'
+  const [filterType, setFilterTypeState] = useState(() => {
+    try {
+      const saved = localStorage.getItem('vps_monitoring_active_filter');
+      return saved || 'all';
+    } catch (e) {
+      return 'all';
+    }
+  });
+
+  const setFilterType = useCallback((newFilter) => {
+    setFilterTypeState(newFilter);
+    try {
+      localStorage.setItem('vps_monitoring_active_filter', newFilter);
+    } catch (e) {}
+  }, []);
   const [searchQuery, setSearchQuery] = useState('');
   const [customOrder, setCustomOrder] = useState(() => {
     try {
@@ -15,27 +30,54 @@ export function useServers() {
     }
   });
 
-  const fetchServers = useCallback(async () => {
+  // Fetch servers using dedicated GET endpoints based on searchQuery & filterType
+  const fetchServers = useCallback(async (q = searchQuery, fType = filterType) => {
     try {
-      const data = await fetchServersApi();
+      const data = await fetchServersApi(q, fType);
       setServers(data);
+
+      // Keep master list updated for badge counting
+      if (fType === 'all' && !q) {
+        setAllServers(data);
+      } else {
+        fetchServersApi('', 'all').then(fullData => setAllServers(fullData)).catch(() => {});
+      }
     } catch (err) {
-      console.error('Failed to fetch VPS list:', err);
+      console.error('Failed to fetch server list:', err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [searchQuery, filterType]);
+
+  // Automatically refetch dedicated GET endpoints when filterType or searchQuery changes
+  useEffect(() => {
+    fetchServers(searchQuery, filterType);
+  }, [filterType, searchQuery]);
 
   const handleMetricsUpdate = useCallback((updatedServers) => {
-    setServers(updatedServers);
+    setAllServers(updatedServers);
+    // Filter live websocket metrics if active filter is not 'all'
+    if (filterType === 'all') {
+      setServers(updatedServers);
+    } else {
+      const filtered = updatedServers.filter(s => {
+        if (filterType === 'vps') return (s.type || 'vps') === 'vps';
+        if (filterType === 'pod_v3') return s.type === 'pod' && (s.pod_version === 'v3' || !s.pod_version);
+        if (filterType === 'pod_v2') return s.type === 'pod' && s.pod_version === 'v2';
+        if (filterType === 'postgresql') return s.type === 'postgresql';
+        if (filterType === 'storage') return s.type === 'minio' || s.type === 's3';
+        return true;
+      });
+      setServers(filtered);
+    }
     setIsLoading(false);
-  }, []);
+  }, [filterType]);
 
-  const handleDeleteServer = async (id, name) => {
-    if (window.confirm(`Apakah Anda yakin ingin menghapus server "${name}" dari monitoring?`)) {
+  const handleDeleteServer = async (id, name, type) => {
+    if (window.confirm(`Apakah Anda yakin ingin menghapus "${name}" dari monitoring?`)) {
       try {
-        await deleteServerApi(id);
-        fetchServers();
+        await deleteServerApi(id, type);
+        fetchServers(searchQuery, filterType);
       } catch (err) {
         console.error('Error deleting server:', err);
       }
@@ -86,7 +128,7 @@ export function useServers() {
     return a.id - b.id;
   });
 
-  // Filter servers by type, pod_version & searchQuery
+  // Displayed servers from dedicated GET response
   const displayedServers = sortedServers.filter(s => {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
@@ -110,15 +152,16 @@ export function useServers() {
     return true; // 'all'
   });
 
-  const vpsCount = servers.filter(s => (s.type || 'vps') === 'vps').length;
-  const podV3Count = servers.filter(s => s.type === 'pod' && (s.pod_version === 'v3' || !s.pod_version)).length;
-  const podV2Count = servers.filter(s => s.type === 'pod' && s.pod_version === 'v2').length;
-  const postgresCount = servers.filter(s => s.type === 'postgresql').length;
-  const storageCount = servers.filter(s => s.type === 'minio' || s.type === 's3').length;
+  // Calculate badge counts from master allServers array
+  const countSource = allServers.length > 0 ? allServers : servers;
+  const vpsCount = countSource.filter(s => (s.type || 'vps') === 'vps').length;
+  const podV3Count = countSource.filter(s => s.type === 'pod' && (s.pod_version === 'v3' || !s.pod_version)).length;
+  const podV2Count = countSource.filter(s => s.type === 'pod' && s.pod_version === 'v2').length;
+  const postgresCount = countSource.filter(s => s.type === 'postgresql').length;
+  const storageCount = countSource.filter(s => s.type === 'minio' || s.type === 's3').length;
 
   // Sync server order from backend DB on mount
   useEffect(() => {
-    fetchServers();
     fetchSettingsApi().then(settings => {
       if (settings && settings.server_order) {
         try {
@@ -130,7 +173,7 @@ export function useServers() {
         } catch (e) {}
       }
     });
-  }, [fetchServers]);
+  }, []);
 
   return {
     servers,

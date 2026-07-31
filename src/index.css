@@ -272,3 +272,55 @@ body {
   animation: skeletonShimmer 1.4s ease infinite;
   border-radius: 8px;
 }
+
+/* Infinite Spinning Icon Animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 0.9s linear infinite !important;
+  display: inline-block;
+}
+
+/* Moving Gradient Pulse Animation for Active Execution */
+@keyframes activeGradientMove {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animated-executing-card {
+  background: linear-gradient(270deg, rgba(0, 242, 254, 0.2), rgba(139, 92, 246, 0.25), rgba(245, 158, 11, 0.2), rgba(239, 68, 68, 0.2)) !important;
+  background-size: 300% 300% !important;
+  animation: activeGradientMove 3s ease infinite !important;
+  border-color: #00f2fe !important;
+  box-shadow: 0 0 30px rgba(0, 242, 254, 0.5) !important;
+}
+
+.animated-executing-danger {
+  background: linear-gradient(270deg, rgba(239, 68, 68, 0.25), rgba(245, 158, 11, 0.2), rgba(239, 68, 68, 0.3)) !important;
+  background-size: 300% 300% !important;
+  animation: activeGradientMove 2.5s ease infinite !important;
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 30px rgba(239, 68, 68, 0.6) !important;
+}
+
+.animated-executing-primary {
+  background: linear-gradient(270deg, rgba(0, 242, 254, 0.25), rgba(79, 172, 254, 0.25), rgba(0, 242, 254, 0.3)) !important;
+  background-size: 300% 300% !important;
+  animation: activeGradientMove 2.5s ease infinite !important;
+  border-color: #00f2fe !important;
+  box-shadow: 0 0 30px rgba(0, 242, 254, 0.6) !important;
+}
