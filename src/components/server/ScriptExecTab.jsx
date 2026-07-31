@@ -5,44 +5,44 @@ import ScriptOutputModal from './ScriptOutputModal';
 
 // Animated Skeleton Loader for Script Exec Tab
 const SkeletonScriptExecTab = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+  <div className="flex flex-col gap-5">
     {/* Header Skeleton */}
-    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-      <div className="skeleton-box" style={{ width: '28px', height: '28px', borderRadius: '6px' }}></div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        <div className="skeleton-box" style={{ width: '240px', height: '20px', borderRadius: '6px' }}></div>
-        <div className="skeleton-box" style={{ width: '340px', height: '14px', borderRadius: '4px' }}></div>
+    <div className="flex items-center gap-2.5">
+      <div className="skeleton-box w-7 h-7 rounded-md"></div>
+      <div className="flex flex-col gap-1.5">
+        <div className="skeleton-box w-60 h-5 rounded-md"></div>
+        <div className="skeleton-box w-80 h-3.5 rounded"></div>
       </div>
     </div>
 
     {/* Combo Banner Skeleton */}
-    <div className="glass-card" style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: '16px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <div className="skeleton-box" style={{ width: '48px', height: '48px', borderRadius: '12px' }}></div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div className="skeleton-box" style={{ width: '220px', height: '18px', borderRadius: '4px' }}></div>
-          <div className="skeleton-box" style={{ width: '300px', height: '14px', borderRadius: '4px' }}></div>
+    <div className="glass-card p-5.5 flex items-center justify-between rounded-2xl border border-slate-800">
+      <div className="flex items-center gap-3">
+        <div className="skeleton-box w-12 h-12 rounded-xl"></div>
+        <div className="flex flex-col gap-1.5">
+          <div className="skeleton-box w-56 h-4.5 rounded"></div>
+          <div className="skeleton-box w-72 h-3.5 rounded"></div>
         </div>
       </div>
-      <div className="skeleton-box" style={{ width: '240px', height: '42px', borderRadius: '12px' }}></div>
+      <div className="skeleton-box w-60 h-10.5 rounded-xl"></div>
     </div>
 
     {/* Cards Skeleton Grid */}
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '18px' }}>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4.5">
       {[1, 2].map((i) => (
-        <div key={i} className="glass-card" style={{ padding: '24px', borderRadius: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '16px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div className="skeleton-box" style={{ width: '36px', height: '36px', borderRadius: '10px' }}></div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <div className="skeleton-box" style={{ width: '100px', height: '12px', borderRadius: '4px' }}></div>
-                <div className="skeleton-box" style={{ width: '140px', height: '18px', borderRadius: '4px' }}></div>
+        <div key={i} className="glass-card p-6 rounded-2xl flex flex-col justify-between gap-4 border border-slate-800">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="skeleton-box w-9 h-9 rounded-lg"></div>
+              <div className="flex flex-col gap-1.5">
+                <div className="skeleton-box w-24 h-3 rounded"></div>
+                <div className="skeleton-box w-36 h-4.5 rounded"></div>
               </div>
             </div>
-            <div className="skeleton-box" style={{ width: '220px', height: '14px', borderRadius: '4px' }}></div>
-            <div className="skeleton-box" style={{ width: '100%', height: '32px', borderRadius: '6px' }}></div>
+            <div className="skeleton-box w-56 h-3.5 rounded"></div>
+            <div className="skeleton-box w-full h-8 rounded-md"></div>
           </div>
-          <div className="skeleton-box" style={{ width: '100%', height: '42px', borderRadius: '10px' }}></div>
+          <div className="skeleton-box w-full h-10.5 rounded-xl"></div>
         </div>
       ))}
     </div>
@@ -100,29 +100,27 @@ export default function ScriptExecTab({ serverId }) {
         killData = { output: '', stderr: e1.message || 'Gagal mengeksekusi kill-process.sh', exitCode: 1 };
       }
 
-      // Step 2: Auto Script
       setComboStep('autoscripting');
+
+      // Step 2: Auto Script
       try {
         autoData = await runVpsScriptApi(serverId, 'auto-script.sh');
       } catch (e2) {
         autoData = { output: '', stderr: e2.message || 'Gagal mengeksekusi auto-script.sh', exitCode: 1 };
       }
 
-      // Combine Outputs into modal
-      setActiveScriptName('kill-process.sh ➡️ auto-script.sh');
+      const combinedOutput = `=== LANGKAH 1: kill-process.sh ===\nExit Code: ${killData.exitCode}\nSTDOUT:\n${killData.output || '(Kosong)'}\nSTDERR:\n${killData.stderr || '(Kosong)'}\n\n=========================================\n\n=== LANGKAH 2: auto-script.sh ===\nExit Code: ${autoData.exitCode}\nSTDOUT:\n${autoData.output || '(Kosong)'}\nSTDERR:\n${autoData.stderr || '(Kosong)'}`;
 
-      const combinedOutput = `=== [STEP 1: kill-process.sh] ===\n${killData.output || '(Tidak ada stdout)'}\n${killData.stderr ? '\n[STDERR 1]:\n' + killData.stderr : ''}\n\n========================================\n\n=== [STEP 2: auto-script.sh] ===\n${autoData.output || '(Tidak ada stdout)'}\n${autoData.stderr ? '\n[STDERR 2]:\n' + autoData.stderr : ''}`;
-      const combinedStderr = [killData.stderr, autoData.stderr].filter(Boolean).join('\n') || '';
-
+      setActiveScriptName('COMBO (kill-process ➔ auto-script)');
       setExecResult({
-        script: 'kill-process.sh & auto-script.sh',
+        script: 'kill-process.sh ➔ auto-script.sh',
         path: '/home/pod/scripts/exec/',
-        exitCode: (killData.exitCode || 0) + (autoData.exitCode || 0),
+        exitCode: (killData.exitCode === 0 && autoData.exitCode === 0) ? 0 : 1,
         output: combinedOutput,
-        stderr: combinedStderr
+        stderr: (killData.stderr || autoData.stderr) ? `Kill STDERR:\n${killData.stderr || 'N/A'}\n\nAuto STDERR:\n${autoData.stderr || 'N/A'}` : ''
       });
     } catch (err) {
-      setErrorMsg(err.message || 'Terjadi kesalahan sistem saat mengeksekusi alur berurutan.');
+      setErrorMsg(err.message || 'Gagal mengeksekusi kombinasi skrip.');
     } finally {
       setRunningScript('');
       setComboStep('');
@@ -134,17 +132,17 @@ export default function ScriptExecTab({ serverId }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div className="flex flex-col gap-5">
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <FileCode color="#f59e0b" size={24} />
+      {/* Tab Header Description */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2.5">
+          <FileCode className="text-amber-400" size={24} />
           <div>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#fff' }}>
+            <h3 className="text-lg font-bold text-white">
               Eksekusi Script VPS (`/home/pod/scripts/exec/`)
             </h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+            <p className="text-xs text-slate-400 mt-0.5">
               Jalankan skrip <strong>kill-process.sh</strong> terlebih dahulu, lalu dilanjutkan dengan <strong>auto-script.sh</strong>.
             </p>
           </div>
@@ -152,50 +150,23 @@ export default function ScriptExecTab({ serverId }) {
       </div>
 
       {errorMsg && (
-        <div style={{
-          background: 'rgba(239, 68, 68, 0.15)',
-          border: '1px solid rgba(239, 68, 68, 0.3)',
-          color: '#fca5a5',
-          padding: '12px 16px',
-          borderRadius: '10px',
-          fontSize: '0.88rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px'
-        }}>
-          <AlertTriangle size={18} />
+        <div className="bg-red-500/15 border border-red-500/30 text-red-300 p-3.5 rounded-xl text-xs flex items-center gap-2.5">
+          <AlertTriangle size={18} className="text-red-400 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
       {/* Active Script Execution Loading Overlay Banner */}
       {Boolean(runningScript) && (
-        <div 
-          className="animated-executing-card"
-          style={{
-            borderRadius: '16px',
-            padding: '22px 26px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '18px',
-            transition: 'all 0.3s ease'
-          }}
-        >
-          <div style={{
-            background: 'rgba(0, 242, 254, 0.2)',
-            padding: '14px',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <Loader2 className="animate-spin" size={32} color="#00f2fe" />
+        <div className="animated-executing-card rounded-2xl p-5.5 flex items-center gap-4.5 transition-all">
+          <div className="bg-cyan-500/20 p-3.5 rounded-full flex items-center justify-center">
+            <Loader2 className="animate-spin text-cyan-400" size={32} />
           </div>
-          <div style={{ flex: 1 }}>
-            <h4 style={{ fontSize: '1.08rem', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="flex-1">
+            <h4 className="text-base font-bold text-white flex items-center gap-2">
               ⚡ Sedang Mengeksekusi Skrip pada Server VPS...
             </h4>
-            <div style={{ fontSize: '0.88rem', color: '#00f2fe', fontWeight: 600, marginTop: '3px' }}>
+            <div className="text-xs text-cyan-400 font-semibold mt-1">
               {runningScript === 'combo' ? (
                 comboStep === 'killing' 
                   ? '🔄 [Langkah 1/2]: Mengeksekusi kill-process.sh (Mematikan service lama)...' 
@@ -204,49 +175,32 @@ export default function ScriptExecTab({ serverId }) {
                 `🚀 Mengeksekusi ${runningScript} via SSH...`
               )}
             </div>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+            <p className="text-[11px] text-slate-400 mt-1">
               Mohon tunggu, proses SSH sedang memproses perintah di server (`/home/pod/scripts/exec/`).
             </p>
           </div>
         </div>
       )}
 
-      {/* Sequential Combo Banner (Kill Process -> Auto Script) with Moving Animation on Executing */}
-      <div 
-        className={runningScript === 'combo' ? 'animated-executing-card' : ''}
-        style={{
-          background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(239, 68, 68, 0.1) 100%)',
-          border: '1px solid rgba(245, 158, 11, 0.3)',
-          borderRadius: '16px',
-          padding: '20px 24px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '16px',
-          transition: 'all 0.3s ease'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            background: 'rgba(245, 158, 11, 0.2)',
-            padding: '12px',
-            borderRadius: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
+      {/* Sequential Combo Banner (Kill Process -> Auto Script) */}
+      <div className={`p-5 rounded-2xl border flex items-center justify-between flex-wrap gap-4 transition-all ${
+        runningScript === 'combo'
+          ? 'animated-executing-card'
+          : 'bg-gradient-to-r from-amber-500/10 to-red-500/10 border-amber-500/30'
+      }`}>
+        <div className="flex items-center gap-3">
+          <div className="bg-amber-500/20 p-3 rounded-xl flex items-center justify-center">
             {runningScript === 'combo' ? (
-              <Loader2 className="animate-spin" color="#f59e0b" size={24} />
+              <Loader2 className="animate-spin text-amber-400" size={24} />
             ) : (
-              <Zap color="#f59e0b" size={24} />
+              <Zap className="text-amber-400" size={24} />
             )}
           </div>
           <div>
-            <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff' }}>
+            <h4 className="text-base font-bold text-white">
               ⚡ Eksekusi Otomatis Berurutan (Combo)
             </h4>
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+            <p className="text-xs text-slate-400 mt-0.5">
               Jalankan <strong>1. kill-process.sh</strong> lalu otomatis dilanjutkan <strong>2. auto-script.sh</strong> secara berurutan.
             </p>
           </div>
@@ -255,197 +209,138 @@ export default function ScriptExecTab({ serverId }) {
         <button
           onClick={handleRunSequentialCombo}
           disabled={Boolean(runningScript)}
-          style={{
-            background: runningScript === 'combo'
-              ? 'linear-gradient(135deg, #ef4444 0%, #f59e0b 100%)'
-              : 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
-            color: '#fff',
-            border: 'none',
-            padding: '10px 20px',
-            fontSize: '0.9rem',
-            fontWeight: 700,
-            borderRadius: '12px',
-            cursor: Boolean(runningScript) ? 'not-allowed' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            boxShadow: runningScript === 'combo' ? '0 0 20px rgba(239, 68, 68, 0.7)' : '0 4px 15px rgba(245, 158, 11, 0.3)',
-            transition: 'all 0.2s ease',
-            opacity: Boolean(runningScript) && runningScript !== 'combo' ? 0.6 : 1
-          }}
+          className={`px-5 py-2.5 rounded-xl font-extrabold text-xs flex items-center gap-2 shadow-lg transition-all cursor-pointer ${
+            runningScript === 'combo'
+              ? 'bg-gradient-to-r from-red-500 to-amber-500 text-white shadow-red-500/20'
+              : 'bg-gradient-to-r from-amber-400 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 shadow-amber-500/25'
+          } ${runningScript ? 'opacity-60 cursor-not-allowed' : ''}`}
         >
           {runningScript === 'combo' ? (
             <>
               <Loader2 className="animate-spin" size={18} />
-              <span>{comboStep === 'killing' ? '1/2: Mematikan Proses (kill-process)...' : '2/2: Menjalankan Auto Script...'}</span>
+              <span>Memproses Combo...</span>
             </>
           ) : (
             <>
               <Zap size={18} />
-              <span>Jalankan Kill Process + Auto Script</span>
+              <span>JALANKAN COMBO (Kill ➔ AutoScript)</span>
             </>
           )}
         </button>
       </div>
 
-      {/* Individual Script Cards (Order: 1. Kill Process -> 2. Auto Script) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '18px' }}>
+      {/* Script Execution Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4.5">
 
-        {/* Card 1: kill-process.sh (FIRST) */}
-        <div 
-          className={runningScript === 'kill-process.sh' || (runningScript === 'combo' && comboStep === 'killing') ? 'animated-executing-danger' : ''}
-          style={{
-            background: 'rgba(239, 68, 68, 0.03)',
-            border: '1px solid rgba(239, 68, 68, 0.25)',
-            borderRadius: '16px',
-            padding: '24px',
-            display: 'flex',
-            flexDirection: 'column',
-            justify: 'space-between',
-            gap: '16px',
-            transition: 'all 0.3s ease'
-          }}
-        >
+        {/* Card 1: kill-process.sh */}
+        <div className={`glass-card p-6 rounded-2xl flex flex-col justify-between border transition-all ${
+          runningScript === 'kill-process.sh'
+            ? 'animated-executing-danger'
+            : 'border-red-500/20 bg-red-500/5 hover:border-red-500/30'
+        }`}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-              <div style={{
-                background: 'rgba(239, 68, 68, 0.15)',
-                padding: '8px',
-                borderRadius: '10px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                {runningScript === 'kill-process.sh' || (runningScript === 'combo' && comboStep === 'killing') ? (
-                  <Loader2 className="animate-spin" color="#ef4444" size={20} />
+            <div className="flex items-center gap-3 mb-3">
+              <div className="bg-red-500/20 p-2.5 rounded-xl">
+                {runningScript === 'kill-process.sh' ? (
+                  <Loader2 className="animate-spin text-red-400" size={22} />
                 ) : (
-                  <Square color="#ef4444" size={20} />
+                  <Square className="text-red-400" size={22} />
                 )}
               </div>
               <div>
-                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#ef4444', textTransform: 'uppercase' }}>
-                  Langkah Pertama (1)
-                </div>
-                <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff' }} className="font-mono">
+                <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider">
+                  Langkah 1: Terminate Services
+                </span>
+                <h4 className="text-lg font-bold text-white font-mono">
                   kill-process.sh
                 </h4>
               </div>
             </div>
-            <div style={{ fontSize: '0.75rem', color: '#ef4444', marginBottom: '8px' }} className="font-mono">
-              /home/pod/scripts/exec/kill-process.sh
-            </div>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
-              Menghentikan small & big screen, consume, synch, pod-api di POD.
+
+            <p className="text-xs text-slate-400 mb-3">
+              Mematikan seluruh proses atau service lama yang sedang berjalan di server POD.
             </p>
+
+            <div className="bg-black/40 border border-slate-800 p-2.5 rounded-lg text-xs font-mono text-slate-400 mb-4">
+              Path: <span className="text-red-300">/home/pod/scripts/exec/kill-process.sh</span>
+            </div>
           </div>
 
           <button
             onClick={() => handleRunScript('kill-process.sh')}
             disabled={Boolean(runningScript)}
-            className="btn-danger"
-            style={{
-              padding: '11px 18px',
-              fontSize: '0.88rem',
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              width: '100%',
-              borderRadius: '10px',
-              boxShadow: runningScript === 'kill-process.sh' ? '0 0 15px rgba(239, 68, 68, 0.6)' : 'none',
-              opacity: Boolean(runningScript) && runningScript !== 'kill-process.sh' ? 0.6 : 1
-            }}
+            className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              runningScript === 'kill-process.sh'
+                ? 'bg-red-500/30 text-red-300 border border-red-500/40'
+                : 'bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30'
+            } ${runningScript ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            {runningScript === 'kill-process.sh' || (runningScript === 'combo' && comboStep === 'killing') ? (
+            {runningScript === 'kill-process.sh' ? (
               <>
                 <Loader2 className="animate-spin" size={16} />
-                <span>Mengeksekusi kill-process.sh...</span>
+                <span>Mengeksekusi Kill Process...</span>
               </>
             ) : (
               <>
                 <Square size={16} />
-                <span>1. Jalankan kill-process.sh</span>
+                <span>Jalankan kill-process.sh</span>
               </>
             )}
           </button>
         </div>
 
-        {/* Card 2: auto-script.sh (SECOND) */}
-        <div 
-          className={runningScript === 'auto-script.sh' || (runningScript === 'combo' && comboStep === 'autoscripting') ? 'animated-executing-primary' : ''}
-          style={{
-            background: 'rgba(0, 242, 254, 0.03)',
-            border: '1px solid rgba(0, 242, 254, 0.25)',
-            borderRadius: '16px',
-            padding: '24px',
-            display: 'flex',
-            flexDirection: 'column',
-            justify: 'space-between',
-            gap: '16px',
-            transition: 'all 0.3s ease'
-          }}
-        >
+        {/* Card 2: auto-script.sh */}
+        <div className={`glass-card p-6 rounded-2xl flex flex-col justify-between border transition-all ${
+          runningScript === 'auto-script.sh'
+            ? 'animated-executing-primary'
+            : 'border-cyan-500/20 bg-cyan-500/5 hover:border-cyan-500/30'
+        }`}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-              <div style={{
-                background: 'rgba(0, 242, 254, 0.15)',
-                padding: '8px',
-                borderRadius: '10px',
-                display: 'flex',
-                alignItems: 'center',
-                justify: 'center'
-              }}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="bg-cyan-500/20 p-2.5 rounded-xl">
                 {runningScript === 'auto-script.sh' ? (
-                  <Loader2 className="animate-spin" color="#00f2fe" size={20} />
+                  <Loader2 className="animate-spin text-cyan-400" size={22} />
                 ) : (
-                  <Play color="#00f2fe" size={20} />
+                  <Play className="text-cyan-400" size={22} />
                 )}
               </div>
               <div>
-                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#00f2fe', textTransform: 'uppercase' }}>
-                  Langkah Kedua (2)
-                </div>
-                <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff' }} className="font-mono">
+                <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">
+                  Langkah 2: Auto Start Services
+                </span>
+                <h4 className="text-lg font-bold text-white font-mono">
                   auto-script.sh
                 </h4>
               </div>
             </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--primary-cyan)', marginBottom: '8px' }} className="font-mono">
-              /home/pod/scripts/exec/auto-script.sh
-            </div>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
-              Menjalankan small & big screen, POD-API di POD.
+
+            <p className="text-xs text-slate-400 mb-3">
+              Mulai ulang dan aktifkan otomatis seluruh service & aplikasi POD di server.
             </p>
+
+            <div className="bg-black/40 border border-slate-800 p-2.5 rounded-lg text-xs font-mono text-slate-400 mb-4">
+              Path: <span className="text-cyan-300">/home/pod/scripts/exec/auto-script.sh</span>
+            </div>
           </div>
 
           <button
             onClick={() => handleRunScript('auto-script.sh')}
             disabled={Boolean(runningScript)}
-            className="btn-primary"
-            style={{
-              padding: '11px 18px',
-              fontSize: '0.88rem',
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              justify: 'center',
-              gap: '8px',
-              width: '100%',
-              borderRadius: '10px',
-              boxShadow: runningScript === 'auto-script.sh' ? '0 0 15px rgba(0, 242, 254, 0.6)' : 'none',
-              opacity: Boolean(runningScript) && runningScript !== 'auto-script.sh' ? 0.6 : 1
-            }}
+            className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              runningScript === 'auto-script.sh'
+                ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-500/40'
+                : 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 border border-cyan-500/30'
+            } ${runningScript ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {runningScript === 'auto-script.sh' ? (
               <>
                 <Loader2 className="animate-spin" size={16} />
-                <span>Mengeksekusi auto-script.sh...</span>
+                <span>Mengeksekusi Auto Script...</span>
               </>
             ) : (
               <>
                 <Play size={16} />
-                <span>2. Jalankan auto-script.sh</span>
+                <span>Jalankan auto-script.sh</span>
               </>
             )}
           </button>
@@ -453,12 +348,12 @@ export default function ScriptExecTab({ serverId }) {
 
       </div>
 
-      {/* Execution Terminal Result Modal */}
+      {/* Script Execution Console Modal Output */}
       <ScriptOutputModal
         isOpen={Boolean(execResult)}
         onClose={() => setExecResult(null)}
-        result={execResult}
         scriptName={activeScriptName}
+        execResult={execResult}
       />
 
     </div>

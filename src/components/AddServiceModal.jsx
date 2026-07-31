@@ -162,596 +162,273 @@ export default function AddServiceModal({ isOpen, onClose, onServerAdded, servic
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 9999, padding: '16px' }}>
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div
-        className="glass-card modal-aos-content"
+        className="w-[92vw] max-w-3xl max-h-[92vh] overflow-y-auto p-6 md:p-8 bg-slate-950 border border-sky-500/30 rounded-3xl shadow-2xl shadow-black/90"
         onClick={(e) => e.stopPropagation()}
-        style={{
-          width: '92vw',
-          maxWidth: '840px',
-          maxHeight: '92vh',
-          overflowY: 'auto',
-          padding: '32px 36px',
-          background: '#090d16',
-          border: '1px solid rgba(56, 189, 248, 0.3)',
-          borderRadius: '24px',
-          boxShadow: '0 25px 70px rgba(0, 0, 0, 0.85)'
-        }}
       >
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div style={{
-              background: formData.type === 'postgresql'
-                ? 'linear-gradient(135deg, rgba(56, 189, 248, 0.2) 0%, rgba(2, 132, 199, 0.2) 100%)'
-                : 'linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(217, 119, 6, 0.2) 100%)',
-              border: `1px solid ${formData.type === 'postgresql' ? 'rgba(56, 189, 248, 0.4)' : 'rgba(245, 158, 11, 0.4)'}`,
-              padding: '12px',
-              borderRadius: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              justify: 'center'
-            }}>
-              {formData.type === 'postgresql' ? <Database color="#38bdf8" size={26} /> : <HardDrive color="#f59e0b" size={26} />}
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
+          <div className="flex items-center gap-3.5">
+            <div className={`p-3 rounded-2xl border flex items-center justify-center ${
+              formData.type === 'postgresql'
+                ? 'bg-sky-500/20 border-sky-500/40 text-sky-400'
+                : 'bg-amber-500/20 border-amber-500/40 text-amber-400'
+            }`}>
+              {formData.type === 'postgresql' ? <Database size={24} /> : <HardDrive size={24} />}
             </div>
             <div>
-              <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.3px' }}>
+              <h3 className="text-xl font-extrabold text-white tracking-tight">
                 {isEditMode ? 'Edit Layanan DB / Storage' : 'Tambah Layanan Database & Storage Baru'}
               </h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                Monitoring Status Database PostgreSQL & MinIO / AWS S3 Storage secara Real-time.
+              <p className="text-xs text-slate-400 mt-0.5">
+                Monitor koneksi PostgreSQL, MinIO Object Storage, atau AWS S3 secara tersentralisasi.
               </p>
             </div>
           </div>
 
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}>
-            <X size={24} />
+          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors cursor-pointer p-1">
+            <X size={22} />
           </button>
         </div>
 
         {errorMsg && (
-          <div style={{
-            background: 'rgba(239, 68, 68, 0.15)',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
-            color: '#fca5a5',
-            padding: '12px 18px',
-            borderRadius: '12px',
-            fontSize: '0.88rem',
-            marginBottom: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px'
-          }}>
-            <AlertCircle size={18} />
+          <div className="bg-red-500/15 border border-red-500/30 text-red-300 p-3.5 rounded-xl text-xs mb-5 flex items-center gap-2.5">
+            <AlertCircle size={18} className="text-red-400 shrink-0" />
             <span>{errorMsg}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
-
-          {/* Tipe Layanan Cards */}
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          
+          {/* Tipe Service Selector */}
           <div>
-            <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '10px' }}>
-              Pilih Jenis Layanan Infrastruktur:
+            <label className="block text-xs font-bold text-slate-300 mb-2.5">
+              Pilih Jenis Layanan:
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
-
-              {/* PostgreSQL Card */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              
+              {/* PostgreSQL */}
               <div
                 onClick={() => handleChange({ target: { name: 'type', value: 'postgresql' } })}
-                style={{
-                  padding: '16px',
-                  borderRadius: '16px',
-                  border: formData.type === 'postgresql' ? '2px solid #38bdf8' : '1px solid rgba(255,255,255,0.1)',
-                  background: formData.type === 'postgresql' ? 'linear-gradient(135deg, rgba(56, 189, 248, 0.15) 0%, rgba(56, 189, 248, 0.05) 100%)' : 'rgba(0,0,0,0.3)',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px'
-                }}
+                className={`p-3.5 rounded-2xl border cursor-pointer transition-all duration-200 flex items-center gap-3 ${
+                  formData.type === 'postgresql'
+                    ? 'border-sky-400 bg-sky-500/15 text-sky-400 shadow-md shadow-sky-500/10'
+                    : 'border-slate-800 bg-black/30 hover:border-slate-700 text-slate-300'
+                }`}
               >
-                <div style={{
-                  background: formData.type === 'postgresql' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255,255,255,0.05)',
-                  padding: '10px',
-                  borderRadius: '12px'
-                }}>
-                  <Database size={20} color={formData.type === 'postgresql' ? '#38bdf8' : 'var(--text-muted)'} />
-                </div>
+                <Database size={20} className={formData.type === 'postgresql' ? 'text-sky-400' : 'text-slate-400'} />
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.92rem', color: formData.type === 'postgresql' ? '#38bdf8' : '#fff' }}>
-                    🐘 PostgreSQL DB
-                  </div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                    Database relasional PostgreSQL.
-                  </div>
+                  <div className="font-bold text-xs">🐘 PostgreSQL</div>
+                  <div className="text-[10px] text-slate-400">Database SQL</div>
                 </div>
               </div>
 
-              {/* MinIO Card */}
+              {/* MinIO Storage */}
               <div
                 onClick={() => handleChange({ target: { name: 'type', value: 'minio' } })}
-                style={{
-                  padding: '16px',
-                  borderRadius: '16px',
-                  border: formData.type === 'minio' ? '2px solid #f59e0b' : '1px solid rgba(255,255,255,0.1)',
-                  background: formData.type === 'minio' ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%)' : 'rgba(0,0,0,0.3)',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px'
-                }}
+                className={`p-3.5 rounded-2xl border cursor-pointer transition-all duration-200 flex items-center gap-3 ${
+                  formData.type === 'minio'
+                    ? 'border-amber-400 bg-amber-500/15 text-amber-400 shadow-md shadow-amber-500/10'
+                    : 'border-slate-800 bg-black/30 hover:border-slate-700 text-slate-300'
+                }`}
               >
-                <div style={{
-                  background: formData.type === 'minio' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255,255,255,0.05)',
-                  padding: '10px',
-                  borderRadius: '12px'
-                }}>
-                  <HardDrive size={20} color={formData.type === 'minio' ? '#f59e0b' : 'var(--text-muted)'} />
-                </div>
+                <HardDrive size={20} className={formData.type === 'minio' ? 'text-amber-400' : 'text-slate-400'} />
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.92rem', color: formData.type === 'minio' ? '#f59e0b' : '#fff' }}>
-                    🪣 MinIO Storage
-                  </div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                    Object storage mandiri MinIO.
-                  </div>
+                  <div className="font-bold text-xs">🪣 MinIO Storage</div>
+                  <div className="text-[10px] text-slate-400">Self-hosted S3</div>
                 </div>
               </div>
 
-              {/* AWS S3 Card */}
+              {/* AWS S3 */}
               <div
                 onClick={() => handleChange({ target: { name: 'type', value: 's3' } })}
-                style={{
-                  padding: '16px',
-                  borderRadius: '16px',
-                  border: formData.type === 's3' ? '2px solid #ec4899' : '1px solid rgba(255,255,255,0.1)',
-                  background: formData.type === 's3' ? 'linear-gradient(135deg, rgba(236, 72, 153, 0.15) 0%, rgba(236, 72, 153, 0.05) 100%)' : 'rgba(0,0,0,0.3)',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px'
-                }}
+                className={`p-3.5 rounded-2xl border cursor-pointer transition-all duration-200 flex items-center gap-3 ${
+                  formData.type === 's3'
+                    ? 'border-pink-400 bg-pink-500/15 text-pink-400 shadow-md shadow-pink-500/10'
+                    : 'border-slate-800 bg-black/30 hover:border-slate-700 text-slate-300'
+                }`}
               >
-                <div style={{
-                  background: formData.type === 's3' ? 'rgba(236, 72, 153, 0.25)' : 'rgba(255,255,255,0.05)',
-                  padding: '10px',
-                  borderRadius: '12px'
-                }}>
-                  <HardDrive size={20} color={formData.type === 's3' ? '#ec4899' : 'var(--text-muted)'} />
-                </div>
+                <HardDrive size={20} className={formData.type === 's3' ? 'text-pink-400' : 'text-slate-400'} />
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.92rem', color: formData.type === 's3' ? '#ec4899' : '#fff' }}>
-                    ☁️ AWS S3 Storage
-                  </div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                    Storage cloud AWS S3 Bucket.
-                  </div>
+                  <div className="font-bold text-xs">☁️ AWS S3</div>
+                  <div className="text-[10px] text-slate-400">Cloud Storage</div>
                 </div>
               </div>
 
             </div>
           </div>
 
-          {/* Form Input Fields Container */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Form Fields: Common Name */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+              Nama Label Layanan:
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="Contoh: DB Utama / MinIO Storage POD / AWS Assets"
+              className="w-full px-4 py-2.5 bg-black/45 border border-slate-800 focus:border-sky-400 rounded-xl text-white text-sm outline-none transition-colors"
+              required
+            />
+          </div>
 
-            {/* Nama Layanan Input */}
-            <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>
-                Nama Label Layanan:
-              </label>
-              <div style={{ position: 'relative' }}>
-                {formData.type === 'postgresql' ? (
-                  <Database size={18} color="#38bdf8" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.8 }} />
-                ) : (
-                  <HardDrive size={18} color="#f59e0b" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.8 }} />
-                )}
+          {/* Dynamic Fields for PostgreSQL */}
+          {formData.type === 'postgresql' && (
+            <div className="flex flex-col gap-4 bg-sky-500/5 border border-sky-500/20 p-4 rounded-2xl">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Host IP / Domain DB:</label>
+                  <input
+                    type="text"
+                    name="host"
+                    value={formData.host}
+                    onChange={handleChange}
+                    placeholder="10.10.3.33"
+                    className="w-full px-4 py-2.5 bg-black/45 border border-slate-800 focus:border-sky-400 rounded-xl text-white text-sm font-mono outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Port DB:</label>
+                  <input
+                    type="number"
+                    name="port"
+                    value={formData.port}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2.5 bg-black/45 border border-slate-800 focus:border-sky-400 rounded-xl text-white text-sm font-mono outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Nama Database:</label>
+                  <input
+                    type="text"
+                    name="db_name"
+                    value={formData.db_name}
+                    onChange={handleChange}
+                    placeholder="postgres"
+                    className="w-full px-4 py-2.5 bg-black/45 border border-slate-800 focus:border-sky-400 rounded-xl text-white text-sm font-mono outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">User Database:</label>
+                  <input
+                    type="text"
+                    name="db_user"
+                    value={formData.db_user}
+                    onChange={handleChange}
+                    placeholder="postgres"
+                    className="w-full px-4 py-2.5 bg-black/45 border border-slate-800 focus:border-sky-400 rounded-xl text-white text-sm font-mono outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Password Database:</label>
                 <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
+                  type="password"
+                  name="password"
+                  value={formData.password}
                   onChange={handleChange}
-                  placeholder="Contoh: PostgreSQL Main Production / MinIO Cluster"
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px 12px 48px',
-                    background: 'rgba(0, 0, 0, 0.45)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    borderRadius: '12px',
-                    color: '#fff',
-                    fontSize: '0.92rem',
-                    outline: 'none',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = formData.type === 'postgresql' ? '#38bdf8' : '#f59e0b'}
-                  onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)'}
-                  required
+                  placeholder={isEditMode ? '•••••••• (Biarkan kosong jika tidak diubah)' : 'Password PostgreSQL'}
+                  className="w-full px-4 py-2.5 bg-black/45 border border-slate-800 focus:border-sky-400 rounded-xl text-white text-sm font-mono outline-none"
                 />
               </div>
             </div>
+          )}
 
-            {/* PostgreSQL Inputs */}
-            {formData.type === 'postgresql' && (
-              <>
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '14px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>
-                      Host IP / Domain PostgreSQL:
-                    </label>
-                    <div style={{ position: 'relative' }}>
-                      <Globe size={18} color="#38bdf8" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.8 }} />
-                      <input
-                        type="text"
-                        name="host"
-                        value={formData.host}
-                        onChange={handleChange}
-                        placeholder="localhost / 10.10.3.33"
-                        className="font-mono"
-                        style={{
-                          width: '100%',
-                          padding: '12px 16px 12px 48px',
-                          background: 'rgba(0, 0, 0, 0.45)',
-                          border: '1px solid rgba(255, 255, 255, 0.15)',
-                          borderRadius: '12px',
-                          color: '#fff',
-                          fontSize: '0.92rem',
-                          outline: 'none',
-                          transition: 'all 0.2s ease'
-                        }}
-                        onFocus={(e) => e.target.style.borderColor = '#38bdf8'}
-                        onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)'}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>
-                      Port DB:
-                    </label>
-                    <div style={{ position: 'relative' }}>
-                      <Hash size={18} color="#38bdf8" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', opacity: 0.8 }} />
-                      <input
-                        type="number"
-                        name="port"
-                        value={formData.port}
-                        onChange={handleChange}
-                        className="font-mono"
-                        style={{
-                          width: '100%',
-                          padding: '12px 16px 12px 42px',
-                          background: 'rgba(0, 0, 0, 0.45)',
-                          border: '1px solid rgba(255, 255, 255, 0.15)',
-                          borderRadius: '12px',
-                          color: '#fff',
-                          fontSize: '0.92rem',
-                          outline: 'none',
-                          transition: 'all 0.2s ease'
-                        }}
-                        onFocus={(e) => e.target.style.borderColor = '#38bdf8'}
-                        onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)'}
-                      />
-                    </div>
-                  </div>
-                </div>
+          {/* Dynamic Fields for MinIO or AWS S3 */}
+          {(formData.type === 'minio' || formData.type === 's3') && (
+            <div className="flex flex-col gap-4 bg-amber-500/5 border border-amber-500/20 p-4 rounded-2xl">
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Endpoint Storage URL:</label>
+                <input
+                  type="text"
+                  name="s3_endpoint"
+                  value={formData.s3_endpoint}
+                  onChange={handleChange}
+                  placeholder={formData.type === 'minio' ? 'http://10.10.3.33:9000' : 'https://s3.us-east-1.amazonaws.com'}
+                  className="w-full px-4 py-2.5 bg-black/45 border border-slate-800 focus:border-amber-400 rounded-xl text-white text-sm font-mono outline-none"
+                  required
+                />
+              </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>
-                      Nama Database (`db_name`):
-                    </label>
-                    <div style={{ position: 'relative' }}>
-                      <Database size={18} color="#38bdf8" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.8 }} />
-                      <input
-                        type="text"
-                        name="db_name"
-                        value={formData.db_name}
-                        onChange={handleChange}
-                        placeholder="postgres / my_app_db"
-                        className="font-mono"
-                        style={{
-                          width: '100%',
-                          padding: '12px 16px 12px 48px',
-                          background: 'rgba(0, 0, 0, 0.45)',
-                          border: '1px solid rgba(255, 255, 255, 0.15)',
-                          borderRadius: '12px',
-                          color: '#fff',
-                          fontSize: '0.92rem',
-                          outline: 'none',
-                          transition: 'all 0.2s ease'
-                        }}
-                        onFocus={(e) => e.target.style.borderColor = '#38bdf8'}
-                        onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)'}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>
-                      User Database (`db_user`):
-                    </label>
-                    <div style={{ position: 'relative' }}>
-                      <User size={18} color="#38bdf8" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.8 }} />
-                      <input
-                        type="text"
-                        name="db_user"
-                        value={formData.db_user}
-                        onChange={handleChange}
-                        placeholder="postgres"
-                        className="font-mono"
-                        style={{
-                          width: '100%',
-                          padding: '12px 16px 12px 48px',
-                          background: 'rgba(0, 0, 0, 0.45)',
-                          border: '1px solid rgba(255, 255, 255, 0.15)',
-                          borderRadius: '12px',
-                          color: '#fff',
-                          fontSize: '0.92rem',
-                          outline: 'none',
-                          transition: 'all 0.2s ease'
-                        }}
-                        onFocus={(e) => e.target.style.borderColor = '#38bdf8'}
-                        onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)'}
-                      />
-                    </div>
-                  </div>
-                </div>
-
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>
-                    Password Database:
-                  </label>
-                  <div style={{ position: 'relative' }}>
-                    <Lock size={18} color="#38bdf8" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.8 }} />
-                    <input
-                      type="password"
-                      name="password"
-                      value={formData.password}
-                      onChange={handleChange}
-                      placeholder={isEditMode ? '•••••••• (Biarkan kosong jika tidak diubah)' : 'Masukkan password PostgreSQL'}
-                      className="font-mono"
-                      style={{
-                        width: '100%',
-                        padding: '12px 16px 12px 48px',
-                        background: 'rgba(0, 0, 0, 0.45)',
-                        border: '1px solid rgba(255, 255, 255, 0.15)',
-                        borderRadius: '12px',
-                        color: '#fff',
-                        fontSize: '0.92rem',
-                        outline: 'none',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onFocus={(e) => e.target.style.borderColor = '#38bdf8'}
-                      onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)'}
-                    />
-                  </div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Access Key ID:</label>
+                  <input
+                    type="text"
+                    name="s3_access_key"
+                    value={formData.s3_access_key}
+                    onChange={handleChange}
+                    placeholder="AKIAIOSFODNN7EXAMPLE"
+                    className="w-full px-4 py-2.5 bg-black/45 border border-slate-800 focus:border-amber-400 rounded-xl text-white text-sm font-mono outline-none"
+                  />
                 </div>
-              </>
-            )}
-
-            {/* MinIO / S3 Storage Inputs */}
-            {(formData.type === 'minio' || formData.type === 's3') && (
-              <>
-                {formData.type === 'minio' && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '14px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>
-                        MinIO Host / Endpoint URL:
-                      </label>
-                      <div style={{ position: 'relative' }}>
-                        <Globe size={18} color="#f59e0b" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.8 }} />
-                        <input
-                          type="text"
-                          name="s3_endpoint"
-                          value={formData.s3_endpoint}
-                          onChange={handleChange}
-                          placeholder="http://10.10.3.33 / s3.domain.com"
-                          className="font-mono"
-                          style={{
-                            width: '100%',
-                            padding: '12px 16px 12px 48px',
-                            background: 'rgba(0, 0, 0, 0.45)',
-                            border: '1px solid rgba(255, 255, 255, 0.15)',
-                            borderRadius: '12px',
-                            color: '#fff',
-                            fontSize: '0.92rem',
-                            outline: 'none',
-                            transition: 'all 0.2s ease'
-                          }}
-                          onFocus={(e) => e.target.style.borderColor = '#f59e0b'}
-                          onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)'}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>
-                        Port MinIO:
-                      </label>
-                      <div style={{ position: 'relative' }}>
-                        <Hash size={18} color="#f59e0b" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', opacity: 0.8 }} />
-                        <input
-                          type="number"
-                          name="port"
-                          value={formData.port || 9000}
-                          onChange={handleChange}
-                          placeholder="9000"
-                          className="font-mono"
-                          style={{
-                            width: '100%',
-                            padding: '12px 16px 12px 42px',
-                            background: 'rgba(0, 0, 0, 0.45)',
-                            border: '1px solid rgba(255, 255, 255, 0.15)',
-                            borderRadius: '12px',
-                            color: '#fff',
-                            fontSize: '0.92rem',
-                            outline: 'none',
-                            transition: 'all 0.2s ease'
-                          }}
-                          onFocus={(e) => e.target.style.borderColor = '#f59e0b'}
-                          onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)'}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {formData.type === 's3' && (
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>
-                      AWS Region:
-                    </label>
-                    <div style={{ position: 'relative' }}>
-                      <Globe size={18} color="#ec4899" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.8 }} />
-                      <input
-                        type="text"
-                        name="s3_region"
-                        value={formData.s3_region}
-                        onChange={handleChange}
-                        placeholder="us-east-1 / ap-southeast-1"
-                        className="font-mono"
-                        style={{
-                          width: '100%',
-                          padding: '12px 16px 12px 48px',
-                          background: 'rgba(0, 0, 0, 0.45)',
-                          border: '1px solid rgba(255, 255, 255, 0.15)',
-                          borderRadius: '12px',
-                          color: '#fff',
-                          fontSize: '0.92rem',
-                          outline: 'none',
-                          transition: 'all 0.2s ease'
-                        }}
-                        onFocus={(e) => e.target.style.borderColor = '#ec4899'}
-                        onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)'}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>
-                      Access Key ID:
-                    </label>
-                    <div style={{ position: 'relative' }}>
-                      <Key size={18} color="#f59e0b" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.8 }} />
-                      <input
-                        type="text"
-                        name="s3_access_key"
-                        value={formData.s3_access_key}
-                        onChange={handleChange}
-                        placeholder="minioadmin / AKIA..."
-                        className="font-mono"
-                        style={{
-                          width: '100%',
-                          padding: '12px 16px 12px 48px',
-                          background: 'rgba(0, 0, 0, 0.45)',
-                          border: '1px solid rgba(255, 255, 255, 0.15)',
-                          borderRadius: '12px',
-                          color: '#fff',
-                          fontSize: '0.92rem',
-                          outline: 'none',
-                          transition: 'all 0.2s ease'
-                        }}
-                        onFocus={(e) => e.target.style.borderColor = '#f59e0b'}
-                        onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)'}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>
-                      Secret Access Key:
-                    </label>
-                    <div style={{ position: 'relative' }}>
-                      <Lock size={18} color="#f59e0b" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.8 }} />
-                      <input
-                        type="password"
-                        name="s3_secret_key"
-                        value={formData.s3_secret_key}
-                        onChange={handleChange}
-                        placeholder={isEditMode ? '•••••••• (Biarkan kosong jika tidak diubah)' : 'minioadmin / secret'}
-                        className="font-mono"
-                        style={{
-                          width: '100%',
-                          padding: '12px 16px 12px 48px',
-                          background: 'rgba(0, 0, 0, 0.45)',
-                          border: '1px solid rgba(255, 255, 255, 0.15)',
-                          borderRadius: '12px',
-                          color: '#fff',
-                          fontSize: '0.92rem',
-                          outline: 'none',
-                          transition: 'all 0.2s ease'
-                        }}
-                        onFocus={(e) => e.target.style.borderColor = '#f59e0b'}
-                        onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)'}
-                      />
-                    </div>
-                  </div>
-                </div>
-
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>
-                    Target Bucket Name (Opsional):
-                  </label>
-                  <div style={{ position: 'relative' }}>
-                    <Folder size={18} color="#f59e0b" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.8 }} />
-                    <input
-                      type="text"
-                      name="s3_bucket"
-                      value={formData.s3_bucket}
-                      onChange={handleChange}
-                      placeholder="my-app-uploads"
-                      className="font-mono"
-                      style={{
-                        width: '100%',
-                        padding: '12px 16px 12px 48px',
-                        background: 'rgba(0, 0, 0, 0.45)',
-                        border: '1px solid rgba(255, 255, 255, 0.15)',
-                        borderRadius: '12px',
-                        color: '#fff',
-                        fontSize: '0.92rem',
-                        outline: 'none',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onFocus={(e) => e.target.style.borderColor = '#f59e0b'}
-                      onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)'}
-                    />
-                  </div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Secret Access Key:</label>
+                  <input
+                    type="password"
+                    name="s3_secret_key"
+                    value={formData.s3_secret_key}
+                    onChange={handleChange}
+                    placeholder={isEditMode ? '•••••••• (Biarkan kosong jika tidak diubah)' : 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY'}
+                    className="w-full px-4 py-2.5 bg-black/45 border border-slate-800 focus:border-amber-400 rounded-xl text-white text-sm font-mono outline-none"
+                  />
                 </div>
-              </>
-            )}
+              </div>
 
-          </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Bucket Name (Opsional):</label>
+                  <input
+                    type="text"
+                    name="s3_bucket"
+                    value={formData.s3_bucket}
+                    onChange={handleChange}
+                    placeholder="my-assets-bucket"
+                    className="w-full px-4 py-2.5 bg-black/45 border border-slate-800 focus:border-amber-400 rounded-xl text-white text-sm font-mono outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Region (Opsional):</label>
+                  <input
+                    type="text"
+                    name="s3_region"
+                    value={formData.s3_region}
+                    onChange={handleChange}
+                    placeholder="us-east-1"
+                    className="w-full px-4 py-2.5 bg-black/45 border border-slate-800 focus:border-amber-400 rounded-xl text-white text-sm font-mono outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Test Connection Result Box */}
           {testResult && (
-            <div style={{
-              background: testResult.success ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-              border: `1px solid ${testResult.success ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
-              color: testResult.success ? '#6ee7b7' : '#fca5a5',
-              padding: '14px 18px',
-              borderRadius: '12px',
-              fontSize: '0.88rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px'
-            }}>
-              {testResult.success ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+            <div className={`p-3.5 rounded-xl text-xs flex items-center gap-2.5 border ${
+              testResult.success
+                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+                : 'bg-red-500/15 border-red-500/30 text-red-300'
+            }`}>
+              {testResult.success ? <CheckCircle size={20} className="text-emerald-400 shrink-0" /> : <AlertCircle size={20} className="text-red-400 shrink-0" />}
               <span>{testResult.message}</span>
             </div>
           )}
 
           {/* Modal Actions */}
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '10px' }}>
+          <div className="flex gap-3 justify-end mt-2">
             <button
               type="button"
               onClick={handleTestConnection}
               disabled={testing}
-              className="btn-secondary"
-              style={{ padding: '10px 18px', fontSize: '0.9rem' }}
+              className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-2 border border-slate-700 transition-colors cursor-pointer"
             >
               {testing ? <Loader2 className="animate-spin" size={16} /> : <Key size={16} />}
               <span>{testing ? 'Uji Koneksi...' : 'Uji Koneksi Layanan'}</span>
@@ -760,14 +437,7 @@ export default function AddServiceModal({ isOpen, onClose, onServerAdded, servic
             <button
               type="submit"
               disabled={submitting}
-              className="btn-primary"
-              style={{
-                padding: '10px 22px',
-                fontSize: '0.9rem',
-                background: formData.type === 'postgresql'
-                  ? 'linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)'
-                  : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
-              }}
+              className="px-5 py-2.5 bg-gradient-to-r from-sky-400 to-sky-600 hover:from-sky-300 hover:to-sky-500 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-sky-500/25 transition-all cursor-pointer"
             >
               {submitting ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle size={16} />}
               <span>{submitting ? 'Menyimpan...' : (isEditMode ? 'Simpan Perubahan' : 'Tambah Layanan')}</span>

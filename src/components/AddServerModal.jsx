@@ -101,112 +101,71 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
       onServerAdded();
       onClose();
     } catch (err) {
-      setErrorMsg(err.message || 'Terjadi kesalahan saat menyimpan server.');
+      setErrorMsg(err.message || 'Gagal menyimpan konfigurasi server.');
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 9999, padding: '16px' }}>
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div
-        className="glass-card modal-aos-content"
+        className="w-[92vw] max-w-3xl max-h-[92vh] overflow-y-auto p-6 md:p-8 bg-slate-950 border border-cyan-500/30 rounded-3xl shadow-2xl shadow-black/90"
         onClick={(e) => e.stopPropagation()}
-        style={{
-          width: '92vw',
-          maxWidth: '820px',
-          maxHeight: '92vh',
-          overflowY: 'auto',
-          padding: '32px 36px',
-          background: '#090d16',
-          border: '1px solid rgba(0, 242, 254, 0.3)',
-          borderRadius: '24px',
-          boxShadow: '0 25px 70px rgba(0, 0, 0, 0.85)'
-        }}
       >
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(0, 242, 254, 0.2) 0%, rgba(79, 172, 254, 0.2) 100%)',
-              border: '1px solid rgba(0, 242, 254, 0.4)',
-              padding: '12px',
-              borderRadius: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              justify: 'center'
-            }}>
-              {isEditMode ? <Edit3 color="#00f2fe" size={24} /> : <Server color="#00f2fe" size={24} />}
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
+          <div className="flex items-center gap-3.5">
+            <div className="bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/40 p-3 rounded-2xl flex items-center justify-center">
+              {isEditMode ? <Edit3 className="text-cyan-400 w-6 h-6" /> : <Server className="text-cyan-400 w-6 h-6" />}
             </div>
             <div>
-              <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.3px' }}>
+              <h3 className="text-xl font-extrabold text-white tracking-tight">
                 {isEditMode ? 'Edit Konfigurasi Server VPS / POD' : 'Tambah Server VPS / POD (SSH)'}
               </h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              <p className="text-xs text-slate-400 mt-0.5">
                 Monitoring Metrik Sistem Real-time, CPU/RAM/Disk, GPU, & Docker Apps via SSH.
               </p>
             </div>
           </div>
 
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}>
-            <X size={24} />
+          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors cursor-pointer p-1">
+            <X size={22} />
           </button>
         </div>
 
         {errorMsg && (
-          <div style={{
-            background: 'rgba(239, 68, 68, 0.15)',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
-            color: '#fca5a5',
-            padding: '12px 18px',
-            borderRadius: '12px',
-            fontSize: '0.88rem',
-            marginBottom: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px'
-          }}>
-            <AlertCircle size={18} />
+          <div className="bg-red-500/15 border border-red-500/30 text-red-300 p-3.5 rounded-xl text-xs mb-5 flex items-center gap-2.5">
+            <AlertCircle size={18} className="text-red-400 shrink-0" />
             <span>{errorMsg}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
-          
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+
           {/* Tipe Server Cards */}
           <div>
-            <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '10px' }}>
+            <label className="block text-xs font-bold text-slate-300 mb-2.5">
               Tipe Infrastruktur Server:
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-              
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+
               {/* Standar VPS */}
               <div
                 onClick={() => handleChange({ target: { name: 'type', value: 'vps' } })}
-                style={{
-                  padding: '16px',
-                  borderRadius: '16px',
-                  border: formData.type === 'vps' ? '2px solid #00f2fe' : '1px solid rgba(255,255,255,0.1)',
-                  background: formData.type === 'vps' ? 'linear-gradient(135deg, rgba(0, 242, 254, 0.15) 0%, rgba(0, 242, 254, 0.05) 100%)' : 'rgba(0,0,0,0.3)',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '14px'
-                }}
+                className={`p-4 rounded-2xl border cursor-pointer transition-all duration-200 flex items-center gap-3.5 ${formData.type === 'vps'
+                  ? 'border-cyan-400 bg-gradient-to-br from-cyan-500/15 to-cyan-500/5 shadow-md shadow-cyan-500/10'
+                  : 'border-slate-800 bg-black/30 hover:border-slate-700'
+                  }`}
               >
-                <div style={{
-                  background: formData.type === 'vps' ? 'rgba(0, 242, 254, 0.25)' : 'rgba(255,255,255,0.05)',
-                  padding: '10px',
-                  borderRadius: '12px'
-                }}>
-                  <Server size={22} color={formData.type === 'vps' ? '#00f2fe' : 'var(--text-muted)'} />
+                <div className={`p-2.5 rounded-xl ${formData.type === 'vps' ? 'bg-cyan-500/25' : 'bg-white/5'}`}>
+                  <Server size={22} className={formData.type === 'vps' ? 'text-cyan-400' : 'text-slate-400'} />
                 </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: formData.type === 'vps' ? '#00f2fe' : '#fff' }}>
+                  <div className={`font-bold text-sm ${formData.type === 'vps' ? 'text-cyan-400' : 'text-white'}`}>
                     🖥️ Standar VPS
                   </div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  <div className="text-xs text-slate-400 mt-0.5">
                     Server Linux fisik atau VM independen.
                   </div>
                 </div>
@@ -215,30 +174,19 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
               {/* POD Container */}
               <div
                 onClick={() => handleChange({ target: { name: 'type', value: 'pod' } })}
-                style={{
-                  padding: '16px',
-                  borderRadius: '16px',
-                  border: formData.type === 'pod' ? '2px solid #c084fc' : '1px solid rgba(255,255,255,0.1)',
-                  background: formData.type === 'pod' ? 'linear-gradient(135deg, rgba(192, 132, 252, 0.15) 0%, rgba(192, 132, 252, 0.05) 100%)' : 'rgba(0,0,0,0.3)',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '14px'
-                }}
+                className={`p-4 rounded-2xl border cursor-pointer transition-all duration-200 flex items-center gap-3.5 ${formData.type === 'pod'
+                  ? 'border-purple-400 bg-gradient-to-br from-purple-500/15 to-purple-500/5 shadow-md shadow-purple-500/10'
+                  : 'border-slate-800 bg-black/30 hover:border-slate-700'
+                  }`}
               >
-                <div style={{
-                  background: formData.type === 'pod' ? 'rgba(192, 132, 252, 0.25)' : 'rgba(255,255,255,0.05)',
-                  padding: '10px',
-                  borderRadius: '12px'
-                }}>
-                  <Box size={22} color={formData.type === 'pod' ? '#c084fc' : 'var(--text-muted)'} />
+                <div className={`p-2.5 rounded-xl ${formData.type === 'pod' ? 'bg-purple-500/25' : 'bg-white/5'}`}>
+                  <Box size={22} className={formData.type === 'pod' ? 'text-purple-400' : 'text-slate-400'} />
                 </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: formData.type === 'pod' ? '#c084fc' : '#fff' }}>
+                  <div className={`font-bold text-sm ${formData.type === 'pod' ? 'text-purple-400' : 'text-white'}`}>
                     📦 POD Container
                   </div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  <div className="text-xs text-slate-400 mt-0.5">
                     Lingkungan terisolasi RunPod / Server POD.
                   </div>
                 </div>
@@ -249,63 +197,34 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
 
           {/* Versi POD Selector (V3 vs V2) */}
           {formData.type === 'pod' && (
-            <div style={{
-              background: 'rgba(192, 132, 252, 0.05)',
-              border: '1px solid rgba(192, 132, 252, 0.2)',
-              borderRadius: '16px',
-              padding: '18px 20px'
-            }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#c084fc', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <div className="bg-purple-500/5 border border-purple-500/20 rounded-2xl p-4.5">
+              <label className="block text-xs font-bold text-purple-400 mb-2.5 uppercase tracking-wider">
                 Pilih Versi POD Server:
               </label>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                
+              <div className="flex gap-3">
+
                 {/* Versi 3 */}
                 <button
                   type="button"
                   onClick={() => handleChange({ target: { name: 'pod_version', value: 'v3' } })}
-                  style={{
-                    flex: 1,
-                    padding: '12px 16px',
-                    borderRadius: '12px',
-                    border: (formData.pod_version || 'v3') === 'v3' ? '2px solid #c084fc' : '1px solid rgba(255,255,255,0.1)',
-                    background: (formData.pod_version || 'v3') === 'v3' ? 'rgba(192, 132, 252, 0.25)' : 'rgba(0,0,0,0.3)',
-                    color: (formData.pod_version || 'v3') === 'v3' ? '#c084fc' : 'var(--text-muted)',
-                    fontWeight: 700,
-                    fontSize: '0.9rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justify: 'center',
-                    gap: '8px',
-                    transition: 'all 0.2s ease'
-                  }}
+                  className={`flex-1 p-3 rounded-xl border font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${(formData.pod_version || 'v3') === 'v3'
+                    ? 'border-purple-400 bg-purple-500/25 text-purple-300'
+                    : 'border-slate-800 bg-black/30 text-slate-400 hover:text-slate-200'
+                    }`}
                 >
-                  <Box size={16} /> 📦 POD Versi 3 (V3)
+                  <Box size={16} /> POD Versi 3 (V3)
                 </button>
 
                 {/* Versi 2 */}
                 <button
                   type="button"
                   onClick={() => handleChange({ target: { name: 'pod_version', value: 'v2' } })}
-                  style={{
-                    flex: 1,
-                    padding: '12px 16px',
-                    borderRadius: '12px',
-                    border: formData.pod_version === 'v2' ? '2px solid #f59e0b' : '1px solid rgba(255,255,255,0.1)',
-                    background: formData.pod_version === 'v2' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(0,0,0,0.3)',
-                    color: formData.pod_version === 'v2' ? '#f59e0b' : 'var(--text-muted)',
-                    fontWeight: 700,
-                    fontSize: '0.9rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justify: 'center',
-                    gap: '8px',
-                    transition: 'all 0.2s ease'
-                  }}
+                  className={`flex-1 p-3 rounded-xl border font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${formData.pod_version === 'v2'
+                    ? 'border-amber-400 bg-amber-500/25 text-amber-300'
+                    : 'border-slate-800 bg-black/30 text-slate-400 hover:text-slate-200'
+                    }`}
                 >
-                  <Box size={16} /> 📦 POD Versi 2 (V2)
+                  <Box size={16} /> POD Versi 2 (V2)
                 </button>
 
               </div>
@@ -313,97 +232,59 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
           )}
 
           {/* Form Input Fields Container */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="flex flex-col gap-4">
 
             {/* Nama Server */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">
                 Nama Label Server:
               </label>
-              <div style={{ position: 'relative' }}>
-                <Server size={18} color="var(--primary-cyan)" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.8 }} />
+              <div className="relative">
+                <Server size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-cyan-400 opacity-80" />
                 <input
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
                   placeholder="Contoh: Production Server / POD 33 Main"
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px 12px 48px',
-                    background: 'rgba(0, 0, 0, 0.45)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    borderRadius: '12px',
-                    color: '#fff',
-                    fontSize: '0.92rem',
-                    outline: 'none',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = '#00f2fe'}
-                  onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)'}
+                  className="w-full pl-12 pr-4 py-2.5 bg-black/45 border border-slate-800 focus:border-cyan-400 rounded-xl text-white text-sm outline-none transition-colors"
                   required
                 />
               </div>
             </div>
 
             {/* Host IP & SSH Port */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '14px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>
+            <div className="grid grid-cols-3 gap-3.5">
+              <div className="col-span-2">
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">
                   Host IP / Domain SSH:
                 </label>
-                <div style={{ position: 'relative' }}>
-                  <Globe size={18} color="#38bdf8" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.8 }} />
+                <div className="relative">
+                  <Globe size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-sky-400 opacity-80" />
                   <input
                     type="text"
                     name="host"
                     value={formData.host}
                     onChange={handleChange}
                     placeholder="10.10.3.33"
-                    className="font-mono"
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px 12px 48px',
-                      background: 'rgba(0, 0, 0, 0.45)',
-                      border: '1px solid rgba(255, 255, 255, 0.15)',
-                      borderRadius: '12px',
-                      color: '#fff',
-                      fontSize: '0.92rem',
-                      outline: 'none',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = '#38bdf8'}
-                    onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)'}
+                    className="w-full pl-12 pr-4 py-2.5 bg-black/45 border border-slate-800 focus:border-sky-400 rounded-xl text-white text-sm font-mono outline-none transition-colors"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">
                   Port SSH:
                 </label>
-                <div style={{ position: 'relative' }}>
-                  <Hash size={18} color="#38bdf8" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', opacity: 0.8 }} />
+                <div className="relative">
+                  <Hash size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sky-400 opacity-80" />
                   <input
                     type="number"
                     name="port"
                     value={formData.port}
                     onChange={handleChange}
-                    className="font-mono"
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px 12px 42px',
-                      background: 'rgba(0, 0, 0, 0.45)',
-                      border: '1px solid rgba(255, 255, 255, 0.15)',
-                      borderRadius: '12px',
-                      color: '#fff',
-                      fontSize: '0.92rem',
-                      outline: 'none',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = '#38bdf8'}
-                    onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)'}
+                    className="w-full pl-10 pr-3 py-2.5 bg-black/45 border border-slate-800 focus:border-sky-400 rounded-xl text-white text-sm font-mono outline-none transition-colors"
                   />
                 </div>
               </div>
@@ -411,55 +292,32 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
 
             {/* SSH Username */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">
                 SSH Username:
               </label>
-              <div style={{ position: 'relative' }}>
-                <User size={18} color="#c084fc" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.8 }} />
+              <div className="relative">
+                <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-purple-400 opacity-80" />
                 <input
                   type="text"
                   name="username"
                   value={formData.username}
                   onChange={handleChange}
                   placeholder="pod / root"
-                  className="font-mono"
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px 12px 48px',
-                    background: 'rgba(0, 0, 0, 0.45)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    borderRadius: '12px',
-                    color: '#fff',
-                    fontSize: '0.92rem',
-                    outline: 'none',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = '#c084fc'}
-                  onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)'}
+                  className="w-full pl-12 pr-4 py-2.5 bg-black/45 border border-slate-800 focus:border-purple-400 rounded-xl text-white text-sm font-mono outline-none transition-colors"
                 />
               </div>
             </div>
 
             {/* Authentication Type */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">
                 Tipe Otentikasi SSH:
               </label>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <label style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  padding: '12px 16px',
-                  background: formData.auth_type === 'password' ? 'rgba(0, 242, 254, 0.12)' : 'rgba(0,0,0,0.3)',
-                  border: `1px solid ${formData.auth_type === 'password' ? '#00f2fe' : 'rgba(255,255,255,0.12)'}`,
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  fontSize: '0.88rem',
-                  fontWeight: 600,
-                  color: formData.auth_type === 'password' ? '#00f2fe' : '#fff'
-                }}>
+              <div className="flex gap-3">
+                <label className={`flex-1 flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer text-xs font-semibold transition-colors ${formData.auth_type === 'password'
+                  ? 'bg-cyan-500/12 border-cyan-400 text-cyan-400'
+                  : 'bg-black/30 border-slate-800 text-white'
+                  }`}>
                   <input
                     type="radio"
                     name="auth_type"
@@ -470,20 +328,10 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
                   <Lock size={16} /> Password SSH
                 </label>
 
-                <label style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  padding: '12px 16px',
-                  background: formData.auth_type === 'key' ? 'rgba(0, 242, 254, 0.12)' : 'rgba(0,0,0,0.3)',
-                  border: `1px solid ${formData.auth_type === 'key' ? '#00f2fe' : 'rgba(255,255,255,0.12)'}`,
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  fontSize: '0.88rem',
-                  fontWeight: 600,
-                  color: formData.auth_type === 'key' ? '#00f2fe' : '#fff'
-                }}>
+                <label className={`flex-1 flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer text-xs font-semibold transition-colors ${formData.auth_type === 'key'
+                  ? 'bg-cyan-500/12 border-cyan-400 text-cyan-400'
+                  : 'bg-black/30 border-slate-800 text-white'
+                  }`}>
                   <input
                     type="radio"
                     name="auth_type"
@@ -499,37 +347,24 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
             {/* Password Input */}
             {formData.auth_type === 'password' ? (
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">
                   Password SSH:
                 </label>
-                <div style={{ position: 'relative' }}>
-                  <Lock size={18} color="#00f2fe" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.8 }} />
+                <div className="relative">
+                  <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-cyan-400 opacity-80" />
                   <input
                     type="password"
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
                     placeholder={isEditMode ? '•••••••• (Biarkan kosong jika tidak diubah)' : 'Masukkan password SSH'}
-                    className="font-mono"
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px 12px 48px',
-                      background: 'rgba(0, 0, 0, 0.45)',
-                      border: '1px solid rgba(255, 255, 255, 0.15)',
-                      borderRadius: '12px',
-                      color: '#fff',
-                      fontSize: '0.92rem',
-                      outline: 'none',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = '#00f2fe'}
-                    onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)'}
+                    className="w-full pl-12 pr-4 py-2.5 bg-black/45 border border-slate-800 focus:border-cyan-400 rounded-xl text-white text-sm font-mono outline-none transition-colors"
                   />
                 </div>
               </div>
             ) : (
               <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">
                   SSH Private Key (PEM/RSA):
                 </label>
                 <textarea
@@ -538,21 +373,7 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
                   onChange={handleChange}
                   placeholder={isEditMode ? '•••••••• (Biarkan kosong jika tidak diubah)' : '-----BEGIN OPENSSH PRIVATE KEY-----'}
                   rows={4}
-                  className="font-mono"
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    background: 'rgba(0, 0, 0, 0.45)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    borderRadius: '12px',
-                    color: '#fff',
-                    fontSize: '0.85rem',
-                    outline: 'none',
-                    resize: 'vertical',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = '#00f2fe'}
-                  onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)'}
+                  className="w-full p-3 bg-black/45 border border-slate-800 focus:border-cyan-400 rounded-xl text-white text-xs font-mono outline-none transition-colors resize-y"
                 />
               </div>
             )}
@@ -561,30 +382,22 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
 
           {/* Test Connection Result Box */}
           {testResult && (
-            <div style={{
-              background: testResult.success ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-              border: `1px solid ${testResult.success ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
-              color: testResult.success ? '#6ee7b7' : '#fca5a5',
-              padding: '14px 18px',
-              borderRadius: '12px',
-              fontSize: '0.88rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px'
-            }}>
-              {testResult.success ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+            <div className={`p-3.5 rounded-xl text-xs flex items-center gap-2.5 border ${testResult.success
+              ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+              : 'bg-red-500/15 border-red-500/30 text-red-300'
+              }`}>
+              {testResult.success ? <CheckCircle size={20} className="text-emerald-400 shrink-0" /> : <AlertCircle size={20} className="text-red-400 shrink-0" />}
               <span>{testResult.message}</span>
             </div>
           )}
 
           {/* Modal Actions */}
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '10px' }}>
+          <div className="flex gap-3 justify-end mt-2">
             <button
               type="button"
               onClick={handleTestConnection}
               disabled={testing}
-              className="btn-secondary"
-              style={{ padding: '10px 18px', fontSize: '0.9rem' }}
+              className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-2 border border-slate-700 transition-colors cursor-pointer"
             >
               {testing ? <Loader2 className="animate-spin" size={16} /> : <Key size={16} />}
               <span>{testing ? 'Uji Koneksi...' : 'Uji Koneksi SSH'}</span>
@@ -593,8 +406,7 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
             <button
               type="submit"
               disabled={submitting}
-              className="btn-primary"
-              style={{ padding: '10px 22px', fontSize: '0.9rem' }}
+              className="px-5 py-2.5 bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-cyan-500/25 transition-all cursor-pointer"
             >
               {submitting ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle size={16} />}
               <span>{submitting ? 'Menyimpan...' : (isEditMode ? 'Simpan Perubahan' : 'Tambah Server')}</span>

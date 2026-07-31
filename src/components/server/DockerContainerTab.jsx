@@ -5,56 +5,45 @@ import DockerLogModal from './DockerLogModal';
 import { useLanguage } from '../../context/LanguageContext';
 
 const SkeletonDockerTable = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+  <div className="flex flex-col gap-4">
     {/* Tab Header Controls Skeleton */}
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <div className="skeleton-box" style={{ width: '20px', height: '20px', borderRadius: '4px' }}></div>
-        <div className="skeleton-box" style={{ width: '160px', height: '22px', borderRadius: '6px' }}></div>
+    <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex items-center gap-2">
+        <div className="skeleton-box w-5 h-5 rounded"></div>
+        <div className="skeleton-box w-40 h-5.5 rounded-md"></div>
       </div>
-      <div className="skeleton-box" style={{ width: '110px', height: '34px', borderRadius: '8px' }}></div>
+      <div className="skeleton-box w-28 h-8.5 rounded-lg"></div>
     </div>
 
     {/* Table Card Skeleton Container */}
-    <div className="glass-card" style={{ padding: '0', overflow: 'hidden', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+    <div className="glass-card p-0 overflow-hidden rounded-2xl border border-slate-800">
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-xs">
           <thead>
-            <tr style={{ background: 'rgba(0, 0, 0, 0.4)', borderBottom: '1px solid var(--border-color)' }}>
-              <th style={{ padding: '12px 14px', textAlign: 'left' }}><div className="skeleton-box" style={{ width: '110px', height: '14px', borderRadius: '4px' }}></div></th>
-              <th style={{ padding: '12px 14px', textAlign: 'left' }}><div className="skeleton-box" style={{ width: '90px', height: '14px', borderRadius: '4px' }}></div></th>
-              <th style={{ padding: '12px 14px', textAlign: 'left' }}><div className="skeleton-box" style={{ width: '70px', height: '14px', borderRadius: '4px' }}></div></th>
-              <th style={{ padding: '12px 14px', textAlign: 'left' }}><div className="skeleton-box" style={{ width: '100px', height: '14px', borderRadius: '4px' }}></div></th>
-              <th style={{ padding: '12px 14px', textAlign: 'right' }}><div className="skeleton-box" style={{ width: '80px', height: '14px', borderRadius: '4px', marginLeft: 'auto' }}></div></th>
+            <tr className="bg-black/40 border-b border-slate-800 text-left">
+              <th className="p-3"><div className="skeleton-box w-28 h-3.5 rounded"></div></th>
+              <th className="p-3"><div className="skeleton-box w-24 h-3.5 rounded"></div></th>
+              <th className="p-3"><div className="skeleton-box w-18 h-3.5 rounded"></div></th>
+              <th className="p-3"><div className="skeleton-box w-24 h-3.5 rounded"></div></th>
+              <th className="p-3 text-right"><div className="skeleton-box w-20 h-3.5 rounded ml-auto"></div></th>
             </tr>
           </thead>
           <tbody>
             {[1, 2, 3, 4].map((i) => (
-              <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                {/* Container Name & ID */}
-                <td style={{ padding: '14px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <div className="skeleton-box" style={{ width: '150px', height: '16px', borderRadius: '4px' }}></div>
-                    <div className="skeleton-box" style={{ width: '80px', height: '12px', borderRadius: '4px' }}></div>
+              <tr key={i} className="border-b border-white/5">
+                <td className="p-3.5">
+                  <div className="flex flex-col gap-1.5">
+                    <div className="skeleton-box w-36 h-4 rounded"></div>
+                    <div className="skeleton-box w-20 h-3 rounded"></div>
                   </div>
                 </td>
-                {/* Image Tag */}
-                <td style={{ padding: '14px' }}>
-                  <div className="skeleton-box" style={{ width: '120px', height: '14px', borderRadius: '4px' }}></div>
-                </td>
-                {/* Status Badge */}
-                <td style={{ padding: '14px' }}>
-                  <div className="skeleton-box" style={{ width: '85px', height: '24px', borderRadius: '20px' }}></div>
-                </td>
-                {/* Ports */}
-                <td style={{ padding: '14px' }}>
-                  <div className="skeleton-box" style={{ width: '110px', height: '14px', borderRadius: '4px' }}></div>
-                </td>
-                {/* Action Buttons */}
-                <td style={{ padding: '14px', textAlign: 'right' }}>
-                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                    <div className="skeleton-box" style={{ width: '80px', height: '32px', borderRadius: '8px' }}></div>
-                    <div className="skeleton-box" style={{ width: '34px', height: '32px', borderRadius: '8px' }}></div>
+                <td className="p-3.5"><div className="skeleton-box w-28 h-3.5 rounded"></div></td>
+                <td className="p-3.5"><div className="skeleton-box w-20 h-6 rounded-full"></div></td>
+                <td className="p-3.5"><div className="skeleton-box w-24 h-3.5 rounded"></div></td>
+                <td className="p-3.5 text-right">
+                  <div className="flex gap-2 justify-end">
+                    <div className="skeleton-box w-20 h-8 rounded-lg"></div>
+                    <div className="skeleton-box w-8 h-8 rounded-lg"></div>
                   </div>
                 </td>
               </tr>
@@ -133,70 +122,55 @@ export default function DockerContainerTab({ serverId }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div className="flex flex-col gap-4">
 
-      {/* Tab Header & Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Box size={20} color="#00f2fe" />
-          <h3 style={{ fontSize: '1.05rem', fontWeight: 600, color: '#fff' }}>
-            Daftar Aplikasi Docker ({containers.length})
+      {/* Tab Header Controls */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <Box className="text-purple-400" size={20} />
+          <h3 className="text-lg font-bold text-white">
+            Docker Applications ({containers.length} Running / Stopped)
           </h3>
         </div>
-        <button onClick={loadContainers} className="btn-secondary" style={{ padding: '6px 12px', fontSize: '0.82rem' }}>
-          <RefreshCw size={14} /> Refresh
+
+        <button
+          onClick={loadContainers}
+          className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+        >
+          <RefreshCw size={14} />
+          <span>Refresh Containers</span>
         </button>
       </div>
 
       {errorMsg && (
-        <div style={{
-          background: 'rgba(239, 68, 68, 0.15)',
-          border: '1px solid rgba(239, 68, 68, 0.3)',
-          color: '#fca5a5',
-          padding: '10px 14px',
-          borderRadius: '8px',
-          fontSize: '0.85rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          <AlertCircle size={16} />
+        <div className="bg-red-500/15 border border-red-500/30 text-red-300 p-3 rounded-xl text-xs flex items-center gap-2">
+          <AlertCircle size={16} className="text-red-400 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
       {actionSuccessMsg && (
-        <div style={{
-          background: 'rgba(16, 185, 129, 0.15)',
-          border: '1px solid rgba(16, 185, 129, 0.3)',
-          color: '#6ee7b7',
-          padding: '10px 14px',
-          borderRadius: '8px',
-          fontSize: '0.85rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          <CheckCircle size={16} />
+        <div className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 p-3 rounded-xl text-xs flex items-center gap-2">
+          <CheckCircle size={16} className="text-emerald-400 shrink-0" />
           <span>{actionSuccessMsg}</span>
         </div>
       )}
 
       {/* Containers Table */}
       {containers.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '36px', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', color: 'var(--text-muted)' }}>
+        <div className="text-center p-9 bg-black/20 rounded-2xl text-slate-400 text-xs">
           Tidak ada container Docker yang berjalan di server ini (atau Docker belum terinstall).
         </div>
       ) : (
-        <div style={{ overflowX: 'auto', background: 'rgba(0, 0, 0, 0.25)', border: '1px solid var(--border-color)', borderRadius: '12px' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+        <div className="overflow-x-auto bg-black/25 border border-slate-800 rounded-2xl">
+          <table className="w-full border-collapse text-xs">
             <thead>
-              <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                <th style={{ padding: '12px 14px' }}>Nama Container</th>
-                <th style={{ padding: '12px 14px' }}>Image Tag</th>
-                <th style={{ padding: '12px 14px' }}>Status / State</th>
-                <th style={{ padding: '12px 14px' }}>Ports</th>
-                <th style={{ padding: '12px 14px', textAlign: 'right' }}>Aksi Admin</th>
+              <tr className="border-b border-slate-800 text-left text-slate-400 bg-slate-900/50">
+                <th className="p-3">Nama Container</th>
+                <th className="p-3">Image Tag</th>
+                <th className="p-3">Status / State</th>
+                <th className="p-3">Ports</th>
+                <th className="p-3 text-right">Aksi Admin</th>
               </tr>
             </thead>
             <tbody>
@@ -207,55 +181,49 @@ export default function DockerContainerTab({ serverId }) {
                 const isStoppingThis = stoppingContainer === c.name;
 
                 return (
-                  <tr key={c.id || index} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <tr key={c.id || index} className="border-b border-white/5 hover:bg-white/[0.02]">
 
                     {/* Container Name & ID */}
-                    <td style={{ padding: '12px 14px' }}>
-                      <div style={{ fontWeight: 600, color: '#fff' }} className="font-mono">{c.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }} className="font-mono">ID: {c.id}</div>
+                    <td className="p-3 font-mono">
+                      <div className="font-semibold text-white">{c.name}</div>
+                      <div className="text-[10px] text-slate-500">ID: {c.id}</div>
                     </td>
 
                     {/* Image */}
-                    <td style={{ padding: '12px 14px', color: 'var(--text-muted)' }} className="font-mono">
+                    <td className="p-3 text-slate-400 font-mono">
                       {c.image}
                     </td>
 
                     {/* Status / State Badge */}
-                    <td style={{ padding: '12px 14px' }}>
-                      <span style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        padding: '3px 10px',
-                        borderRadius: '20px',
-                        background: isRunning ? 'rgba(16, 185, 129, 0.15)' : (isExited ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)'),
-                        color: isRunning ? '#10b981' : (isExited ? '#ef4444' : '#f59e0b'),
-                        border: `1px solid ${isRunning ? 'rgba(16, 185, 129, 0.3)' : (isExited ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)')}`
-                      }}>
-                        <span className={`live-dot ${isRunning ? 'online' : 'offline'}`} style={{ width: '6px', height: '6px' }}></span>
+                    <td className="p-3">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                        isRunning
+                          ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                          : isExited
+                          ? 'bg-red-500/15 text-red-400 border-red-500/30'
+                          : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                      }`}>
+                        <span className={`live-dot ${isRunning ? 'online' : 'offline'} w-1.5 h-1.5`}></span>
                         {c.status || c.state}
                       </span>
                     </td>
 
                     {/* Exposed Ports */}
-                    <td style={{ padding: '12px 14px', color: 'var(--text-muted)', fontSize: '0.78rem' }} className="font-mono">
+                    <td className="p-3 text-slate-400 text-xs font-mono">
                       {c.ports || '-'}
                     </td>
 
                     {/* Admin Action Buttons */}
-                    <td style={{ padding: '12px 14px', textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                    <td className="p-3 text-right">
+                      <div className="flex gap-2 justify-end">
 
                         {/* Log Console Button */}
                         <button
                           onClick={() => setSelectedLogContainer(c.name)}
-                          className="btn-secondary"
-                          style={{ padding: '5px 10px', fontSize: '0.78rem' }}
+                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
                           title="Lihat Log Container"
                         >
-                          <Terminal size={14} color="#00f2fe" />
+                          <Terminal size={14} className="text-cyan-400" />
                           <span>Logs</span>
                         </button>
 
@@ -263,16 +231,11 @@ export default function DockerContainerTab({ serverId }) {
                         <button
                           onClick={() => handleStop(c.name)}
                           disabled={isStoppingThis || isRestartingThis || !isRunning}
-                          className="btn-secondary"
-                          style={{
-                            padding: '5px 10px',
-                            fontSize: '0.78rem',
-                            borderColor: 'rgba(239, 68, 68, 0.4)',
-                            color: '#ef4444',
-                            background: 'rgba(239, 68, 68, 0.1)',
-                            opacity: (!isRunning && !isStoppingThis) ? 0.5 : 1,
-                            cursor: (!isRunning && !isStoppingThis) ? 'not-allowed' : 'pointer'
-                          }}
+                          className={`px-2.5 py-1 border rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer ${
+                            isStoppingThis || isRestartingThis || !isRunning
+                              ? 'bg-red-500/10 border-red-500/20 text-red-400 opacity-50 cursor-not-allowed'
+                              : 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20'
+                          }`}
                           title="Hentikan (docker stop) Container Ini"
                         >
                           {isStoppingThis ? (
@@ -287,14 +250,11 @@ export default function DockerContainerTab({ serverId }) {
                         <button
                           onClick={() => handleRestart(c.name)}
                           disabled={isRestartingThis || isStoppingThis}
-                          className="btn-secondary"
-                          style={{
-                            padding: '5px 10px',
-                            fontSize: '0.78rem',
-                            borderColor: 'rgba(245, 158, 11, 0.4)',
-                            color: '#f59e0b',
-                            background: 'rgba(245, 158, 11, 0.1)'
-                          }}
+                          className={`px-2.5 py-1 border rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer ${
+                            isRestartingThis || isStoppingThis
+                              ? 'bg-amber-500/10 border-amber-500/20 text-amber-400 opacity-50 cursor-not-allowed'
+                              : 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20'
+                          }`}
                           title="Restart Container Ini"
                         >
                           {isRestartingThis ? (

@@ -2,19 +2,14 @@ import React from 'react';
 
 export default function SkeletonPerformanceSummary() {
   return (
-    <section style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-      gap: '16px',
-      marginBottom: '28px'
-    }}>
+    <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
       {[1, 2, 3, 4, 5].map(i => (
-        <div key={i} className="glass-card" style={{ padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div className="skeleton-box" style={{ width: '120px', height: '14px' }}></div>
-            <div className="skeleton-box" style={{ width: '18px', height: '18px', borderRadius: '50%' }}></div>
+        <div key={i} className="glass-card p-4 rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <div className="skeleton-box w-28 h-3.5 rounded-md"></div>
+            <div className="skeleton-box w-7 h-7 rounded-lg"></div>
           </div>
-          <div className="skeleton-box" style={{ width: '100px', height: '24px', borderRadius: '6px' }}></div>
+          <div className="skeleton-box w-24 h-7 rounded-lg mt-3"></div>
         </div>
       ))}
     </section>

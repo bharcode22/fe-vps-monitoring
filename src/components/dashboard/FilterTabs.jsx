@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grid, Search, X, Server, Box, Database, HardDrive } from 'lucide-react';
+import { LayoutGrid, Search, X, Server, Box, Database, HardDrive } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
 export default function FilterTabs({
@@ -17,54 +17,29 @@ export default function FilterTabs({
   const { t } = useLanguage();
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#fff', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Grid size={20} color="#00f2fe" />
+    <div className="flex items-center justify-between flex-wrap gap-4">
+      
+      {/* Title & Search Bar */}
+      <div className="flex items-center gap-4 flex-wrap">
+        <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
+          <LayoutGrid className="text-cyan-400 w-5 h-5" />
           <span>{t('connectedInfrastructure')}</span>
         </h2>
 
         {/* Real-time Search Input Bar */}
-        <div style={{
-          position: 'relative',
-          display: 'flex',
-          alignItems: 'center',
-          minWidth: '240px'
-        }}>
-          <Search size={16} color="var(--text-dim)" style={{ position: 'absolute', left: '12px', pointerEvents: 'none' }} />
+        <div className="relative flex items-center min-w-[240px]">
+          <Search size={16} className="absolute left-3 text-slate-500 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t('searchPlaceholder')}
-            style={{
-              width: '100%',
-              padding: '7px 32px 7px 36px',
-              background: 'rgba(0, 0, 0, 0.35)',
-              border: '1px solid var(--border-color)',
-              borderRadius: '10px',
-              color: '#fff',
-              fontSize: '0.88rem',
-              outline: 'none',
-              transition: 'all 0.2s ease'
-            }}
-            onFocus={(e) => e.target.style.borderColor = '#00f2fe'}
-            onBlur={(e) => e.target.style.borderColor = 'var(--border-color)'}
+            className="w-full pl-9 pr-8 py-1.5 bg-black/40 border border-slate-800 focus:border-cyan-400 rounded-xl text-white text-xs outline-none transition-all duration-200"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              style={{
-                position: 'absolute',
-                right: '8px',
-                background: 'none',
-                border: 'none',
-                color: 'var(--text-muted)',
-                cursor: 'pointer',
-                padding: '2px',
-                display: 'flex',
-                alignItems: 'center'
-              }}
+              className="absolute right-2.5 text-slate-400 hover:text-slate-200 p-0.5 cursor-pointer"
             >
               <X size={14} />
             </button>
@@ -72,23 +47,17 @@ export default function FilterTabs({
         </div>
       </div>
 
-      {/* Requested Category Filter Buttons: Semua, VPS, POD V3, POD V2, Database, Storage */}
-      <div style={{ display: 'flex', gap: '8px', background: 'rgba(0, 0, 0, 0.35)', padding: '4px', borderRadius: '12px', border: '1px solid var(--border-color)', flexWrap: 'wrap' }}>
+      {/* Category Filter Buttons */}
+      <div className="flex gap-1.5 bg-black/40 p-1 rounded-xl border border-slate-800 flex-wrap">
         
         {/* Semua (All) */}
         <button
           onClick={() => setFilterType('all')}
-          style={{
-            background: filterType === 'all' ? 'linear-gradient(135deg, #00f2fe 0%, #4facfe 100%)' : 'transparent',
-            color: filterType === 'all' ? '#0b0f19' : 'var(--text-muted)',
-            border: 'none',
-            padding: '6px 14px',
-            borderRadius: '8px',
-            fontSize: '0.85rem',
-            cursor: 'pointer',
-            fontWeight: 700,
-            transition: 'all 0.2s ease'
-          }}
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer ${
+            filterType === 'all'
+              ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 shadow-sm shadow-cyan-500/20'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
         >
           {t('all')} ({totalCount})
         </button>
@@ -96,91 +65,66 @@ export default function FilterTabs({
         {/* VPS */}
         <button
           onClick={() => setFilterType('vps')}
-          style={{
-            background: filterType === 'vps' ? 'rgba(0, 242, 254, 0.2)' : 'transparent',
-            color: filterType === 'vps' ? '#00f2fe' : 'var(--text-muted)',
-            border: filterType === 'vps' ? '1px solid rgba(0, 242, 254, 0.4)' : '1px solid transparent',
-            padding: '6px 14px',
-            borderRadius: '8px',
-            fontSize: '0.85rem',
-            cursor: 'pointer',
-            fontWeight: 700,
-            transition: 'all 0.2s ease'
-          }}
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
+            filterType === 'vps'
+              ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
+              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+          }`}
         >
-          🖥️ VPS ({vpsCount || 0})
+          <Server size={14} />
+          <span>VPS ({vpsCount || 0})</span>
         </button>
 
         {/* POD V3 */}
         <button
           onClick={() => setFilterType('pod_v3')}
-          style={{
-            background: filterType === 'pod_v3' ? 'rgba(192, 132, 252, 0.25)' : 'transparent',
-            color: filterType === 'pod_v3' ? '#c084fc' : 'var(--text-muted)',
-            border: filterType === 'pod_v3' ? '1px solid #c084fc' : '1px solid transparent',
-            padding: '6px 14px',
-            borderRadius: '8px',
-            fontSize: '0.85rem',
-            cursor: 'pointer',
-            fontWeight: 700,
-            transition: 'all 0.2s ease'
-          }}
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
+            filterType === 'pod_v3'
+              ? 'bg-purple-500/25 text-purple-400 border border-purple-400'
+              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+          }`}
         >
-          📦 POD V3 ({podV3Count || 0})
+          <Box size={14} />
+          <span>POD V3 ({podV3Count || 0})</span>
         </button>
 
         {/* POD V2 */}
         <button
           onClick={() => setFilterType('pod_v2')}
-          style={{
-            background: filterType === 'pod_v2' ? 'rgba(245, 158, 11, 0.25)' : 'transparent',
-            color: filterType === 'pod_v2' ? '#f59e0b' : 'var(--text-muted)',
-            border: filterType === 'pod_v2' ? '1px solid #f59e0b' : '1px solid transparent',
-            padding: '6px 14px',
-            borderRadius: '8px',
-            fontSize: '0.85rem',
-            cursor: 'pointer',
-            fontWeight: 700,
-            transition: 'all 0.2s ease'
-          }}
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
+            filterType === 'pod_v2'
+              ? 'bg-amber-500/25 text-amber-400 border border-amber-400'
+              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+          }`}
         >
-          📦 POD V2 ({podV2Count || 0})
+          <Box size={14} />
+          <span>POD V2 ({podV2Count || 0})</span>
         </button>
 
         {/* Database (PostgreSQL) */}
         <button
           onClick={() => setFilterType('postgresql')}
-          style={{
-            background: filterType === 'postgresql' ? 'rgba(56, 189, 248, 0.25)' : 'transparent',
-            color: filterType === 'postgresql' ? '#38bdf8' : 'var(--text-muted)',
-            border: filterType === 'postgresql' ? '1px solid #38bdf8' : '1px solid transparent',
-            padding: '6px 14px',
-            borderRadius: '8px',
-            fontSize: '0.85rem',
-            cursor: 'pointer',
-            fontWeight: 700,
-            transition: 'all 0.2s ease'
-          }}
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
+            filterType === 'postgresql'
+              ? 'bg-sky-500/25 text-sky-400 border border-sky-400'
+              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+          }`}
         >
-          🐘 Database ({postgresCount || 0})
+          <Database size={14} />
+          <span>Database ({postgresCount || 0})</span>
         </button>
 
         {/* Storage (MinIO & S3) */}
         <button
           onClick={() => setFilterType('storage')}
-          style={{
-            background: filterType === 'storage' ? 'rgba(236, 72, 153, 0.25)' : 'transparent',
-            color: filterType === 'storage' ? '#ec4899' : 'var(--text-muted)',
-            border: filterType === 'storage' ? '1px solid #ec4899' : '1px solid transparent',
-            padding: '6px 14px',
-            borderRadius: '8px',
-            fontSize: '0.85rem',
-            cursor: 'pointer',
-            fontWeight: 700,
-            transition: 'all 0.2s ease'
-          }}
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
+            filterType === 'storage'
+              ? 'bg-pink-500/25 text-pink-400 border border-pink-400'
+              : 'text-slate-400 hover:text-slate-200 border border-transparent'
+          }`}
         >
-          🪣 Storage ({storageCount || 0})
+          <HardDrive size={14} />
+          <span>Storage ({storageCount || 0})</span>
         </button>
 
       </div>

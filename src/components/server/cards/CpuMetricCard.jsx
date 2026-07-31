@@ -3,29 +3,27 @@ import { Cpu } from 'lucide-react';
 import { getProgressColor } from '../../../utils/formatters';
 
 export default function CpuMetricCard({ cpuUsage = 0, cpuCores = 1 }) {
-  const usage = Math.min(100, Math.max(0, cpuUsage));
+  const usage = Math.min(100, Math.max(0, Number(cpuUsage) || 0));
 
   return (
-    <div style={{
-      background: 'rgba(255, 255, 255, 0.03)',
-      border: '1px solid var(--border-color)',
-      borderRadius: '12px',
-      padding: '14px'
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-        <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Cpu size={15} color="#38bdf8" /> CPU Load
-        </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ fontSize: '0.7rem', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', padding: '1px 6px', borderRadius: '4px', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
-            {cpuCores} Cores
-          </span>
-          <span className="font-mono" style={{ fontWeight: 600, color: '#fff', fontSize: '0.95rem' }}>
-            {usage}%
-          </span>
+    <div className="bg-slate-900/60 border border-slate-800/80 hover:border-sky-500/30 rounded-2xl p-3.5 flex flex-col justify-between transition-all duration-200">
+      <div className="flex items-center justify-between gap-1 mb-1.5">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Cpu size={16} className="text-sky-400 shrink-0" />
+          <span className="text-xs font-semibold text-slate-300 truncate">CPU Load</span>
         </div>
+        <span className="font-mono font-extrabold text-white text-base shrink-0">
+          {usage}%
+        </span>
       </div>
-      <div className="progress-bar-bg">
+
+      <div className="flex items-center justify-between text-[10px] font-mono mb-1.5">
+        <span className="text-sky-400/90 font-bold bg-sky-500/15 border border-sky-500/30 px-1.5 py-0.5 rounded-md">
+          {cpuCores} Cores
+        </span>
+      </div>
+
+      <div className="progress-bar-bg my-0.5">
         <div
           className="progress-bar-fill"
           style={{

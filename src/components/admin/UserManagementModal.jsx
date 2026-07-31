@@ -42,169 +42,140 @@ export default function UserManagementModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div
-        className="glass-card modal-aos-content"
+        className="w-[92vw] max-w-5xl max-h-[90vh] overflow-y-auto p-6 md:p-8 bg-slate-950 border border-cyan-500/30 rounded-3xl shadow-2xl shadow-black/90"
         onClick={(e) => e.stopPropagation()}
-        style={{
-          width: '92vw',
-          maxWidth: '1100px',
-          padding: '34px',
-          maxHeight: '90vh',
-          overflowY: 'auto'
-        }}
       >
         {/* Modal Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Users color="#00f2fe" size={24} />
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#fff' }}>
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2.5">
+            <Users className="text-cyan-400 w-6 h-6" />
+            <h2 className="text-xl font-bold text-white">
               Kelola Persetujuan Pengguna (User Approval)
             </h2>
           </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button onClick={loadUsers} className="btn-secondary" style={{ padding: '6px 12px', fontSize: '0.82rem' }}>
+          <div className="flex gap-2">
+            <button onClick={loadUsers} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer">
               <RefreshCw size={14} /> Refresh
             </button>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+            <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors cursor-pointer p-1">
               <X size={20} />
             </button>
           </div>
         </div>
 
         {errorMsg && (
-          <div style={{
-            background: 'rgba(239, 68, 68, 0.15)',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
-            color: '#fca5a5',
-            padding: '10px 14px',
-            borderRadius: '8px',
-            fontSize: '0.85rem',
-            marginBottom: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <AlertCircle size={16} />
+          <div className="bg-red-500/15 border border-red-500/30 text-red-300 p-3 rounded-xl text-xs mb-4 flex items-center gap-2">
+            <AlertCircle size={16} className="text-red-400 shrink-0" />
             <span>{errorMsg}</span>
           </div>
         )}
 
         {actionSuccess && (
-          <div style={{
-            background: 'rgba(16, 185, 129, 0.15)',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
-            color: '#6ee7b7',
-            padding: '10px 14px',
-            borderRadius: '8px',
-            fontSize: '0.85rem',
-            marginBottom: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <ShieldCheck size={16} />
+          <div className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 p-3 rounded-xl text-xs mb-4 flex items-center gap-2">
+            <Check size={16} className="text-emerald-400 shrink-0" />
             <span>{actionSuccess}</span>
           </div>
         )}
 
-        {/* Users Table */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
-            Memuat daftar pengguna...
-          </div>
-        ) : users.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
-            Belum ada akun pengguna terdaftar.
+          <div className="p-10 text-center text-slate-400 flex items-center justify-center gap-2 font-medium">
+            <RefreshCw className="animate-spin text-cyan-400" size={18} />
+            <span>Memuat data akun pengguna...</span>
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+          <div className="overflow-x-auto bg-black/40 border border-slate-800 rounded-2xl">
+            <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-muted)' }}>
-                  <th style={{ padding: '10px' }}>User / Email</th>
-                  <th style={{ padding: '10px' }}>Role</th>
-                  <th style={{ padding: '10px' }}>Status</th>
-                  <th style={{ padding: '10px', textAlign: 'right' }}>Aksi Approval</th>
+                <tr className="border-b border-slate-800 text-slate-400 bg-slate-900/50">
+                  <th className="p-3.5">User Profile</th>
+                  <th className="p-3.5">Email</th>
+                  <th className="p-3.5">Status Persetujuan</th>
+                  <th className="p-3.5">Hak Akses Role</th>
+                  <th className="p-3.5 text-right">Aksi Admin</th>
                 </tr>
               </thead>
               <tbody>
-                {users.map(u => {
-                  const isSuperAdmin = u.email === 'zaqqwer758@gmail.com';
+                {users.map((u) => {
+                  const isSuperAdmin = u.role === 'superadmin';
                   const isApproved = u.status === 'approved';
                   const isPending = u.status === 'pending';
 
                   return (
-                    <tr key={u.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <td style={{ padding: '12px 10px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <tr key={u.id} className="border-b border-white/5 hover:bg-white/[0.02]">
+                      {/* Name & Picture */}
+                      <td className="p-3.5">
+                        <div className="flex items-center gap-2.5">
                           {u.picture ? (
-                            <img src={u.picture} alt={u.name} style={{ width: '32px', height: '32px', borderRadius: '50%' }} />
+                            <img src={u.picture} alt={u.name} className="w-7 h-7 rounded-full" />
                           ) : (
-                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(0, 242, 254, 0.2)', color: '#00f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-                              {u.email[0].toUpperCase()}
+                            <div className="w-7 h-7 rounded-full bg-cyan-400 text-slate-950 font-bold flex items-center justify-center text-xs">
+                              {u.name ? u.name[0] : 'U'}
                             </div>
                           )}
-                          <div>
-                            <div style={{ fontWeight: 600, color: '#fff' }}>{u.name || u.email}</div>
-                            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }} className="font-mono">{u.email}</div>
-                          </div>
+                          <div className="font-semibold text-white">{u.name || 'User'}</div>
                         </div>
                       </td>
 
-                      <td style={{ padding: '12px 10px' }}>
-                        <span style={{
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          background: u.role === 'super_admin' ? 'rgba(0, 242, 254, 0.2)' : 'rgba(192, 132, 252, 0.2)',
-                          color: u.role === 'super_admin' ? '#00f2fe' : '#c084fc'
-                        }}>
-                          {u.role === 'super_admin' ? '⭐ Super Admin' : 'Admin'}
+                      {/* Email */}
+                      <td className="p-3.5 text-slate-300 font-mono">
+                        {u.email}
+                      </td>
+
+                      {/* Status */}
+                      <td className="p-3.5">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                          isApproved
+                            ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                            : isPending
+                            ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                            : 'bg-red-500/15 text-red-400 border-red-500/30'
+                        }`}>
+                          {isApproved && <ShieldCheck size={13} />}
+                          {isPending && <Clock size={13} />}
+                          {!isApproved && !isPending && <UserX size={13} />}
+                          <span className="uppercase">{u.status}</span>
                         </span>
                       </td>
 
-                      <td style={{ padding: '12px 10px' }}>
-                        <span style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          fontSize: '0.78rem',
-                          fontWeight: 600,
-                          padding: '3px 10px',
-                          borderRadius: '20px',
-                          background: isApproved ? 'rgba(16, 185, 129, 0.15)' : (isPending ? 'rgba(245, 158, 11, 0.15)' : 'rgba(239, 68, 68, 0.15)'),
-                          color: isApproved ? '#10b981' : (isPending ? '#f59e0b' : '#ef4444')
-                        }}>
-                          {isApproved ? <ShieldCheck size={14} /> : (isPending ? <Clock size={14} /> : <UserX size={14} />)}
-                          {isApproved ? 'Approved' : (isPending ? 'Pending' : 'Rejected')}
+                      {/* Role */}
+                      <td className="p-3.5">
+                        <span className={`font-bold ${isSuperAdmin ? 'text-cyan-400' : 'text-purple-400'}`}>
+                          {isSuperAdmin ? '⭐ Super Admin' : 'Admin'}
                         </span>
                       </td>
 
-                      <td style={{ padding: '12px 10px', textAlign: 'right' }}>
-                        {isSuperAdmin ? (
-                          <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>(Utama)</span>
-                        ) : (
-                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                            {!isApproved && (
+                      {/* Actions */}
+                      <td className="p-3.5 text-right">
+                        {!isSuperAdmin && (
+                          <div className="flex gap-2 justify-end">
+                            {isPending && (
                               <button
                                 onClick={() => handleUpdateStatus(u.id, 'approved', 'admin')}
-                                className="btn-primary"
-                                style={{ padding: '4px 10px', fontSize: '0.78rem' }}
-                                title="Setujui Akun Ini"
+                                className="px-3 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/40 rounded-lg font-bold text-xs flex items-center gap-1 transition-colors cursor-pointer"
+                                title="Setujui Akun Admin"
                               >
                                 <Check size={14} /> Setujui
                               </button>
                             )}
-                            {u.status !== 'rejected' && (
+
+                            {isApproved && (
                               <button
                                 onClick={() => handleUpdateStatus(u.id, 'rejected', 'admin')}
-                                className="btn-danger"
-                                style={{ padding: '4px 10px', fontSize: '0.78rem' }}
-                                title="Tolak Akun Ini"
+                                className="px-3 py-1 bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 rounded-lg font-bold text-xs flex items-center gap-1 transition-colors cursor-pointer"
+                                title="Tolak / Nonaktifkan Akun"
                               >
-                                <UserX size={14} /> Tolak
+                                <UserX size={14} /> Nonaktifkan
+                              </button>
+                            )}
+
+                            {!isApproved && !isPending && (
+                              <button
+                                onClick={() => handleUpdateStatus(u.id, 'approved', 'admin')}
+                                className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 rounded-lg font-bold text-xs transition-colors cursor-pointer"
+                              >
+                                Aktifkan Kembali
                               </button>
                             )}
                           </div>
@@ -217,7 +188,6 @@ export default function UserManagementModal({ isOpen, onClose }) {
             </table>
           </div>
         )}
-
       </div>
     </div>
   );

@@ -5,24 +5,21 @@ import { useLanguage } from '../../../context/LanguageContext';
 
 export default function RamMetricCard({ ramUsage = 0, ramUsedMb = 0, ramFreeMb = 0 }) {
   const { t } = useLanguage();
-  const usage = Math.min(100, Math.max(0, ramUsage));
+  const usage = Math.min(100, Math.max(0, Number(ramUsage) || 0));
 
   return (
-    <div style={{
-      background: 'rgba(255, 255, 255, 0.03)',
-      border: '1px solid var(--border-color)',
-      borderRadius: '12px',
-      padding: '14px'
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-        <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <HardDrive size={15} color="#c084fc" /> {t('ramMemory')}
-        </span>
-        <span className="font-mono" style={{ fontWeight: 600, color: '#fff', fontSize: '0.95rem' }}>
+    <div className="bg-slate-900/60 border border-slate-800/80 hover:border-purple-500/30 rounded-2xl p-3.5 flex flex-col justify-between transition-all duration-200">
+      <div className="flex items-center justify-between gap-1 mb-1.5">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <HardDrive size={16} className="text-purple-400 shrink-0" />
+          <span className="text-xs font-semibold text-slate-300 truncate">{t('ramMemory')}</span>
+        </div>
+        <span className="font-mono font-extrabold text-white text-base shrink-0">
           {usage}%
         </span>
       </div>
-      <div className="progress-bar-bg">
+
+      <div className="progress-bar-bg my-1.5">
         <div
           className="progress-bar-fill"
           style={{
@@ -31,9 +28,16 @@ export default function RamMetricCard({ ramUsage = 0, ramUsedMb = 0, ramFreeMb =
           }}
         ></div>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: '6px' }} className="font-mono">
-        <span>{t('used')}: {formatMbToGb(ramUsedMb)}</span>
-        <span style={{ color: '#c084fc', fontWeight: 600 }}>{t('free')}: {formatMbToGb(ramFreeMb)}</span>
+
+      <div className="flex flex-col gap-0.5 text-[11px] font-mono text-slate-400 mt-1">
+        <div className="flex justify-between items-center">
+          <span>{t('used')}:</span>
+          <span className="text-slate-200 font-semibold">{formatMbToGb(ramUsedMb)}</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span>{t('free')}:</span>
+          <span className="text-purple-400 font-semibold">{formatMbToGb(ramFreeMb)}</span>
+        </div>
       </div>
     </div>
   );

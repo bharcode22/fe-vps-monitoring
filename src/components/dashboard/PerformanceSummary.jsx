@@ -20,66 +20,73 @@ export default function PerformanceSummary({ servers = [] }) {
     : 0;
 
   return (
-    <section style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-      gap: '16px',
-      marginBottom: '28px'
-    }}>
+    <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+      
       {/* Total Download */}
-      <div className="glass-card" style={{ padding: '18px 22px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{t('totalDownloadSpeed')}</span>
-          <ArrowDown color="#00f2fe" size={18} />
+      <div className="glass-card p-4 rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md hover:border-cyan-500/30 transition-all duration-200">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-slate-400">{t('totalDownloadSpeed')}</span>
+          <div className="p-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
+            <ArrowDown size={16} />
+          </div>
         </div>
-        <div className="font-mono" style={{ fontSize: '1.5rem', fontWeight: 700, color: '#00f2fe', marginTop: '6px' }}>
+        <div className="font-mono text-2xl font-black text-cyan-400 mt-2 tracking-tight">
           {formatSpeed(totalDownloadSpeed)}
         </div>
       </div>
 
       {/* Total Upload */}
-      <div className="glass-card" style={{ padding: '18px 22px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{t('totalUploadSpeed')}</span>
-          <ArrowUp color="#8b5cf6" size={18} />
+      <div className="glass-card p-4 rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md hover:border-purple-500/30 transition-all duration-200">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-slate-400">{t('totalUploadSpeed')}</span>
+          <div className="p-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400">
+            <ArrowUp size={16} />
+          </div>
         </div>
-        <div className="font-mono" style={{ fontSize: '1.5rem', fontWeight: 700, color: '#c084fc', marginTop: '6px' }}>
+        <div className="font-mono text-2xl font-black text-purple-400 mt-2 tracking-tight">
           {formatSpeed(totalUploadSpeed)}
         </div>
       </div>
 
       {/* Avg CPU */}
-      <div className="glass-card" style={{ padding: '18px 22px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{t('avgCpuUsage')}</span>
-          <Cpu color="#38bdf8" size={18} />
+      <div className="glass-card p-4 rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md hover:border-sky-500/30 transition-all duration-200">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-slate-400">{t('avgCpuUsage')}</span>
+          <div className="p-1.5 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400">
+            <Cpu size={16} />
+          </div>
         </div>
-        <div className="font-mono" style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', marginTop: '6px' }}>
+        <div className="font-mono text-2xl font-black text-white mt-2 tracking-tight">
           {avgCpu}%
         </div>
       </div>
 
       {/* Avg GPU */}
-      <div className="glass-card" style={{ padding: '18px 22px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{t('avgGpuUsage')}</span>
-          <Zap color="#10b981" size={18} />
+      <div className="glass-card p-4 rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md hover:border-emerald-500/30 transition-all duration-200">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-slate-400">{t('avgGpuUsage')}</span>
+          <div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+            <Zap size={16} />
+          </div>
         </div>
-        <div className="font-mono" style={{ fontSize: '1.5rem', fontWeight: 700, color: '#10b981', marginTop: '6px' }}>
+        <div className="font-mono text-2xl font-black text-emerald-400 mt-2 tracking-tight">
           {avgGpu}%
         </div>
       </div>
 
       {/* Online Status */}
-      <div className="glass-card" style={{ padding: '18px 22px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{t('onlineStatus')}</span>
-          <ShieldCheck color="#10b981" size={18} />
+      <div className="glass-card p-4 rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md hover:border-emerald-500/30 transition-all duration-200">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-slate-400">{t('onlineStatus')}</span>
+          <div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+            <ShieldCheck size={16} />
+          </div>
         </div>
-        <div className="font-mono" style={{ fontSize: '1.5rem', fontWeight: 700, color: '#10b981', marginTop: '6px' }}>
-          {onlineCount} / {servers.length} <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 500 }}>Online</span>
+        <div className="font-mono text-2xl font-black text-emerald-400 mt-2 tracking-tight">
+          {onlineCount} <span className="text-sm font-semibold text-slate-400">/ {servers.length}</span>
         </div>
       </div>
+
     </section>
   );
 }

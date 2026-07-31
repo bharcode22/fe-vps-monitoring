@@ -21,7 +21,7 @@ export default function App() {
   const [editingServer, setEditingServer] = useState(null);
   const [editingService, setEditingService] = useState(null);
   const [selectedDetailServerId, setSelectedDetailServerId] = useState(null);
-  
+
   // Persistent TV Mode state (Restores instantly from localStorage & syncs with DB)
   const [isTvMode, setIsTvMode] = useState(() => {
     try {
@@ -111,8 +111,8 @@ export default function App() {
   };
 
   // Keep detail modal server object updated with latest live metrics
-  const activeDetailServer = selectedDetailServerId 
-    ? servers.find(s => s.id === selectedDetailServerId) 
+  const activeDetailServer = selectedDetailServerId
+    ? servers.find(s => s.id === selectedDetailServerId)
     : null;
 
   // Group servers by categories
@@ -121,22 +121,15 @@ export default function App() {
   const minioGroup = displayedServers.filter(s => s.type === 'minio');
   const s3Group = displayedServers.filter(s => s.type === 's3');
 
-  const gridStyle = {
-    display: 'grid',
-    gridTemplateColumns: isTvMode 
-      ? 'repeat(auto-fit, minmax(420px, 1fr))' 
-      : 'repeat(auto-fit, minmax(380px, 1fr))',
-    gap: '20px'
-  };
+  const gridClassName = `grid gap-5 transition-all duration-300 ${isTvMode
+    ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4'
+    : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3'
+    }`;
 
   return (
-    <div style={{
-      maxWidth: isTvMode ? '100%' : '1440px',
-      margin: '0 auto',
-      padding: isTvMode ? '0 16px 40px 16px' : '0 24px 40px 24px',
-      transition: 'all 0.3s ease'
-    }}>
-      
+    <div className={`mx-auto pb-10 transition-all duration-300 ${isTvMode ? 'w-full px-4' : 'max-w-7xl px-4 sm:px-6'
+      }`}>
+
       {/* Header Top Navbar */}
       <Navbar
         onOpenAddModal={() => setIsAddModalOpen(true)}
@@ -157,8 +150,8 @@ export default function App() {
       )}
 
       {/* Main Server Cards Section */}
-      <main style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        
+      <main className="flex flex-col gap-6">
+
         {/* Type & Version Filter Tabs + Search Input */}
         <FilterTabs
           filterType={filterType}
@@ -175,21 +168,23 @@ export default function App() {
 
         {/* Server Cards Display Grid */}
         {isLoading ? (
-          <div style={gridStyle}>
+          <div className={gridClassName}>
+            <SkeletonCard />
+            <SkeletonCard />
             <SkeletonCard />
             <SkeletonCard />
           </div>
         ) : displayedServers.length === 0 ? (
-          <div className="glass-card" style={{ padding: '48px', textAlign: 'center' }}>
-            <Server size={48} color="var(--text-muted)" style={{ margin: '0 auto 16px auto', display: 'block' }} />
-            <h3 style={{ fontSize: '1.2rem', marginBottom: '8px', color: '#fff' }}>Belum Ada Server / Layanan Ditemukan</h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '20px' }}>
+          <div className="glass-card p-12 text-center flex flex-col items-center justify-center">
+            <Server size={48} className="text-slate-500 mb-4" />
+            <h3 className="text-lg font-bold text-white mb-2">Belum Ada Server / Layanan Ditemukan</h3>
+            <p className="text-slate-400 text-sm mb-5">
               {searchQuery ? `Tidak ada layanan yang cocok dengan kata kunci "${searchQuery}"` : 'Belum ada target VPS / POD / PostgreSQL / Storage yang ditambahkan'}
             </p>
           </div>
         ) : filterType !== 'all' || searchQuery ? (
           /* Filtered Single Grid View */
-          <div style={gridStyle}>
+          <div className={gridClassName}>
             {displayedServers.map((server, idx) => (
               <ServerCard
                 key={server.id}
@@ -212,21 +207,21 @@ export default function App() {
           </div>
         ) : (
           /* Grouped Categorized View (All Mode) */
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-            
+          <div className="flex flex-col gap-8">
+
             {/* Group 1: VPS & POD SSH Servers */}
             {vpsPodGroup.length > 0 && (
-              <section style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingBottom: '4px', borderBottom: '1px solid rgba(0, 242, 254, 0.2)' }}>
-                  <Server size={22} color="#00f2fe" />
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.3px' }}>
+              <section className="flex flex-col gap-3.5">
+                <div className="flex items-center gap-2.5 pb-2 border-b border-cyan-500/20">
+                  <Server size={20} className="text-cyan-400" />
+                  <h3 className="text-base font-extrabold text-white tracking-tight">
                     Server VPS & POD (SSH)
                   </h3>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 700, padding: '2px 8px', borderRadius: '12px', background: 'rgba(0, 242, 254, 0.15)', color: '#00f2fe' }}>
+                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
                     {vpsPodGroup.length} Server
                   </span>
                 </div>
-                <div style={gridStyle}>
+                <div className={gridClassName}>
                   {vpsPodGroup.map((server, idx) => (
                     <ServerCard
                       key={server.id}
@@ -252,17 +247,17 @@ export default function App() {
 
             {/* Group 2: PostgreSQL Databases */}
             {postgresGroup.length > 0 && (
-              <section style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingBottom: '4px', borderBottom: '1px solid rgba(56, 189, 248, 0.2)' }}>
-                  <Database size={22} color="#38bdf8" />
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.3px' }}>
+              <section className="flex flex-col gap-3.5">
+                <div className="flex items-center gap-2.5 pb-2 border-b border-sky-500/20">
+                  <Database size={20} className="text-sky-400" />
+                  <h3 className="text-base font-extrabold text-white tracking-tight">
                     Database PostgreSQL
                   </h3>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 700, padding: '2px 8px', borderRadius: '12px', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8' }}>
+                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-sky-500/15 text-sky-400 border border-sky-500/30">
                     {postgresGroup.length} Database
                   </span>
                 </div>
-                <div style={gridStyle}>
+                <div className={gridClassName}>
                   {postgresGroup.map((server, idx) => (
                     <ServerCard
                       key={server.id}
@@ -288,17 +283,17 @@ export default function App() {
 
             {/* Group 3: MinIO Object Storage */}
             {minioGroup.length > 0 && (
-              <section style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingBottom: '4px', borderBottom: '1px solid rgba(245, 158, 11, 0.2)' }}>
-                  <HardDrive size={22} color="#f59e0b" />
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.3px' }}>
+              <section className="flex flex-col gap-3.5">
+                <div className="flex items-center gap-2.5 pb-2 border-b border-amber-500/20">
+                  <HardDrive size={20} className="text-amber-400" />
+                  <h3 className="text-base font-extrabold text-white tracking-tight">
                     MinIO Object Storage
                   </h3>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 700, padding: '2px 8px', borderRadius: '12px', background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b' }}>
+                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">
                     {minioGroup.length} Service
                   </span>
                 </div>
-                <div style={gridStyle}>
+                <div className={gridClassName}>
                   {minioGroup.map((server, idx) => (
                     <ServerCard
                       key={server.id}
@@ -324,17 +319,17 @@ export default function App() {
 
             {/* Group 4: AWS S3 Storage */}
             {s3Group.length > 0 && (
-              <section style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingBottom: '4px', borderBottom: '1px solid rgba(236, 72, 153, 0.2)' }}>
-                  <HardDrive size={22} color="#ec4899" />
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.3px' }}>
+              <section className="flex flex-col gap-3.5">
+                <div className="flex items-center gap-2.5 pb-2 border-b border-pink-500/20">
+                  <HardDrive size={20} className="text-pink-400" />
+                  <h3 className="text-base font-extrabold text-white tracking-tight">
                     AWS S3 Object Storage
                   </h3>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 700, padding: '2px 8px', borderRadius: '12px', background: 'rgba(236, 72, 153, 0.15)', color: '#ec4899' }}>
+                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-pink-500/15 text-pink-400 border border-pink-400/30">
                     {s3Group.length} Service
                   </span>
                 </div>
-                <div style={gridStyle}>
+                <div className={gridClassName}>
                   {s3Group.map((server, idx) => (
                     <ServerCard
                       key={server.id}

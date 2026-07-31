@@ -81,27 +81,16 @@ export default function ServerCard({
 
   return (
     <div
-      className="glass-card"
       draggable
       onDragStart={(e) => onDragStart && onDragStart(e, index)}
       onDragOver={(e) => onDragOver && onDragOver(e, index)}
       onDrop={(e) => onDrop && onDrop(e, index)}
       onDragEnd={onDragEnd}
       onClick={() => onSelectServer && onSelectServer(server)}
-      style={{
-        padding: '24px',
-        display: 'flex',
-        flexDirection: 'column',
-        justify: 'space-between',
-        position: 'relative',
-        cursor: 'grab',
-        opacity: isDragging ? 0.45 : 1,
-        border: isDragging ? '2px dashed var(--primary-cyan)' : undefined,
-        transform: isDragging ? 'scale(0.98)' : 'none',
-        transition: 'all 0.2s ease'
-      }}
+      className={`glass-card p-6 flex flex-col justify-between relative cursor-grab transition-all duration-200 rounded-2xl border ${isDragging ? 'opacity-45 border-dashed border-cyan-400 scale-[0.98]' : 'border-slate-800 bg-slate-900/60 backdrop-blur-md'
+        }`}
     >
-      
+
       {/* Server Header */}
       <ServerHeader
         server={server}
@@ -116,83 +105,86 @@ export default function ServerCard({
         isLast={isLast}
       />
 
-      {/* Metrics Grid */}
+      {/* Metrics Grid (2 Columns x 3 Rows - Spacious Layout) */}
       {server.type === 'postgresql' ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
-          <div style={{ background: 'rgba(56, 189, 248, 0.05)', border: '1px solid rgba(56, 189, 248, 0.2)', borderRadius: '14px', padding: '16px' }}>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Koneksi Aktif</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#38bdf8' }}>
-              {metrics.activeConnections ?? 0} <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-muted)' }}>/ {metrics.totalConnections ?? 0} Total</span>
+        <div className="grid grid-cols-2 gap-3.5 my-4">
+          <div className="bg-sky-500/5 border border-sky-500/20 rounded-2xl p-4">
+            <div className="text-xs text-slate-400 mb-1 font-medium">Koneksi Aktif</div>
+            <div className="text-xl font-extrabold text-sky-400 font-mono">
+              {metrics.activeConnections ?? 0} <span className="text-xs font-normal text-slate-400">/ {metrics.totalConnections ?? 0}</span>
             </div>
           </div>
 
-          <div style={{ background: 'rgba(56, 189, 248, 0.05)', border: '1px solid rgba(56, 189, 248, 0.2)', borderRadius: '14px', padding: '16px' }}>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Ukuran Database</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#38bdf8' }}>
+          <div className="bg-sky-500/5 border border-sky-500/20 rounded-2xl p-4">
+            <div className="text-xs text-slate-400 mb-1 font-medium">Ukuran Database</div>
+            <div className="text-xl font-extrabold text-sky-400 font-mono">
               {metrics.ramUsedMb || metrics.ram_used_mb ? `${metrics.ramUsedMb || metrics.ram_used_mb} MB` : '0 MB'}
             </div>
           </div>
 
-          <div style={{ background: 'rgba(56, 189, 248, 0.05)', border: '1px solid rgba(56, 189, 248, 0.2)', borderRadius: '14px', padding: '16px' }}>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Total Transaksi</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#38bdf8' }}>
+          <div className="bg-sky-500/5 border border-sky-500/20 rounded-2xl p-4">
+            <div className="text-xs text-slate-400 mb-1 font-medium">Total Transaksi</div>
+            <div className="text-xl font-extrabold text-sky-400 font-mono">
               {metrics.totalTransactions ? metrics.totalTransactions.toLocaleString() : 0}
             </div>
           </div>
 
-          <div style={{ background: 'rgba(56, 189, 248, 0.05)', border: '1px solid rgba(56, 189, 248, 0.2)', borderRadius: '14px', padding: '16px' }}>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Latensi Ping DB</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#38bdf8' }}>
-              {metrics.pingMs ?? metrics.ping_ms ?? 0} <span style={{ fontSize: '0.8rem' }}>ms</span>
+          <div className="bg-sky-500/5 border border-sky-500/20 rounded-2xl p-4">
+            <div className="text-xs text-slate-400 mb-1 font-medium">Latensi Ping DB</div>
+            <div className="text-xl font-extrabold text-sky-400 font-mono">
+              {metrics.pingMs ?? metrics.ping_ms ?? 0} <span className="text-xs font-normal">ms</span>
             </div>
           </div>
         </div>
       ) : (server.type === 'minio' || server.type === 's3') ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
-          <div style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: '14px', padding: '16px' }}>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Total Bucket</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f59e0b' }}>
-              {metrics.totalBuckets ?? 0} <span style={{ fontSize: '0.8rem' }}>Bucket</span>
+        <div className="grid grid-cols-2 gap-3.5 my-4">
+          <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4">
+            <div className="text-xs text-slate-400 mb-1 font-medium">Total Bucket</div>
+            <div className="text-xl font-extrabold text-amber-400 font-mono">
+              {metrics.totalBuckets ?? 0} <span className="text-xs font-normal">Bucket</span>
             </div>
           </div>
 
-          <div style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: '14px', padding: '16px' }}>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Jumlah File (Objects)</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f59e0b' }}>
+          <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4">
+            <div className="text-xs text-slate-400 mb-1 font-medium">Jumlah File (Objects)</div>
+            <div className="text-xl font-extrabold text-amber-400 font-mono">
               {metrics.totalObjects ? metrics.totalObjects.toLocaleString() : 0}
             </div>
           </div>
 
-          <div style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: '14px', padding: '16px' }}>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Ukuran Storage Terpakai</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f59e0b' }}>
+          <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4">
+            <div className="text-xs text-slate-400 mb-1 font-medium">Storage Terpakai</div>
+            <div className="text-xl font-extrabold text-amber-400 font-mono">
               {metrics.diskUsedGb || metrics.disk_used_gb ? `${metrics.diskUsedGb || metrics.disk_used_gb} GB` : `${metrics.ramUsedMb || metrics.ram_used_mb || 0} MB`}
             </div>
           </div>
 
-          <div style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: '14px', padding: '16px' }}>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Latensi S3 Endpoint</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f59e0b' }}>
-              {metrics.pingMs ?? metrics.ping_ms ?? 0} <span style={{ fontSize: '0.8rem' }}>ms</span>
+          <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4">
+            <div className="text-xs text-slate-400 mb-1 font-medium">Latensi S3 Endpoint</div>
+            <div className="text-xl font-extrabold text-amber-400 font-mono">
+              {metrics.pingMs ?? metrics.ping_ms ?? 0} <span className="text-xs font-normal">ms</span>
             </div>
           </div>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
+        <div className="grid grid-cols-2 gap-3.5 my-4">
+          {/* Row 1: CPU Load & RAM Memory */}
           <CpuMetricCard
             cpuUsage={metrics.cpu_usage || metrics.cpuUsage || 0}
             cpuCores={metrics.cpu_cores || metrics.cpuCores || 1}
           />
-          
+
           <RamMetricCard
             ramUsage={metrics.ram_usage || metrics.ramUsage || 0}
             ramUsedMb={metrics.ram_used_mb || metrics.ramUsedMb || 0}
             ramFreeMb={metrics.ram_free_mb || metrics.ramFreeMb || 0}
           />
 
+          {/* Row 2: Download Speed & Upload Speed */}
           <DownloadSpeedCard speed={metrics.bandwidth_rx_speed || metrics.bandwidthRxSpeed || 0} />
           <UploadSpeedCard speed={metrics.bandwidth_tx_speed || metrics.bandwidthTxSpeed || 0} />
 
+          {/* Row 3: Disk Storage & GPU Load */}
           <DiskMetricCard
             diskUsage={metrics.disk_usage || metrics.diskUsage || 0}
             diskUsedGb={metrics.disk_used_gb || metrics.diskUsedGb || 0}
@@ -210,34 +202,24 @@ export default function ServerCard({
       {/* Chart Toggle Footer */}
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ borderTop: '1px solid var(--border-color)', pt: '14px', paddingTop: '14px', marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}
+        className="border-t border-slate-800 pt-3.5 mt-4 flex items-center justify-between flex-wrap gap-3"
       >
         <button
           onClick={(e) => { e.stopPropagation(); setShowChart(!showChart); }}
-          className="btn-secondary"
-          style={{ fontSize: '0.85rem', padding: '6px 14px' }}
+          className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer"
         >
-          <BarChart2 size={16} color="#00f2fe" />
+          <BarChart2 size={16} className="text-cyan-400" />
           <span>{showChart ? t('hideChart') : t('showChart')}</span>
         </button>
 
         {showChart && (
-          <div style={{ display: 'flex', gap: '6px', background: 'rgba(0, 0, 0, 0.3)', padding: '4px', borderRadius: '8px' }}>
+          <div className="flex gap-1.5 bg-black/30 p-1 rounded-lg">
             {['bandwidth', 'cpu', 'ram', 'gpu'].map(tab => (
               <button
                 key={tab}
                 onClick={(e) => { e.stopPropagation(); setActiveChartTab(tab); }}
-                style={{
-                  background: activeChartTab === tab ? 'rgba(0, 242, 254, 0.2)' : 'transparent',
-                  color: activeChartTab === tab ? '#00f2fe' : 'var(--text-muted)',
-                  border: 'none',
-                  padding: '4px 10px',
-                  borderRadius: '6px',
-                  fontSize: '0.8rem',
-                  cursor: 'pointer',
-                  fontWeight: 500,
-                  textTransform: 'capitalize'
-                }}
+                className={`px-2.5 py-1 rounded-md text-xs font-medium capitalize transition-colors cursor-pointer ${activeChartTab === tab ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-slate-200'
+                  }`}
               >
                 {tab}
               </button>

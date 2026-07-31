@@ -2,39 +2,42 @@ import React from 'react';
 
 export default function SkeletonCard() {
   return (
-    <div className="glass-card" style={{ padding: '24px', opacity: 0.8 }}>
+    <div className="glass-card p-6 flex flex-col justify-between rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md">
       {/* Header Skeleton */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div className="skeleton-box" style={{ width: '42px', height: '42px', borderRadius: '12px' }}></div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <div className="skeleton-box" style={{ width: '140px', height: '18px' }}></div>
-            <div className="skeleton-box" style={{ width: '100px', height: '14px' }}></div>
+      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="skeleton-box w-10 h-10 rounded-xl"></div>
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-2">
+              <div className="skeleton-box w-28 h-4.5 rounded-md"></div>
+              <div className="skeleton-box w-16 h-4 rounded-md"></div>
+            </div>
+            <div className="skeleton-box w-36 h-3.5 rounded-md"></div>
           </div>
         </div>
-        <div className="skeleton-box" style={{ width: '80px', height: '24px', borderRadius: '20px' }}></div>
+        <div className="skeleton-box w-24 h-7 rounded-full"></div>
       </div>
 
-      {/* Mini Metric Cards Skeleton Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '14px' }}>
+      {/* Mini Metric Cards Skeleton Grid (2 Columns x 3 Rows) */}
+      <div className="grid grid-cols-2 gap-3.5 my-4">
         {[1, 2, 3, 4, 5, 6].map(i => (
-          <div key={i} style={{
-            background: 'rgba(255, 255, 255, 0.02)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '12px',
-            padding: '14px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <div className="skeleton-box" style={{ width: '70px', height: '14px' }}></div>
-              <div className="skeleton-box" style={{ width: '35px', height: '14px' }}></div>
+          <div key={i} className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-3.5 flex flex-col justify-between gap-2.5">
+            <div className="flex items-center justify-between">
+              <div className="skeleton-box w-20 h-3.5 rounded-md"></div>
+              <div className="skeleton-box w-10 h-3.5 rounded-md"></div>
             </div>
-            <div className="skeleton-box" style={{ width: '100%', height: '8px', borderRadius: '4px' }}></div>
-            <div className="skeleton-box" style={{ width: '110px', height: '12px', marginTop: '4px' }}></div>
+            <div className="skeleton-box w-full h-2 rounded-full"></div>
+            <div className="flex flex-col gap-1 mt-1">
+              <div className="skeleton-box w-full h-3 rounded-md"></div>
+              <div className="skeleton-box w-3/4 h-3 rounded-md"></div>
+            </div>
           </div>
         ))}
+      </div>
+
+      {/* Footer Skeleton */}
+      <div className="border-t border-slate-800 pt-3.5 mt-4 flex items-center justify-between">
+        <div className="skeleton-box w-32 h-8 rounded-lg"></div>
       </div>
     </div>
   );

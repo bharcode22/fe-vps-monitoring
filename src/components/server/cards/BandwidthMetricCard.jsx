@@ -4,16 +4,12 @@ import { formatSpeed } from '../../../utils/formatters';
 
 export function DownloadSpeedCard({ speed = 0 }) {
   return (
-    <div style={{
-      background: 'rgba(0, 242, 254, 0.04)',
-      border: '1px solid rgba(0, 242, 254, 0.15)',
-      borderRadius: '12px',
-      padding: '14px'
-    }}>
-      <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <ArrowDown size={15} color="#00f2fe" /> Download Speed
+    <div className="bg-slate-900/60 border border-slate-800/80 hover:border-cyan-500/30 rounded-2xl p-4 flex flex-col justify-between transition-all duration-200">
+      <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5 shrink truncate">
+        <ArrowDown size={16} className="text-cyan-400 shrink-0" />
+        <span className="truncate">Download Speed</span>
       </span>
-      <div className="font-mono" style={{ fontWeight: 700, fontSize: '1.25rem', color: '#00f2fe', marginTop: '6px' }}>
+      <div className="font-mono font-extrabold text-cyan-400 text-lg mt-2">
         {formatSpeed(speed)}
       </div>
     </div>
@@ -22,16 +18,12 @@ export function DownloadSpeedCard({ speed = 0 }) {
 
 export function UploadSpeedCard({ speed = 0 }) {
   return (
-    <div style={{
-      background: 'rgba(139, 92, 246, 0.04)',
-      border: '1px solid rgba(139, 92, 246, 0.15)',
-      borderRadius: '12px',
-      padding: '14px'
-    }}>
-      <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <ArrowUp size={15} color="#8b5cf6" /> Upload Speed
+    <div className="bg-slate-900/60 border border-slate-800/80 hover:border-purple-500/30 rounded-2xl p-4 flex flex-col justify-between transition-all duration-200">
+      <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5 shrink truncate">
+        <ArrowUp size={16} className="text-purple-400 shrink-0" />
+        <span className="truncate">Upload Speed</span>
       </span>
-      <div className="font-mono" style={{ fontWeight: 700, fontSize: '1.25rem', color: '#c084fc', marginTop: '6px' }}>
+      <div className="font-mono font-extrabold text-purple-400 text-lg mt-2">
         {formatSpeed(speed)}
       </div>
     </div>
