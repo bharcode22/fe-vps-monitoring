@@ -71,8 +71,28 @@ export default function AddServiceModal({ isOpen, onClose, onServerAdded, servic
     setFormData((prev) => {
       const updated = { ...prev, [name]: value };
       if (name === 'type') {
-        if (value === 'postgresql') updated.port = 5432;
-        if (value === 'minio') updated.port = 9000;
+        if (value === 'postgresql') {
+          updated.port = 5432;
+          updated.db_user = updated.db_user || 'postgres';
+          updated.db_name = updated.db_name || 'postgres';
+          updated.username = updated.db_user || 'postgres';
+        } else if (value === 'minio') {
+          updated.port = 9000;
+          updated.db_user = '';
+          updated.db_name = '';
+          updated.username = updated.s3_access_key || '';
+        } else if (value === 's3') {
+          updated.port = 443;
+          updated.db_user = '';
+          updated.db_name = '';
+          updated.username = updated.s3_access_key || '';
+        }
+      }
+      if (name === 's3_access_key' && (prev.type === 'minio' || prev.type === 's3')) {
+        updated.username = value;
+      }
+      if (name === 'db_user' && prev.type === 'postgresql') {
+        updated.username = value;
       }
       return updated;
     });
@@ -90,8 +110,16 @@ export default function AddServiceModal({ isOpen, onClose, onServerAdded, servic
     setTestResult(null);
     setErrorMsg('');
 
+    const payload = {
+      ...formData,
+      host: formData.host || formData.s3_endpoint || (formData.type === 's3' ? 's3.amazonaws.com' : ''),
+      username: (formData.type === 'minio' || formData.type === 's3') ? (formData.s3_access_key || '') : (formData.db_user || 'postgres'),
+      db_user: (formData.type === 'minio' || formData.type === 's3') ? '' : (formData.db_user || 'postgres'),
+      db_name: (formData.type === 'minio' || formData.type === 's3') ? '' : (formData.db_name || 'postgres')
+    };
+
     try {
-      const data = await testConnectionApi(formData);
+      const data = await testConnectionApi(payload);
       setTestResult(data);
     } catch (err) {
       setTestResult({ success: false, message: err.message || 'Gagal terhubung ke layanan.' });
@@ -109,7 +137,10 @@ export default function AddServiceModal({ isOpen, onClose, onServerAdded, servic
 
     const payload = {
       ...formData,
-      host: formData.host || formData.s3_endpoint || (formData.type === 's3' ? 's3.amazonaws.com' : '')
+      host: formData.host || formData.s3_endpoint || (formData.type === 's3' ? 's3.amazonaws.com' : ''),
+      username: (formData.type === 'minio' || formData.type === 's3') ? (formData.s3_access_key || '') : (formData.db_user || 'postgres'),
+      db_user: (formData.type === 'minio' || formData.type === 's3') ? '' : (formData.db_user || 'postgres'),
+      db_name: (formData.type === 'minio' || formData.type === 's3') ? '' : (formData.db_name || 'postgres')
     };
 
     setSubmitting(true);

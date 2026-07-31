@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grid, Search, X, Server, Database, HardDrive } from 'lucide-react';
+import { Grid, Search, X, Server, Box, Database, HardDrive } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
 export default function FilterTabs({
@@ -8,10 +8,11 @@ export default function FilterTabs({
   searchQuery,
   setSearchQuery,
   totalCount,
-  vpsPodCount,
+  vpsCount,
+  podV3Count,
+  podV2Count,
   postgresCount,
-  minioCount,
-  s3Count
+  storageCount
 }) {
   const { t } = useLanguage();
 
@@ -71,7 +72,7 @@ export default function FilterTabs({
         </div>
       </div>
 
-      {/* Structured Category Filter Buttons */}
+      {/* Requested Category Filter Buttons: Semua, VPS, POD V3, POD V2, Database, Storage */}
       <div style={{ display: 'flex', gap: '8px', background: 'rgba(0, 0, 0, 0.35)', padding: '4px', borderRadius: '12px', border: '1px solid var(--border-color)', flexWrap: 'wrap' }}>
         
         {/* Semua (All) */}
@@ -92,13 +93,13 @@ export default function FilterTabs({
           {t('all')} ({totalCount})
         </button>
 
-        {/* VPS & POD (SSH) in 1 place */}
+        {/* VPS */}
         <button
-          onClick={() => setFilterType('vps_pod')}
+          onClick={() => setFilterType('vps')}
           style={{
-            background: filterType === 'vps_pod' ? 'rgba(0, 242, 254, 0.2)' : 'transparent',
-            color: filterType === 'vps_pod' ? '#00f2fe' : 'var(--text-muted)',
-            border: filterType === 'vps_pod' ? '1px solid rgba(0, 242, 254, 0.4)' : '1px solid transparent',
+            background: filterType === 'vps' ? 'rgba(0, 242, 254, 0.2)' : 'transparent',
+            color: filterType === 'vps' ? '#00f2fe' : 'var(--text-muted)',
+            border: filterType === 'vps' ? '1px solid rgba(0, 242, 254, 0.4)' : '1px solid transparent',
             padding: '6px 14px',
             borderRadius: '8px',
             fontSize: '0.85rem',
@@ -107,10 +108,46 @@ export default function FilterTabs({
             transition: 'all 0.2s ease'
           }}
         >
-          🖥️ Server VPS & POD ({vpsPodCount || 0})
+          🖥️ VPS ({vpsCount || 0})
         </button>
 
-        {/* PostgreSQL Database */}
+        {/* POD V3 */}
+        <button
+          onClick={() => setFilterType('pod_v3')}
+          style={{
+            background: filterType === 'pod_v3' ? 'rgba(192, 132, 252, 0.25)' : 'transparent',
+            color: filterType === 'pod_v3' ? '#c084fc' : 'var(--text-muted)',
+            border: filterType === 'pod_v3' ? '1px solid #c084fc' : '1px solid transparent',
+            padding: '6px 14px',
+            borderRadius: '8px',
+            fontSize: '0.85rem',
+            cursor: 'pointer',
+            fontWeight: 700,
+            transition: 'all 0.2s ease'
+          }}
+        >
+          📦 POD V3 ({podV3Count || 0})
+        </button>
+
+        {/* POD V2 */}
+        <button
+          onClick={() => setFilterType('pod_v2')}
+          style={{
+            background: filterType === 'pod_v2' ? 'rgba(245, 158, 11, 0.25)' : 'transparent',
+            color: filterType === 'pod_v2' ? '#f59e0b' : 'var(--text-muted)',
+            border: filterType === 'pod_v2' ? '1px solid #f59e0b' : '1px solid transparent',
+            padding: '6px 14px',
+            borderRadius: '8px',
+            fontSize: '0.85rem',
+            cursor: 'pointer',
+            fontWeight: 700,
+            transition: 'all 0.2s ease'
+          }}
+        >
+          📦 POD V2 ({podV2Count || 0})
+        </button>
+
+        {/* Database (PostgreSQL) */}
         <button
           onClick={() => setFilterType('postgresql')}
           style={{
@@ -125,16 +162,16 @@ export default function FilterTabs({
             transition: 'all 0.2s ease'
           }}
         >
-          🐘 PostgreSQL ({postgresCount || 0})
+          🐘 Database ({postgresCount || 0})
         </button>
 
-        {/* MinIO Storage */}
+        {/* Storage (MinIO & S3) */}
         <button
-          onClick={() => setFilterType('minio')}
+          onClick={() => setFilterType('storage')}
           style={{
-            background: filterType === 'minio' ? 'rgba(245, 158, 11, 0.25)' : 'transparent',
-            color: filterType === 'minio' ? '#f59e0b' : 'var(--text-muted)',
-            border: filterType === 'minio' ? '1px solid #f59e0b' : '1px solid transparent',
+            background: filterType === 'storage' ? 'rgba(236, 72, 153, 0.25)' : 'transparent',
+            color: filterType === 'storage' ? '#ec4899' : 'var(--text-muted)',
+            border: filterType === 'storage' ? '1px solid #ec4899' : '1px solid transparent',
             padding: '6px 14px',
             borderRadius: '8px',
             fontSize: '0.85rem',
@@ -143,25 +180,7 @@ export default function FilterTabs({
             transition: 'all 0.2s ease'
           }}
         >
-          🪣 MinIO ({minioCount || 0})
-        </button>
-
-        {/* AWS S3 Storage */}
-        <button
-          onClick={() => setFilterType('s3')}
-          style={{
-            background: filterType === 's3' ? 'rgba(236, 72, 153, 0.25)' : 'transparent',
-            color: filterType === 's3' ? '#ec4899' : 'var(--text-muted)',
-            border: filterType === 's3' ? '1px solid #ec4899' : '1px solid transparent',
-            padding: '6px 14px',
-            borderRadius: '8px',
-            fontSize: '0.85rem',
-            cursor: 'pointer',
-            fontWeight: 700,
-            transition: 'all 0.2s ease'
-          }}
-        >
-          ☁️ AWS S3 ({s3Count || 0})
+          🪣 Storage ({storageCount || 0})
         </button>
 
       </div>

@@ -69,11 +69,10 @@ export default function App() {
     searchQuery,
     setSearchQuery,
     vpsCount,
-    podCount,
-    vpsPodCount,
+    podV3Count,
+    podV2Count,
     postgresCount,
-    minioCount,
-    s3Count,
+    storageCount,
     fetchServers,
     handleMetricsUpdate,
     handleDeleteServer,
@@ -167,10 +166,11 @@ export default function App() {
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           totalCount={servers.length}
-          vpsPodCount={vpsPodCount}
+          vpsCount={vpsCount}
+          podV3Count={podV3Count}
+          podV2Count={podV2Count}
           postgresCount={postgresCount}
-          minioCount={minioCount}
-          s3Count={s3Count}
+          storageCount={storageCount}
         />
 
         {/* Server Cards Display Grid */}
