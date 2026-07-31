@@ -163,7 +163,7 @@ export default function SoundsTab({ serverId }) {
 
       {/* Summary Metric Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px' }}>
-        
+
         {/* Card 1: Total Items in JSON */}
         <div className="glass-card" style={{ padding: '16px', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
           <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -178,12 +178,12 @@ export default function SoundsTab({ serverId }) {
         </div>
 
         {/* Card 2: Missing Files (Red Alert) */}
-        <div 
+        <div
           onClick={() => setActiveFilter('missing')}
-          className="glass-card" 
-          style={{ 
-            padding: '16px', 
-            borderRadius: '14px', 
+          className="glass-card"
+          style={{
+            padding: '16px',
+            borderRadius: '14px',
             border: `1px solid ${summary.totalMissingFiles > 0 ? 'rgba(239, 68, 68, 0.4)' : 'var(--border-color)'}`,
             background: summary.totalMissingFiles > 0 ? 'rgba(239, 68, 68, 0.08)' : 'rgba(255,255,255,0.02)',
             cursor: 'pointer'
@@ -201,12 +201,12 @@ export default function SoundsTab({ serverId }) {
         </div>
 
         {/* Card 3: Valid Files (Green) */}
-        <div 
+        <div
           onClick={() => setActiveFilter('valid')}
-          className="glass-card" 
-          style={{ 
-            padding: '16px', 
-            borderRadius: '14px', 
+          className="glass-card"
+          style={{
+            padding: '16px',
+            borderRadius: '14px',
             border: '1px solid rgba(16, 185, 129, 0.3)',
             background: 'rgba(16, 185, 129, 0.05)',
             cursor: 'pointer'
@@ -224,9 +224,9 @@ export default function SoundsTab({ serverId }) {
         </div>
 
         {/* Card 4: Folder Extra Files */}
-        <div 
+        <div
           onClick={() => setActiveFilter('extra')}
-          className="glass-card" 
+          className="glass-card"
           style={{ padding: '16px', borderRadius: '14px', border: '1px solid var(--border-color)', cursor: 'pointer' }}
         >
           <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -244,7 +244,7 @@ export default function SoundsTab({ serverId }) {
 
       {/* Filter Tabs & Search Bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-        
+
         {/* Filter Buttons */}
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <button
@@ -338,7 +338,7 @@ export default function SoundsTab({ serverId }) {
       {/* Content Display Mode 1: Physical Files Mode */}
       {activeFilter === 'extra' ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
-          
+
           {/* Sounds Folder List */}
           <div className="glass-card" style={{ padding: '20px', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
@@ -420,7 +420,7 @@ export default function SoundsTab({ serverId }) {
 
                     return (
                       <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: hasMissing ? 'rgba(239, 68, 68, 0.03)' : 'transparent' }}>
-                        
+
                         {/* Title & ID */}
                         <td style={{ padding: '14px' }}>
                           <div style={{ fontWeight: 700, color: '#fff' }}>{itemTitle}</div>
@@ -473,7 +473,7 @@ export default function SoundsTab({ serverId }) {
                                     color: fileObj.exists ? '#10b981' : '#ef4444',
                                     border: `1px solid ${fileObj.exists ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.4)'}`
                                   }}>
-                                    {fileObj.exists ? '✅ ADA' : `❌ MISSING in ${fileObj.targetFolder}`}
+                                    {fileObj.exists ? `✅ ADA (${fileObj.foundPath})` : `❌ MISSING in ${fileObj.targetFolder}`}
                                   </span>
                                 </div>
                               ))
