@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import io from 'socket.io-client';
 import { BACKEND_URL } from '../config';
 
-export function useSocket(onMetricsUpdate) {
+export function useSocket(onMetricsUpdate, onServerListUpdated) {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
@@ -20,16 +20,23 @@ export function useSocket(onMetricsUpdate) {
       setIsConnected(false);
     });
 
-    socket.on('metrics_update', (updatedServers) => {
+    socket.on('metrics_update', (updatedMetrics) => {
       if (onMetricsUpdate) {
-        onMetricsUpdate(updatedServers);
+        onMetricsUpdate(updatedMetrics);
+      }
+    });
+
+    socket.on('server_list_updated', () => {
+      console.log('🔔 Server list configuration updated via socket');
+      if (onServerListUpdated) {
+        onServerListUpdated();
       }
     });
 
     return () => {
       socket.disconnect();
     };
-  }, [onMetricsUpdate]);
+  }, [onMetricsUpdate, onServerListUpdated]);
 
   return { isConnected };
 }

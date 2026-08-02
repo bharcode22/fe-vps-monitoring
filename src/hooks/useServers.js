@@ -54,24 +54,24 @@ export function useServers() {
     fetchServers(searchQuery, filterType);
   }, [filterType, searchQuery]);
 
-  const handleMetricsUpdate = useCallback((updatedServers) => {
-    setAllServers(updatedServers);
-    // Filter live websocket metrics if active filter is not 'all'
-    if (filterType === 'all') {
-      setServers(updatedServers);
-    } else {
-      const filtered = updatedServers.filter(s => {
-        if (filterType === 'vps') return (s.type || 'vps') === 'vps';
-        if (filterType === 'pod_v3') return s.type === 'pod' && (s.pod_version === 'v3' || !s.pod_version);
-        if (filterType === 'pod_v2') return s.type === 'pod' && s.pod_version === 'v2';
-        if (filterType === 'postgresql') return s.type === 'postgresql';
-        if (filterType === 'storage') return s.type === 'minio' || s.type === 's3';
-        return true;
+  const handleMetricsUpdate = useCallback((metricsList) => {
+    if (!Array.isArray(metricsList)) return;
+
+    // Smart merge: Update currentMetrics on matching servers without overwriting server metadata
+    const mergeMetrics = (serverArray) => {
+      return serverArray.map(srv => {
+        const match = metricsList.find(m => m.id === srv.id && (m.type ? m.type === (srv.type || 'vps') : true));
+        if (match && match.currentMetrics) {
+          return { ...srv, currentMetrics: match.currentMetrics };
+        }
+        return srv;
       });
-      setServers(filtered);
-    }
+    };
+
+    setAllServers(prevAll => mergeMetrics(prevAll));
+    setServers(prevServers => mergeMetrics(prevServers));
     setIsLoading(false);
-  }, [filterType]);
+  }, []);
 
   const handleDeleteServer = async (id, name, type) => {
     if (window.confirm(`Apakah Anda yakin ingin menghapus "${name}" dari monitoring?`)) {

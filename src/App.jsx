@@ -81,7 +81,7 @@ export default function App() {
     handleReorder
   } = useServers();
 
-  const { isConnected } = useSocket(handleMetricsUpdate);
+  const { isConnected } = useSocket(handleMetricsUpdate, fetchServers);
 
   // Drag & Drop gesture handlers
   const handleDragStart = (e, idx) => {
