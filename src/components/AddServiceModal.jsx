@@ -95,6 +95,28 @@ export default function AddServiceModal({ isOpen, onClose, onServerAdded, servic
       if (name === 'db_user' && prev.type === 'postgresql') {
         updated.username = value;
       }
+      if (name === 'connString' && value.trim()) {
+        try {
+          const url = new URL(value.trim());
+          const username = decodeURIComponent(url.username);
+          const password = decodeURIComponent(url.password);
+          const host = url.hostname;
+          const port = Number(url.port) || 5432;
+          const db_name = url.pathname.replace(/^\/+/, '').split('?')[0];
+
+          updated.host = host;
+          updated.port = port;
+          updated.username = username || 'postgres';
+          updated.password = password;
+          updated.db_user = username || 'postgres';
+          updated.db_name = db_name || 'postgres';
+          if (!updated.name && db_name) {
+            updated.name = db_name;
+          }
+        } catch (err) {
+          // ignore invalid url during manual typing
+        }
+      }
       return updated;
     });
     setTestResult(null);
@@ -102,8 +124,9 @@ export default function AddServiceModal({ isOpen, onClose, onServerAdded, servic
   };
 
   const handleTestConnection = async () => {
-    if (!formData.name || (formData.type === 'postgresql' && !formData.connString) || ((formData.type === 'minio' || formData.type === 's3') && !formData.s3_endpoint)) {
-      setErrorMsg('Nama Layanan dan Connection String / Endpoint wajib diisi.');
+    const connStr = formData.connString ? formData.connString.trim() : '';
+    if ((formData.type === 'postgresql' && !connStr) || ((formData.type === 'minio' || formData.type === 's3') && !formData.s3_endpoint)) {
+      setErrorMsg('Connection String / Endpoint wajib diisi.');
       return;
     }
 
@@ -156,10 +179,6 @@ export default function AddServiceModal({ isOpen, onClose, onServerAdded, servic
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name) {
-      setErrorMsg('Nama Layanan wajib diisi.');
-      return;
-    }
 
     const payload = (() => {
       if (formData.type === 'postgresql' && formData.connString) {
@@ -172,8 +191,7 @@ export default function AddServiceModal({ isOpen, onClose, onServerAdded, servic
           const db_name = url.pathname.replace(/^\/+/, '').split('?')[0];
           return {
             ...formData,
-            host,
-            port,
+            name: formData.name || db_name || 'PostgreSQL DB',
             username,
             password,
             db_user: username,
@@ -193,6 +211,11 @@ export default function AddServiceModal({ isOpen, onClose, onServerAdded, servic
         db_name: (formData.type === 'minio' || formData.type === 's3') ? '' : (formData.db_name || 'postgres')
       };
     })();
+
+    if (!payload.name) {
+      setErrorMsg('Nama Layanan wajib diisi.');
+      return;
+    }
 
     setSubmitting(true);
     setErrorMsg('');
