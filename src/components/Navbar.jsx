@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Server, Plus, Activity, RefreshCw, Tv, Users, LogOut, Lock, Database, HardDrive, Menu, X } from 'lucide-react';
+import { Server, Plus, Activity, RefreshCw, Tv, Users, LogOut, Lock, Database, HardDrive, Menu, X, Zap } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
@@ -12,7 +12,9 @@ export default function Navbar({
   onRefresh,
   isTvMode,
   onToggleTvMode,
-  onOpenUserModal
+  onOpenUserModal,
+  currentView = 'dashboard',
+  onNavigateView
 }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { lang, changeLanguage, t } = useLanguage();
@@ -55,6 +57,34 @@ export default function Navbar({
 
         {/* Desktop View Toolbar */}
         <div className="hidden md:flex items-center gap-3">
+
+          {/* View Switcher (Dashboard vs Sync DB) */}
+          {onNavigateView && (
+            <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/10 mr-1">
+              <button
+                onClick={() => onNavigateView('dashboard')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  currentView === 'dashboard'
+                    ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-400 border border-cyan-500/40 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Activity size={14} />
+                <span>Dashboard</span>
+              </button>
+              <button
+                onClick={() => onNavigateView('sync')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  currentView === 'sync'
+                    ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-400 border border-cyan-500/40 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Zap size={14} />
+                <span>Database Sync</span>
+              </button>
+            </div>
+          )}
 
           {/* Action Group for Approved Admin */}
           {isAuthenticated && (
@@ -200,6 +230,40 @@ export default function Navbar({
       {/* Mobile Menu Dropdown Drawer */}
       {isMobileMenuOpen && (
         <div className="md:hidden mt-4 pt-4 border-t border-slate-800 flex flex-col gap-3.5 animate-in fade-in slide-in-from-top-2 duration-200">
+
+          {/* View Navigation Switcher Mobile */}
+          {onNavigateView && (
+            <div className="grid grid-cols-2 gap-2 bg-slate-950/60 p-2 rounded-2xl border border-white/10">
+              <button
+                onClick={() => {
+                  onNavigateView('dashboard');
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                  currentView === 'dashboard'
+                    ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-400 border border-cyan-500/40'
+                    : 'text-slate-400'
+                }`}
+              >
+                <Activity size={15} />
+                <span>Dashboard</span>
+              </button>
+              <button
+                onClick={() => {
+                  onNavigateView('sync');
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                  currentView === 'sync'
+                    ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-400 border border-cyan-500/40'
+                    : 'text-slate-400'
+                }`}
+              >
+                <Zap size={15} />
+                <span>Database Sync</span>
+              </button>
+            </div>
+          )}
 
           {/* Action Buttons for Authenticated User */}
           {isAuthenticated && (

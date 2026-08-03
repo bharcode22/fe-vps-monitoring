@@ -12,6 +12,7 @@ export default function AddServiceModal({ isOpen, onClose, onServerAdded, servic
     username: 'postgres',
     password: '',
     type: 'postgresql',
+    connString: '',
     db_name: 'postgres',
     db_user: 'postgres',
     s3_endpoint: '',
@@ -101,8 +102,8 @@ export default function AddServiceModal({ isOpen, onClose, onServerAdded, servic
   };
 
   const handleTestConnection = async () => {
-    if (!formData.name || (formData.type === 'postgresql' && !formData.host) || (formData.type === 'minio' && !formData.s3_endpoint)) {
-      setErrorMsg('Nama Layanan dan Host / Endpoint wajib diisi.');
+    if (!formData.name || (formData.type === 'postgresql' && !formData.connString) || ((formData.type === 'minio' || formData.type === 's3') && !formData.s3_endpoint)) {
+      setErrorMsg('Nama Layanan dan Connection String / Endpoint wajib diisi.');
       return;
     }
 
@@ -110,13 +111,38 @@ export default function AddServiceModal({ isOpen, onClose, onServerAdded, servic
     setTestResult(null);
     setErrorMsg('');
 
-    const payload = {
-      ...formData,
-      host: formData.host || formData.s3_endpoint || (formData.type === 's3' ? 's3.amazonaws.com' : ''),
-      username: (formData.type === 'minio' || formData.type === 's3') ? (formData.s3_access_key || '') : (formData.db_user || 'postgres'),
-      db_user: (formData.type === 'minio' || formData.type === 's3') ? '' : (formData.db_user || 'postgres'),
-      db_name: (formData.type === 'minio' || formData.type === 's3') ? '' : (formData.db_name || 'postgres')
-    };
+    const payload = (() => {
+      if (formData.type === 'postgresql' && formData.connString) {
+        try {
+          const url = new URL(formData.connString);
+          const username = decodeURIComponent(url.username);
+          const password = decodeURIComponent(url.password);
+          const host = url.hostname;
+          const port = Number(url.port) || 5432;
+          const db_name = url.pathname.replace(/^\/+/, '').split('?')[0];
+          return {
+            ...formData,
+            host,
+            port,
+            username,
+            password,
+            db_user: username,
+            db_name
+          };
+        } catch (e) {
+          console.error('Invalid connection string', e);
+          return { ...formData };
+        }
+      }
+      // fallback for other types
+      return {
+        ...formData,
+        host: formData.host || formData.s3_endpoint || (formData.type === 's3' ? 's3.amazonaws.com' : ''),
+        username: (formData.type === 'minio' || formData.type === 's3') ? (formData.s3_access_key || '') : (formData.db_user || 'postgres'),
+        db_user: (formData.type === 'minio' || formData.type === 's3') ? '' : (formData.db_user || 'postgres'),
+        db_name: (formData.type === 'minio' || formData.type === 's3') ? '' : (formData.db_name || 'postgres')
+      };
+    })();
 
     try {
       const data = await testConnectionApi(payload);
@@ -135,13 +161,38 @@ export default function AddServiceModal({ isOpen, onClose, onServerAdded, servic
       return;
     }
 
-    const payload = {
-      ...formData,
-      host: formData.host || formData.s3_endpoint || (formData.type === 's3' ? 's3.amazonaws.com' : ''),
-      username: (formData.type === 'minio' || formData.type === 's3') ? (formData.s3_access_key || '') : (formData.db_user || 'postgres'),
-      db_user: (formData.type === 'minio' || formData.type === 's3') ? '' : (formData.db_user || 'postgres'),
-      db_name: (formData.type === 'minio' || formData.type === 's3') ? '' : (formData.db_name || 'postgres')
-    };
+    const payload = (() => {
+      if (formData.type === 'postgresql' && formData.connString) {
+        try {
+          const url = new URL(formData.connString);
+          const username = decodeURIComponent(url.username);
+          const password = decodeURIComponent(url.password);
+          const host = url.hostname;
+          const port = Number(url.port) || 5432;
+          const db_name = url.pathname.replace(/^\/+/, '').split('?')[0];
+          return {
+            ...formData,
+            host,
+            port,
+            username,
+            password,
+            db_user: username,
+            db_name
+          };
+        } catch (e) {
+          console.error('Invalid connection string', e);
+          return { ...formData };
+        }
+      }
+      // fallback for other types
+      return {
+        ...formData,
+        host: formData.host || formData.s3_endpoint || (formData.type === 's3' ? 's3.amazonaws.com' : ''),
+        username: (formData.type === 'minio' || formData.type === 's3') ? (formData.s3_access_key || '') : (formData.db_user || 'postgres'),
+        db_user: (formData.type === 'minio' || formData.type === 's3') ? '' : (formData.db_user || 'postgres'),
+        db_name: (formData.type === 'minio' || formData.type === 's3') ? '' : (formData.db_name || 'postgres')
+      };
+    })();
 
     setSubmitting(true);
     setErrorMsg('');
@@ -170,11 +221,10 @@ export default function AddServiceModal({ isOpen, onClose, onServerAdded, servic
         {/* Header */}
         <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
           <div className="flex items-center gap-3.5">
-            <div className={`p-3 rounded-2xl border flex items-center justify-center ${
-              formData.type === 'postgresql'
-                ? 'bg-sky-500/20 border-sky-500/40 text-sky-400'
-                : 'bg-amber-500/20 border-amber-500/40 text-amber-400'
-            }`}>
+            <div className={`p-3 rounded-2xl border flex items-center justify-center ${formData.type === 'postgresql'
+              ? 'bg-sky-500/20 border-sky-500/40 text-sky-400'
+              : 'bg-amber-500/20 border-amber-500/40 text-amber-400'
+              }`}>
               {formData.type === 'postgresql' ? <Database size={24} /> : <HardDrive size={24} />}
             </div>
             <div>
@@ -200,22 +250,21 @@ export default function AddServiceModal({ isOpen, onClose, onServerAdded, servic
         )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          
+
           {/* Tipe Service Selector */}
           <div>
             <label className="block text-xs font-bold text-slate-300 mb-2.5">
               Pilih Jenis Layanan:
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              
+
               {/* PostgreSQL */}
               <div
                 onClick={() => handleChange({ target: { name: 'type', value: 'postgresql' } })}
-                className={`p-3.5 rounded-2xl border cursor-pointer transition-all duration-200 flex items-center gap-3 ${
-                  formData.type === 'postgresql'
-                    ? 'border-sky-400 bg-sky-500/15 text-sky-400 shadow-md shadow-sky-500/10'
-                    : 'border-slate-800 bg-black/30 hover:border-slate-700 text-slate-300'
-                }`}
+                className={`p-3.5 rounded-2xl border cursor-pointer transition-all duration-200 flex items-center gap-3 ${formData.type === 'postgresql'
+                  ? 'border-sky-400 bg-sky-500/15 text-sky-400 shadow-md shadow-sky-500/10'
+                  : 'border-slate-800 bg-black/30 hover:border-slate-700 text-slate-300'
+                  }`}
               >
                 <Database size={20} className={formData.type === 'postgresql' ? 'text-sky-400' : 'text-slate-400'} />
                 <div>
@@ -227,11 +276,10 @@ export default function AddServiceModal({ isOpen, onClose, onServerAdded, servic
               {/* MinIO Storage */}
               <div
                 onClick={() => handleChange({ target: { name: 'type', value: 'minio' } })}
-                className={`p-3.5 rounded-2xl border cursor-pointer transition-all duration-200 flex items-center gap-3 ${
-                  formData.type === 'minio'
-                    ? 'border-amber-400 bg-amber-500/15 text-amber-400 shadow-md shadow-amber-500/10'
-                    : 'border-slate-800 bg-black/30 hover:border-slate-700 text-slate-300'
-                }`}
+                className={`p-3.5 rounded-2xl border cursor-pointer transition-all duration-200 flex items-center gap-3 ${formData.type === 'minio'
+                  ? 'border-amber-400 bg-amber-500/15 text-amber-400 shadow-md shadow-amber-500/10'
+                  : 'border-slate-800 bg-black/30 hover:border-slate-700 text-slate-300'
+                  }`}
               >
                 <HardDrive size={20} className={formData.type === 'minio' ? 'text-amber-400' : 'text-slate-400'} />
                 <div>
@@ -243,11 +291,10 @@ export default function AddServiceModal({ isOpen, onClose, onServerAdded, servic
               {/* AWS S3 */}
               <div
                 onClick={() => handleChange({ target: { name: 'type', value: 's3' } })}
-                className={`p-3.5 rounded-2xl border cursor-pointer transition-all duration-200 flex items-center gap-3 ${
-                  formData.type === 's3'
-                    ? 'border-pink-400 bg-pink-500/15 text-pink-400 shadow-md shadow-pink-500/10'
-                    : 'border-slate-800 bg-black/30 hover:border-slate-700 text-slate-300'
-                }`}
+                className={`p-3.5 rounded-2xl border cursor-pointer transition-all duration-200 flex items-center gap-3 ${formData.type === 's3'
+                  ? 'border-pink-400 bg-pink-500/15 text-pink-400 shadow-md shadow-pink-500/10'
+                  : 'border-slate-800 bg-black/30 hover:border-slate-700 text-slate-300'
+                  }`}
               >
                 <HardDrive size={20} className={formData.type === 's3' ? 'text-pink-400' : 'text-slate-400'} />
                 <div>
@@ -278,65 +325,16 @@ export default function AddServiceModal({ isOpen, onClose, onServerAdded, servic
           {/* Dynamic Fields for PostgreSQL */}
           {formData.type === 'postgresql' && (
             <div className="flex flex-col gap-4 bg-sky-500/5 border border-sky-500/20 p-4 rounded-2xl">
-              <div className="grid grid-cols-3 gap-3">
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Host IP / Domain DB:</label>
-                  <input
-                    type="text"
-                    name="host"
-                    value={formData.host}
-                    onChange={handleChange}
-                    placeholder="10.10.3.33"
-                    className="w-full px-4 py-2.5 bg-black/45 border border-slate-800 focus:border-sky-400 rounded-xl text-white text-sm font-mono outline-none"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Port DB:</label>
-                  <input
-                    type="number"
-                    name="port"
-                    value={formData.port}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2.5 bg-black/45 border border-slate-800 focus:border-sky-400 rounded-xl text-white text-sm font-mono outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Nama Database:</label>
-                  <input
-                    type="text"
-                    name="db_name"
-                    value={formData.db_name}
-                    onChange={handleChange}
-                    placeholder="postgres"
-                    className="w-full px-4 py-2.5 bg-black/45 border border-slate-800 focus:border-sky-400 rounded-xl text-white text-sm font-mono outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">User Database:</label>
-                  <input
-                    type="text"
-                    name="db_user"
-                    value={formData.db_user}
-                    onChange={handleChange}
-                    placeholder="postgres"
-                    className="w-full px-4 py-2.5 bg-black/45 border border-slate-800 focus:border-sky-400 rounded-xl text-white text-sm font-mono outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Password Database:</label>
+              <div className="col-span-2">
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Connection String:</label>
                 <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
+                  type="text"
+                  name="connString"
+                  value={formData.connString}
                   onChange={handleChange}
-                  placeholder={isEditMode ? '•••••••• (Biarkan kosong jika tidak diubah)' : 'Password PostgreSQL'}
+                  placeholder="postgresql://postgres:password@host:5432/dbname?schema=public"
                   className="w-full px-4 py-2.5 bg-black/45 border border-slate-800 focus:border-sky-400 rounded-xl text-white text-sm font-mono outline-none"
+                  required
                 />
               </div>
             </div>
@@ -412,11 +410,10 @@ export default function AddServiceModal({ isOpen, onClose, onServerAdded, servic
 
           {/* Test Connection Result Box */}
           {testResult && (
-            <div className={`p-3.5 rounded-xl text-xs flex items-center gap-2.5 border ${
-              testResult.success
-                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
-                : 'bg-red-500/15 border-red-500/30 text-red-300'
-            }`}>
+            <div className={`p-3.5 rounded-xl text-xs flex items-center gap-2.5 border ${testResult.success
+              ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+              : 'bg-red-500/15 border-red-500/30 text-red-300'
+              }`}>
               {testResult.success ? <CheckCircle size={20} className="text-emerald-400 shrink-0" /> : <AlertCircle size={20} className="text-red-400 shrink-0" />}
               <span>{testResult.message}</span>
             </div>

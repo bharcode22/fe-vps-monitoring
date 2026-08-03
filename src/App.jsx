@@ -9,12 +9,14 @@ import PerformanceSummary from './components/dashboard/PerformanceSummary';
 import FilterTabs from './components/dashboard/FilterTabs';
 import SkeletonPerformanceSummary from './components/dashboard/SkeletonPerformanceSummary';
 import SkeletonCard from './components/common/SkeletonCard';
+import DatabaseSyncPage from './pages/DatabaseSyncPage';
 import { useServers } from './hooks/useServers';
 import { useSocket } from './hooks/useSocket';
 import { fetchSettingsApi, saveSettingApi } from './api/vpsApi';
 import { Server, Database, HardDrive, Cpu, ShieldCheck } from 'lucide-react';
 
 export default function App() {
+  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' | 'sync'
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAddServiceModalOpen, setIsAddServiceModalOpen] = useState(false);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
@@ -140,14 +142,24 @@ export default function App() {
         onRefresh={fetchServers}
         isTvMode={isTvMode}
         onToggleTvMode={handleToggleTvMode}
+        currentView={currentView}
+        onNavigateView={setCurrentView}
       />
 
-      {/* Global Performance Summary Bar */}
-      {isLoading ? (
-        <SkeletonPerformanceSummary />
+      {/* Render View: Database Synchronization Page or Main Dashboard */}
+      {currentView === 'sync' ? (
+        <DatabaseSyncPage
+          servers={servers}
+          onBack={() => setCurrentView('dashboard')}
+        />
       ) : (
-        <PerformanceSummary servers={servers} />
-      )}
+        <>
+          {/* Global Performance Summary Bar */}
+          {isLoading ? (
+            <SkeletonPerformanceSummary />
+          ) : (
+            <PerformanceSummary servers={servers} />
+          )}
 
       {/* Main Server Cards Section */}
       <main className="flex flex-col gap-6">
@@ -357,6 +369,8 @@ export default function App() {
         )}
 
       </main>
+      </>
+      )}
 
       {/* Add / Edit VPS / POD SSH Modal */}
       <AddServerModal
