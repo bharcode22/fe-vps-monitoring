@@ -2,10 +2,13 @@ import { BACKEND_URL } from '../config';
 
 function getAuthHeaders() {
   const token = localStorage.getItem('vps_monitoring_token') || '';
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
+  const headers = {
+    'Content-Type': 'application/json'
   };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
 }
 
 /**
@@ -21,7 +24,7 @@ export async function fetchServersApi(searchQuery = '', filterType = 'all') {
   const param = searchQuery.trim() ? `?q=${encodeURIComponent(searchQuery.trim())}` : '';
   const url = `${BACKEND_URL}${endpoint}${param}`;
 
-  const res = await fetch(url);
+  const res = await fetch(url, { headers: getAuthHeaders() });
   const data = await res.json();
   if (!data.success) throw new Error(data.error || 'Gagal mengambil data layanan');
   return data.data;
@@ -31,7 +34,7 @@ export async function fetchServersApi(searchQuery = '', filterType = 'all') {
  * Fetch historical metrics for a specific server
  */
 export async function fetchServerHistoryApi(serverId) {
-  const res = await fetch(`${BACKEND_URL}/api/vps/${serverId}/history`);
+  const res = await fetch(`${BACKEND_URL}/api/vps/${serverId}/history`, { headers: getAuthHeaders() });
   const data = await res.json();
   if (!data.success) throw new Error(data.error || 'Gagal mengambil riwayat statistik');
   return data.data;
