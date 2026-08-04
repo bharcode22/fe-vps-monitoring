@@ -81,6 +81,26 @@ export default function Navbar({
                 <Zap size={14} />
                 <span>Database Sync</span>
               </button>
+              <button
+                onClick={() => onNavigateView('sounds-comparison')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${currentView === 'sounds-comparison'
+                  ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-400 border border-cyan-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+                  }`}
+              >
+                <Activity size={14} />
+                <span>Compare Sounds</span>
+              </button>
+              <button
+                onClick={() => onNavigateView('metadata-comparison')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${currentView === 'metadata-comparison'
+                  ? 'bg-gradient-to-r from-purple-500/30 to-pink-500/30 text-purple-400 border border-purple-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+                  }`}
+              >
+                <Database size={14} />
+                <span>Compare Metadata</span>
+              </button>
             </div>
           )}
 
@@ -257,6 +277,32 @@ export default function Navbar({
               >
                 <Zap size={15} />
                 <span>Database Sync</span>
+              </button>
+              <button
+                onClick={() => {
+                  onNavigateView('sounds-comparison');
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`col-span-2 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${currentView === 'sounds-comparison'
+                  ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-400 border border-cyan-500/40'
+                  : 'text-slate-400'
+                  }`}
+              >
+                <Activity size={15} />
+                <span>Compare Sounds</span>
+              </button>
+              <button
+                onClick={() => {
+                  onNavigateView('metadata-comparison');
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`col-span-2 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${currentView === 'metadata-comparison'
+                  ? 'bg-gradient-to-r from-purple-500/30 to-pink-500/30 text-purple-400 border border-purple-500/40'
+                  : 'text-slate-400'
+                  }`}
+              >
+                <Database size={15} />
+                <span>Compare Metadata</span>
               </button>
             </div>
           )}

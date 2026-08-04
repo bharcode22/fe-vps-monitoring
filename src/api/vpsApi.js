@@ -319,3 +319,27 @@ export async function fetchPm2LogsApi(serverId, appName) {
   if (!data.success) throw new Error(data.error || 'Gagal mengambil log PM2');
   return data.data;
 }
+
+/**
+ * Fetch and compare all sounds across multiple pods
+ */
+export async function fetchCompareSoundsApi(version = 'all') {
+  const res = await fetch(`${BACKEND_URL}/api/vps/sounds/compare?version=${encodeURIComponent(version)}`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal membandingkan sounds antar pod');
+  return data.data;
+}
+
+/**
+ * Fetch and compare all metadata across multiple pods
+ */
+export async function fetchCompareMetadataApi(version = 'all') {
+  const res = await fetch(`${BACKEND_URL}/api/vps/metadata/compare?version=${encodeURIComponent(version)}`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal membandingkan metadata antar pod');
+  return data.data;
+}
