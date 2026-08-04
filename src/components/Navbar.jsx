@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Server, Plus, Activity, RefreshCw, Tv, Users, LogOut, Lock, Database, HardDrive, Menu, X, Zap } from 'lucide-react';
+import { Server, Plus, Activity, RefreshCw, Tv, Users, LogOut, Lock, Database, HardDrive, Menu, X, Zap, Shuffle } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
@@ -100,6 +100,16 @@ export default function Navbar({
               >
                 <Database size={14} />
                 <span>Compare Metadata</span>
+              </button>
+              <button
+                onClick={() => onNavigateView('rabbitmq')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${currentView === 'rabbitmq'
+                  ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-400 border border-cyan-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+                  }`}
+              >
+                <Shuffle size={14} />
+                <span>RabbitMQ Monitor</span>
               </button>
             </div>
           )}
@@ -303,6 +313,19 @@ export default function Navbar({
               >
                 <Database size={15} />
                 <span>Compare Metadata</span>
+              </button>
+              <button
+                onClick={() => {
+                  onNavigateView('rabbitmq');
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`col-span-2 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${currentView === 'rabbitmq'
+                  ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-400 border border-cyan-500/40'
+                  : 'text-slate-400'
+                  }`}
+              >
+                <Shuffle size={15} />
+                <span>RabbitMQ Monitor</span>
               </button>
             </div>
           )}

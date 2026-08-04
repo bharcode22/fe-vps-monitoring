@@ -13,6 +13,7 @@ import SkeletonCard from './components/common/SkeletonCard';
 import DatabaseSyncPage from './pages/DatabaseSyncPage';
 import SoundsComparisonPage from './pages/SoundsComparisonPage';
 import MetadataComparisonPage from './pages/MetadataComparisonPage';
+import RabbitMqMonitorPage from './pages/RabbitMqMonitorPage';
 import { useServers } from './hooks/useServers';
 import { useSocket } from './hooks/useSocket';
 import { fetchSettingsApi, saveSettingApi } from './api/vpsApi';
@@ -26,7 +27,7 @@ export default function App() {
     } catch (e) {
       return 'dashboard';
     }
-  }); // 'dashboard' | 'sync' | 'sounds-comparison' | 'metadata-comparison'
+  }); // 'dashboard' | 'sync' | 'sounds-comparison' | 'metadata-comparison' | 'rabbitmq'
 
   // Persist currentView changes to localStorage
   useEffect(() => {
@@ -167,6 +168,8 @@ export default function App() {
         <MetadataComparisonPage onBack={() => setCurrentView('dashboard')} />
       ) : currentView === 'sounds-comparison' ? (
         <SoundsComparisonPage onBack={() => setCurrentView('dashboard')} />
+      ) : currentView === 'rabbitmq' ? (
+        <RabbitMqMonitorPage onBack={() => setCurrentView('dashboard')} />
       ) : currentView === 'sync' ? (
         <DatabaseSyncPage
           servers={servers}
