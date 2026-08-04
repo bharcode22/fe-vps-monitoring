@@ -291,7 +291,7 @@ export default function AddServiceModal({ isOpen, onClose, onServerAdded, servic
               >
                 <Database size={20} className={formData.type === 'postgresql' ? 'text-sky-400' : 'text-slate-400'} />
                 <div>
-                  <div className="font-bold text-xs">🐘 PostgreSQL</div>
+                  <div className="font-bold text-xs">PostgreSQL</div>
                   <div className="text-[10px] text-slate-400">Database SQL</div>
                 </div>
               </div>
@@ -306,7 +306,7 @@ export default function AddServiceModal({ isOpen, onClose, onServerAdded, servic
               >
                 <HardDrive size={20} className={formData.type === 'minio' ? 'text-amber-400' : 'text-slate-400'} />
                 <div>
-                  <div className="font-bold text-xs">🪣 MinIO Storage</div>
+                  <div className="font-bold text-xs">MinIO Storage</div>
                   <div className="text-[10px] text-slate-400">Self-hosted S3</div>
                 </div>
               </div>
@@ -321,7 +321,7 @@ export default function AddServiceModal({ isOpen, onClose, onServerAdded, servic
               >
                 <HardDrive size={20} className={formData.type === 's3' ? 'text-pink-400' : 'text-slate-400'} />
                 <div>
-                  <div className="font-bold text-xs">☁️ AWS S3</div>
+                  <div className="font-bold text-xs">AWS S3</div>
                   <div className="text-[10px] text-slate-400">Cloud Storage</div>
                 </div>
               </div>

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, Server, Box, Cpu, HardDrive, ArrowDown, ArrowUp, Zap, Clock, ShieldCheck, Edit3, Activity, FileCode, Music } from 'lucide-react';
+import { X, Server, Box, Cpu, HardDrive, ArrowDown, ArrowUp, Zap, Clock, ShieldCheck, Edit3, Activity, FileCode, Music, Layers } from 'lucide-react';
 import MetricsChart from '../MetricsChart';
 import { fetchServerHistoryApi } from '../../api/vpsApi';
 import { formatMbToGb } from '../../utils/formatters';
 import { useAuth } from '../../context/AuthContext';
 import DockerContainerTab from './DockerContainerTab';
+import Pm2AppTab from './Pm2AppTab';
 import ScriptExecTab from './ScriptExecTab';
 import SoundsTab from './SoundsTab';
 
@@ -99,22 +100,20 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
         {/* Header Title & Actions */}
         <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
           <div className="flex items-center gap-3">
-            <div className={`p-3 rounded-2xl border ${
-              isPod
-                ? 'bg-purple-500/15 border-purple-500/30 text-purple-400'
-                : isOnline
+            <div className={`p-3 rounded-2xl border ${isPod
+              ? 'bg-purple-500/15 border-purple-500/30 text-purple-400'
+              : isOnline
                 ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400'
                 : 'bg-red-500/15 border-red-500/30 text-red-400'
-            }`}>
+              }`}>
               {isPod ? <Box size={28} /> : <Server size={28} />}
             </div>
             <div>
               <div className="flex items-center gap-2.5">
                 <h2 className="text-xl font-bold text-white">{server.name}</h2>
-                <span className={`text-xs font-bold uppercase px-2.5 py-0.5 rounded-md border ${
-                  isPod ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' : 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30'
-                }`}>
-                  {isPod ? `📦 POD ${podVersionText}` : '🖥️ VPS'}
+                <span className={`text-xs font-bold uppercase px-2.5 py-0.5 rounded-md border ${isPod ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' : 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30'
+                  }`}>
+                  {isPod ? `POD ${podVersionText}` : 'VPS'}
                 </span>
               </div>
               <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
@@ -134,11 +133,10 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
 
           <div className="flex items-center gap-3">
             {/* Status Pill */}
-            <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold border ${
-              isOnline
-                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
-                : 'bg-red-500/15 border-red-500/30 text-red-400'
-            }`}>
+            <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold border ${isOnline
+              ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+              : 'bg-red-500/15 border-red-500/30 text-red-400'
+              }`}>
               <span className={`live-dot ${isOnline ? 'online' : 'offline'} w-2 h-2`}></span>
               <span>{isOnline ? 'ONLINE' : 'OFFLINE'}</span>
             </div>
@@ -166,46 +164,52 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
           <div className="flex gap-2 mb-5 border-b border-slate-800 pb-3 flex-wrap">
             <button
               onClick={() => setViewMode('metrics')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
-                viewMode === 'metrics'
-                  ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 shadow-md shadow-cyan-500/20'
-                  : 'bg-white/5 text-slate-400 hover:text-slate-200'
-              }`}
+              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${viewMode === 'metrics'
+                ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                : 'bg-white/5 text-slate-400 hover:text-slate-200'
+                }`}
             >
               <Activity size={16} /> Metrik & Grafik Real-time
             </button>
 
             <button
               onClick={() => setViewMode('docker')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
-                viewMode === 'docker'
-                  ? 'bg-gradient-to-r from-purple-400 to-purple-600 text-slate-950 shadow-md shadow-purple-500/20'
-                  : 'bg-white/5 text-slate-400 hover:text-slate-200'
-              }`}
+              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${viewMode === 'docker'
+                ? 'bg-gradient-to-r from-purple-400 to-purple-600 text-slate-950 shadow-md shadow-purple-500/20'
+                : 'bg-white/5 text-slate-400 hover:text-slate-200'
+                }`}
             >
-              <Box size={16} /> 🐳 Docker Apps (Manage)
+              <Box size={16} /> Docker Apps
+            </button>
+
+            <button
+              onClick={() => setViewMode('pm2')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${viewMode === 'pm2'
+                ? 'bg-gradient-to-r from-emerald-400 to-teal-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                : 'bg-white/5 text-slate-400 hover:text-slate-200'
+                }`}
+            >
+              <Layers size={16} /> PM2 Services
             </button>
 
             <button
               onClick={() => setViewMode('scripts')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
-                viewMode === 'scripts'
-                  ? 'bg-gradient-to-r from-amber-400 to-amber-600 text-slate-950 shadow-md shadow-amber-500/20'
-                  : 'bg-white/5 text-slate-400 hover:text-slate-200'
-              }`}
+              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${viewMode === 'scripts'
+                ? 'bg-gradient-to-r from-amber-400 to-amber-600 text-slate-950 shadow-md shadow-amber-500/20'
+                : 'bg-white/5 text-slate-400 hover:text-slate-200'
+                }`}
             >
-              <FileCode size={16} /> ⚡ Exec Scripts (kill-process ➡️ auto-script)
+              <FileCode size={16} /> Exec Scripts
             </button>
 
             <button
               onClick={() => setViewMode('sounds')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
-                viewMode === 'sounds'
-                  ? 'bg-gradient-to-r from-cyan-400 to-sky-500 text-slate-950 shadow-md shadow-cyan-500/20'
-                  : 'bg-white/5 text-slate-400 hover:text-slate-200'
-              }`}
+              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${viewMode === 'sounds'
+                ? 'bg-gradient-to-r from-cyan-400 to-sky-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                : 'bg-white/5 text-slate-400 hover:text-slate-200'
+                }`}
             >
-              <Music size={16} /> 🎵 Sounds Metadata
+              <Music size={16} /> Sounds Metadata
             </button>
           </div>
         )}
@@ -213,6 +217,8 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
         {/* Dynamic Content View */}
         {viewMode === 'docker' && isAuthenticated ? (
           <DockerContainerTab serverId={server.id} />
+        ) : viewMode === 'pm2' && isAuthenticated ? (
+          <Pm2AppTab serverId={server.id} />
         ) : viewMode === 'scripts' && isAuthenticated ? (
           <ScriptExecTab serverId={server.id} />
         ) : viewMode === 'sounds' && isAuthenticated ? (
@@ -343,34 +349,30 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
                 <div className="flex gap-1.5 bg-black/40 p-1 rounded-xl border border-slate-800">
                   <button
                     onClick={() => setActiveTab('bandwidth')}
-                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                      activeTab === 'bandwidth' ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-slate-200'
-                    }`}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${activeTab === 'bandwidth' ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-slate-200'
+                      }`}
                   >
                     Bandwidth
                   </button>
                   <button
                     onClick={() => setActiveTab('cpu')}
-                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                      activeTab === 'cpu' ? 'bg-sky-500/20 text-sky-400' : 'text-slate-400 hover:text-slate-200'
-                    }`}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${activeTab === 'cpu' ? 'bg-sky-500/20 text-sky-400' : 'text-slate-400 hover:text-slate-200'
+                      }`}
                   >
                     CPU
                   </button>
                   <button
                     onClick={() => setActiveTab('ram')}
-                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                      activeTab === 'ram' ? 'bg-purple-500/20 text-purple-400' : 'text-slate-400 hover:text-slate-200'
-                    }`}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${activeTab === 'ram' ? 'bg-purple-500/20 text-purple-400' : 'text-slate-400 hover:text-slate-200'
+                      }`}
                   >
                     RAM
                   </button>
                   {hasGpu && (
                     <button
                       onClick={() => setActiveTab('gpu')}
-                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                        activeTab === 'gpu' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400 hover:text-slate-200'
-                      }`}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${activeTab === 'gpu' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400 hover:text-slate-200'
+                        }`}
                     >
                       GPU
                     </button>

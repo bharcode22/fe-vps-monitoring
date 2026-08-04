@@ -239,3 +239,83 @@ export async function validateServerSoundsApi(serverId) {
   if (!data.success) throw new Error(data.error || 'Gagal memvalidasi data metadata sounds');
   return data.data;
 }
+
+/**
+ * Fetch all PM2 applications for a specific server (Admin only)
+ */
+export async function fetchPm2AppsApi(serverId) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/${serverId}/pm2`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal mengambil daftar aplikasi PM2');
+  return data.data;
+}
+
+/**
+ * Restart a PM2 app (Admin only)
+ */
+export async function restartPm2AppApi(serverId, appName) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/${serverId}/pm2/restart`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ appName })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal merestart aplikasi PM2');
+  return data;
+}
+
+/**
+ * Stop a PM2 app (Admin only)
+ */
+export async function stopPm2AppApi(serverId, appName) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/${serverId}/pm2/stop`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ appName })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal menghentikan (stop) aplikasi PM2');
+  return data;
+}
+
+/**
+ * Remove a Docker container (docker rm -f) (Admin only)
+ */
+export async function removeDockerContainerApi(serverId, containerName) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/${serverId}/docker/remove`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ containerName })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal menghapus (docker rm) container');
+  return data;
+}
+
+/**
+ * Delete a PM2 app (pm2 delete) (Admin only)
+ */
+export async function deletePm2AppApi(serverId, appName) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/${serverId}/pm2/delete`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ appName })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal menghapus (pm2 delete) aplikasi PM2');
+  return data;
+}
+
+/**
+ * Fetch logs for a PM2 app (Admin only)
+ */
+export async function fetchPm2LogsApi(serverId, appName) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/${serverId}/pm2/${encodeURIComponent(appName)}/logs`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal mengambil log PM2');
+  return data.data;
+}

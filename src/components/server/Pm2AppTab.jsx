@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Box, RefreshCw, RotateCcw, Square, Terminal, AlertCircle, CheckCircle, Loader2, Trash2 } from 'lucide-react';
-import { fetchDockerContainersApi, restartDockerContainerApi, stopDockerContainerApi, removeDockerContainerApi } from '../../api/vpsApi';
-import DockerLogModal from './DockerLogModal';
-import { useLanguage } from '../../context/LanguageContext';
+import { Layers, RefreshCw, RotateCcw, Square, Terminal, AlertCircle, CheckCircle, Loader2, Trash2 } from 'lucide-react';
+import { fetchPm2AppsApi, restartPm2AppApi, stopPm2AppApi, deletePm2AppApi } from '../../api/vpsApi';
+import Pm2LogModal from './Pm2LogModal';
+import { formatMbToGb } from '../../utils/formatters';
 
-const SkeletonDockerTable = () => (
+const SkeletonPm2Table = () => (
   <div className="flex flex-col gap-4">
-    {/* Tab Header Controls Skeleton */}
     <div className="flex items-center justify-between flex-wrap gap-3">
       <div className="flex items-center gap-2">
         <div className="skeleton-box w-5 h-5 rounded"></div>
@@ -14,8 +13,6 @@ const SkeletonDockerTable = () => (
       </div>
       <div className="skeleton-box w-28 h-8.5 rounded-lg"></div>
     </div>
-
-    {/* Table Card Skeleton Container */}
     <div className="glass-card p-0 overflow-hidden rounded-2xl border border-slate-800">
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-xs">
@@ -29,23 +26,13 @@ const SkeletonDockerTable = () => (
             </tr>
           </thead>
           <tbody>
-            {[1, 2, 3, 4].map((i) => (
+            {[1, 2, 3].map((i) => (
               <tr key={i} className="border-b border-white/5">
-                <td className="p-3.5">
-                  <div className="flex flex-col gap-1.5">
-                    <div className="skeleton-box w-36 h-4 rounded"></div>
-                    <div className="skeleton-box w-20 h-3 rounded"></div>
-                  </div>
-                </td>
+                <td className="p-3.5"><div className="skeleton-box w-36 h-4 rounded"></div></td>
                 <td className="p-3.5"><div className="skeleton-box w-28 h-3.5 rounded"></div></td>
                 <td className="p-3.5"><div className="skeleton-box w-20 h-6 rounded-full"></div></td>
                 <td className="p-3.5"><div className="skeleton-box w-24 h-3.5 rounded"></div></td>
-                <td className="p-3.5 text-right">
-                  <div className="flex gap-2 justify-end">
-                    <div className="skeleton-box w-20 h-8 rounded-lg"></div>
-                    <div className="skeleton-box w-8 h-8 rounded-lg"></div>
-                  </div>
-                </td>
+                <td className="p-3.5 text-right"><div className="skeleton-box w-20 h-8 rounded-lg ml-auto"></div></td>
               </tr>
             ))}
           </tbody>
@@ -55,107 +42,109 @@ const SkeletonDockerTable = () => (
   </div>
 );
 
-export default function DockerContainerTab({ serverId }) {
-  const { t } = useLanguage();
-  const [containers, setContainers] = useState([]);
+export default function Pm2AppTab({ serverId }) {
+  const [apps, setApps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
-  const [restartingContainer, setRestartingContainer] = useState('');
-  const [stoppingContainer, setStoppingContainer] = useState('');
-  const [removingContainer, setRemovingContainer] = useState('');
+  const [restartingApp, setRestartingApp] = useState('');
+  const [stoppingApp, setStoppingApp] = useState('');
+  const [deletingApp, setDeletingApp] = useState('');
   const [actionSuccessMsg, setActionSuccessMsg] = useState('');
-
-  // Selected container for log modal
-  const [selectedLogContainer, setSelectedLogContainer] = useState(null);
+  const [selectedLogApp, setSelectedLogApp] = useState(null);
 
   useEffect(() => {
     if (serverId) {
-      loadContainers();
+      loadApps();
     }
   }, [serverId]);
 
-  const loadContainers = async () => {
+  const loadApps = async () => {
     setLoading(true);
     setErrorMsg('');
     try {
-      const data = await fetchDockerContainersApi(serverId);
-      setContainers(data);
+      const data = await fetchPm2AppsApi(serverId);
+      setApps(data);
     } catch (err) {
-      setErrorMsg(err.message || 'Gagal memuat daftar container Docker.');
+      setErrorMsg(err.message || 'Gagal memuat daftar aplikasi PM2 (pm2 ls).');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRestart = async (containerName) => {
-    setRestartingContainer(containerName);
+  const handleRestart = async (appName) => {
+    setRestartingApp(appName);
     setActionSuccessMsg('');
     setErrorMsg('');
     try {
-      await restartDockerContainerApi(serverId, containerName);
-      setActionSuccessMsg(`Container ${containerName} berhasil dimuat ulang (restart).`);
-      loadContainers();
+      await restartPm2AppApi(serverId, appName);
+      setActionSuccessMsg(`Aplikasi PM2 "${appName}" berhasil dimuat ulang (restart).`);
+      loadApps();
     } catch (err) {
-      setErrorMsg(err.message || `Gagal merestart container ${containerName}`);
+      setErrorMsg(err.message || `Gagal merestart PM2 ${appName}`);
     } finally {
-      setRestartingContainer('');
+      setRestartingApp('');
     }
   };
 
-  const handleStop = async (containerName) => {
-    if (!window.confirm(`Apakah Anda yakin ingin menghentikan (docker stop) container "${containerName}"?`)) return;
-    setStoppingContainer(containerName);
+  const handleStop = async (appName) => {
+    if (!window.confirm(`Apakah Anda yakin ingin menghentikan (pm2 stop) aplikasi "${appName}"?`)) return;
+    setStoppingApp(appName);
     setActionSuccessMsg('');
     setErrorMsg('');
     try {
-      await stopDockerContainerApi(serverId, containerName);
-      setActionSuccessMsg(`Container ${containerName} berhasil dihentikan (stop).`);
-      loadContainers();
+      await stopPm2AppApi(serverId, appName);
+      setActionSuccessMsg(`Aplikasi PM2 "${appName}" berhasil dihentikan (stop).`);
+      loadApps();
     } catch (err) {
-      setErrorMsg(err.message || `Gagal menghentikan container ${containerName}`);
+      setErrorMsg(err.message || `Gagal menghentikan PM2 ${appName}`);
     } finally {
-      setStoppingContainer('');
+      setStoppingApp('');
     }
   };
 
-  const handleRemove = async (containerName) => {
-    if (!window.confirm(`PERINGATAN: Apakah Anda yakin ingin MENGHAPUS PERMANEN (docker rm -f) container "${containerName}"?`)) return;
-    setRemovingContainer(containerName);
+  const handleDelete = async (appName) => {
+    if (!window.confirm(`PERINGATAN: Apakah Anda yakin ingin MENGHAPUS (pm2 delete) service "${appName}" dari daftar PM2?`)) return;
+    setDeletingApp(appName);
     setActionSuccessMsg('');
     setErrorMsg('');
     try {
-      await removeDockerContainerApi(serverId, containerName);
-      setActionSuccessMsg(`Container ${containerName} berhasil dihapus (docker rm -f).`);
-      loadContainers();
+      await deletePm2AppApi(serverId, appName);
+      setActionSuccessMsg(`Aplikasi PM2 "${appName}" berhasil dihapus (pm2 delete).`);
+      loadApps();
     } catch (err) {
-      setErrorMsg(err.message || `Gagal menghapus container ${containerName}`);
+      setErrorMsg(err.message || `Gagal menghapus PM2 ${appName}`);
     } finally {
-      setRemovingContainer('');
+      setDeletingApp('');
     }
+  };
+
+  const formatMemory = (bytes) => {
+    if (!bytes) return '0 MB';
+    const mb = Math.round(bytes / (1024 * 1024));
+    return `${mb} MB`;
   };
 
   if (loading) {
-    return <SkeletonDockerTable />;
+    return <SkeletonPm2Table />;
   }
 
   return (
     <div className="flex flex-col gap-4">
-
-      {/* Tab Header Controls */}
+      {/* Header Controls */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
-          <Box className="text-purple-400" size={20} />
+          <Layers className="text-emerald-400" size={20} />
           <h3 className="text-lg font-bold text-white">
-            Docker Applications ({containers.length} Running / Stopped)
+            PM2 Managed Services ({apps.length} Running / Stopped)
           </h3>
         </div>
 
         <button
-          onClick={loadContainers}
+          onClick={loadApps}
           className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
         >
-          <RefreshCw size={14} />
-          <span>Refresh Containers</span>
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          <span>Refresh PM2 (pm2 ls)</span>
         </button>
       </div>
 
@@ -173,87 +162,91 @@ export default function DockerContainerTab({ serverId }) {
         </div>
       )}
 
-      {/* Containers Table */}
-      {containers.length === 0 ? (
+      {/* Apps Table */}
+      {apps.length === 0 ? (
         <div className="text-center p-9 bg-black/20 rounded-2xl text-slate-400 text-xs">
-          Tidak ada container Docker yang berjalan di server ini (atau Docker belum terinstall).
+          Tidak ada aplikasi PM2 yang berjalan di server ini (atau PM2 belum terinstall).
         </div>
       ) : (
         <div className="overflow-x-auto bg-black/25 border border-slate-800 rounded-2xl">
           <table className="w-full border-collapse text-xs">
             <thead>
               <tr className="border-b border-slate-800 text-left text-slate-400 bg-slate-900/50">
-                <th className="p-3">Nama Container</th>
-                <th className="p-3">Image Tag</th>
+                <th className="p-3">Nama Service / App</th>
                 <th className="p-3">Status / State</th>
-                <th className="p-3">Ports</th>
+                <th className="p-3">Memori (RAM)</th>
+                <th className="p-3">CPU %</th>
+                <th className="p-3">Restarts</th>
                 <th className="p-3 text-right">Aksi Admin</th>
               </tr>
             </thead>
             <tbody>
-              {containers.map((c, index) => {
-                const isRunning = (c.state || '').toLowerCase() === 'running';
-                const isExited = (c.state || '').toLowerCase() === 'exited';
-                const isRestartingThis = restartingContainer === c.name;
-                const isStoppingThis = stoppingContainer === c.name;
+              {apps.map((app) => {
+                const isOnline = (app.status || '').toLowerCase() === 'online';
+                const isStopped = (app.status || '').toLowerCase() === 'stopped';
+                const isRestartingThis = restartingApp === app.name;
+                const isStoppingThis = stoppingApp === app.name;
 
                 return (
-                  <tr key={c.id || index} className="border-b border-white/5 hover:bg-white/[0.02]">
-
-                    {/* Container Name & ID */}
+                  <tr key={app.id || app.name} className="border-b border-white/5 hover:bg-white/[0.02]">
+                    {/* App Name & ID */}
                     <td className="p-3 font-mono">
-                      <div className="font-semibold text-white">{c.name}</div>
-                      <div className="text-[10px] text-slate-500">ID: {c.id}</div>
+                      <div className="font-semibold text-white">{app.name}</div>
+                      <div className="text-[10px] text-slate-500">ID: {app.id} • {app.mode}</div>
                     </td>
 
-                    {/* Image */}
-                    <td className="p-3 text-slate-400 font-mono">
-                      {c.image}
-                    </td>
-
-                    {/* Status / State Badge */}
+                    {/* Status Badge */}
                     <td className="p-3">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
-                        isRunning
+                        isOnline
                           ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                          : isExited
+                          : isStopped
                           ? 'bg-red-500/15 text-red-400 border-red-500/30'
                           : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
                       }`}>
-                        <span className={`live-dot ${isRunning ? 'online' : 'offline'} w-1.5 h-1.5`}></span>
-                        {c.status || c.state}
+                        <span className={`live-dot ${isOnline ? 'online' : 'offline'} w-1.5 h-1.5`}></span>
+                        {app.status.toUpperCase()}
                       </span>
                     </td>
 
-                    {/* Exposed Ports */}
-                    <td className="p-3 text-slate-400 text-xs font-mono">
-                      {c.ports || '-'}
+                    {/* Memory */}
+                    <td className="p-3 text-emerald-300 font-mono">
+                      {formatMemory(app.memory)}
                     </td>
 
-                    {/* Admin Action Buttons */}
+                    {/* CPU */}
+                    <td className="p-3 text-cyan-300 font-mono">
+                      {app.cpu}%
+                    </td>
+
+                    {/* Restarts */}
+                    <td className="p-3 text-slate-400 font-mono">
+                      {app.restarts}x
+                    </td>
+
+                    {/* Actions */}
                     <td className="p-3 text-right">
                       <div className="flex gap-2 justify-end">
-
-                        {/* Log Console Button */}
+                        {/* Logs */}
                         <button
-                          onClick={() => setSelectedLogContainer(c.name)}
+                          onClick={() => setSelectedLogApp(app.name)}
                           className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-                          title="Lihat Log Container"
+                          title="Lihat Log Service (pm2 logs)"
                         >
                           <Terminal size={14} className="text-cyan-400" />
                           <span>Logs</span>
                         </button>
 
-                        {/* Stop Button */}
+                        {/* Stop */}
                         <button
-                          onClick={() => handleStop(c.name)}
-                          disabled={isStoppingThis || isRestartingThis || !isRunning}
+                          onClick={() => handleStop(app.name)}
+                          disabled={isStoppingThis || isRestartingThis || !isOnline}
                           className={`px-2.5 py-1 border rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer ${
-                            isStoppingThis || isRestartingThis || !isRunning
+                            isStoppingThis || isRestartingThis || !isOnline
                               ? 'bg-red-500/10 border-red-500/20 text-red-400 opacity-50 cursor-not-allowed'
                               : 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20'
                           }`}
-                          title="Hentikan (docker stop) Container Ini"
+                          title="Hentikan Service PM2 Ini"
                         >
                           {isStoppingThis ? (
                             <Loader2 className="animate-spin" size={14} />
@@ -263,16 +256,16 @@ export default function DockerContainerTab({ serverId }) {
                           <span>{isStoppingThis ? 'Stopping...' : 'Stop'}</span>
                         </button>
 
-                        {/* Restart Button */}
+                        {/* Restart */}
                         <button
-                          onClick={() => handleRestart(c.name)}
-                          disabled={isRestartingThis || isStoppingThis || removingContainer === c.name}
+                          onClick={() => handleRestart(app.name)}
+                          disabled={isRestartingThis || isStoppingThis || deletingApp === app.name}
                           className={`px-2.5 py-1 border rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer ${
-                            isRestartingThis || isStoppingThis || removingContainer === c.name
+                            isRestartingThis || isStoppingThis || deletingApp === app.name
                               ? 'bg-amber-500/10 border-amber-500/20 text-amber-400 opacity-50 cursor-not-allowed'
                               : 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20'
                           }`}
-                          title="Restart Container Ini"
+                          title="Restart Service PM2 Ini"
                         >
                           {isRestartingThis ? (
                             <Loader2 className="animate-spin" size={14} />
@@ -282,28 +275,26 @@ export default function DockerContainerTab({ serverId }) {
                           <span>{isRestartingThis ? 'Restarting...' : 'Restart'}</span>
                         </button>
 
-                        {/* Remove Container Button */}
+                        {/* Delete PM2 App */}
                         <button
-                          onClick={() => handleRemove(c.name)}
-                          disabled={removingContainer === c.name || isRestartingThis || isStoppingThis}
+                          onClick={() => handleDelete(app.name)}
+                          disabled={deletingApp === app.name || isRestartingThis || isStoppingThis}
                           className={`px-2 py-1 border rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer ${
-                            removingContainer === c.name
+                            deletingApp === app.name
                               ? 'bg-red-600/20 border-red-600/30 text-red-500 opacity-50 cursor-not-allowed'
                               : 'bg-red-600/15 border-red-600/40 text-red-400 hover:bg-red-600/30'
                           }`}
-                          title="Hapus Permanen (docker rm -f) Container Ini"
+                          title="Hapus (pm2 delete) Service Ini"
                         >
-                          {removingContainer === c.name ? (
+                          {deletingApp === app.name ? (
                             <Loader2 className="animate-spin" size={14} />
                           ) : (
                             <Trash2 size={14} />
                           )}
-                          <span>{removingContainer === c.name ? 'Deleting...' : 'Delete'}</span>
+                          <span>{deletingApp === app.name ? 'Deleting...' : 'Delete'}</span>
                         </button>
-
                       </div>
                     </td>
-
                   </tr>
                 );
               })}
@@ -313,13 +304,12 @@ export default function DockerContainerTab({ serverId }) {
       )}
 
       {/* Log Console Modal */}
-      <DockerLogModal
-        isOpen={Boolean(selectedLogContainer)}
-        onClose={() => setSelectedLogContainer(null)}
+      <Pm2LogModal
+        isOpen={Boolean(selectedLogApp)}
+        onClose={() => setSelectedLogApp(null)}
         serverId={serverId}
-        containerName={selectedLogContainer}
+        appName={selectedLogApp}
       />
-
     </div>
   );
 }

@@ -46,7 +46,7 @@ export default function Navbar({
                 {t('appTitle')}
               </h1>
               <span className="text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
-                v3.5 PRO
+                PRO
               </span>
             </div>
             <p className="text-slate-400 text-[11px] sm:text-xs mt-0.5 hidden xs:block sm:block">
@@ -63,22 +63,20 @@ export default function Navbar({
             <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/10 mr-1">
               <button
                 onClick={() => onNavigateView('dashboard')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                  currentView === 'dashboard'
-                    ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-400 border border-cyan-500/40 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${currentView === 'dashboard'
+                  ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-400 border border-cyan-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+                  }`}
               >
                 <Activity size={14} />
                 <span>Dashboard</span>
               </button>
               <button
                 onClick={() => onNavigateView('sync')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                  currentView === 'sync'
-                    ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-400 border border-cyan-500/40 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${currentView === 'sync'
+                  ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-400 border border-cyan-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+                  }`}
               >
                 <Zap size={14} />
                 <span>Database Sync</span>
@@ -239,11 +237,10 @@ export default function Navbar({
                   onNavigateView('dashboard');
                   setIsMobileMenuOpen(false);
                 }}
-                className={`py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                  currentView === 'dashboard'
-                    ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-400 border border-cyan-500/40'
-                    : 'text-slate-400'
-                }`}
+                className={`py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${currentView === 'dashboard'
+                  ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-400 border border-cyan-500/40'
+                  : 'text-slate-400'
+                  }`}
               >
                 <Activity size={15} />
                 <span>Dashboard</span>
@@ -253,11 +250,10 @@ export default function Navbar({
                   onNavigateView('sync');
                   setIsMobileMenuOpen(false);
                 }}
-                className={`py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                  currentView === 'sync'
-                    ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-400 border border-cyan-500/40'
-                    : 'text-slate-400'
-                }`}
+                className={`py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${currentView === 'sync'
+                  ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-400 border border-cyan-500/40'
+                  : 'text-slate-400'
+                  }`}
               >
                 <Zap size={15} />
                 <span>Database Sync</span>

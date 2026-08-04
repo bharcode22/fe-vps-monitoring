@@ -6,20 +6,20 @@ export default function GpuMetricCard({ gpuUsage = 0, gpuName = '', gpuTemp = 0 
   const usage = hasGpu ? Math.min(100, Math.max(0, Number(gpuUsage) || 0)) : 0;
 
   return (
-    <div className={`border rounded-2xl p-3.5 flex flex-col justify-between transition-all duration-200 ${
-      hasGpu ? 'bg-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/40' : 'bg-slate-900/40 border-slate-800/80 opacity-70'
+    <div className={`rounded-2xl p-3.5 flex flex-col justify-between transition-all duration-200 ${
+      hasGpu ? 'bg-emerald-500/10 border border-emerald-500/20 hover:border-emerald-500/40' : 'bg-slate-900/40 border border-slate-800/80 opacity-70'
     }`}>
-      <div className="flex items-center justify-between gap-1 mb-1.5">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <Zap size={16} className={hasGpu ? 'text-emerald-400 shrink-0' : 'text-slate-500 shrink-0'} />
-          <span className="text-xs font-semibold text-slate-300 truncate">GPU Load</span>
+      <div className="flex flex-col gap-1.5 mb-2">
+        <div className="flex items-center gap-1.5 text-slate-400">
+          <Zap size={14} className={hasGpu ? 'text-emerald-400 shrink-0' : 'text-slate-500 shrink-0'} />
+          <span className="text-[10px] font-bold uppercase tracking-wider truncate">GPU Load</span>
         </div>
-        <span className={`font-mono font-extrabold text-base shrink-0 ${hasGpu ? 'text-white' : 'text-slate-400'}`}>
+        <div className={`font-mono font-extrabold text-xl tracking-tight ${hasGpu ? 'text-white' : 'text-slate-400'}`}>
           {usage}%
-        </span>
+        </div>
       </div>
 
-      <div className="progress-bar-bg my-1.5">
+      <div className="progress-bar-bg mb-2">
         <div
           className="progress-bar-fill"
           style={{
@@ -29,7 +29,7 @@ export default function GpuMetricCard({ gpuUsage = 0, gpuName = '', gpuTemp = 0 
         ></div>
       </div>
 
-      <div className="flex items-center justify-between text-[11px] font-mono gap-1 text-slate-400 mt-1">
+      <div className="flex items-center justify-between text-[10px] font-mono gap-1 text-slate-400 mt-auto">
         <span className="truncate max-w-[65%]" title={hasGpu ? gpuName : 'N/A'}>
           {hasGpu ? gpuName : 'Tidak Ada GPU'}
         </span>

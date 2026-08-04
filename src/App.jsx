@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import ServerCard from './components/ServerCard';
 import AddServerModal from './components/AddServerModal';
 import AddServiceModal from './components/AddServiceModal';
@@ -369,6 +370,7 @@ export default function App() {
         )}
 
       </main>
+      <Footer />
       </>
       )}
 

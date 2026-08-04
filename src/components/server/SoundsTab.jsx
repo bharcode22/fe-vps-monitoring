@@ -152,7 +152,7 @@ export default function SoundsTab({ serverId }) {
 
       {/* Summary Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5">
-        
+
         {/* Card 1: Total Items in JSON */}
         <div className="glass-card p-4 rounded-2xl border border-slate-800 bg-slate-900/60">
           <span className="text-xs text-slate-400 flex items-center gap-1.5">
@@ -167,32 +167,31 @@ export default function SoundsTab({ serverId }) {
         </div>
 
         {/* Card 2: Missing Files (Red Alert) */}
-        <div 
+        <div
           onClick={() => setActiveFilter('missing')}
-          className={`glass-card p-4 rounded-2xl border cursor-pointer transition-all ${
-            summary.totalMissingFiles > 0
-              ? 'bg-red-500/10 border-red-500/40 shadow-md shadow-red-500/10'
-              : 'bg-slate-900/60 border-slate-800'
-          }`}
+          className={`glass-card p-4 rounded-2xl border cursor-pointer transition-all ${summary.totalMissingFiles > 0
+            ? 'bg-red-500/10 border-red-500/40 shadow-md shadow-red-500/10'
+            : 'bg-slate-900/60 border-slate-800'
+            }`}
         >
           <span className={`text-xs font-semibold flex items-center gap-1.5 ${summary.totalMissingFiles > 0 ? 'text-red-400' : 'text-slate-400'}`}>
-            <XCircle size={15} className={summary.totalMissingFiles > 0 ? 'text-red-400' : 'text-slate-400'} /> ❌ Missing Files (Hilang)
+            <XCircle size={15} className={summary.totalMissingFiles > 0 ? 'text-red-400' : 'text-slate-400'} /> Missing Files (Hilang)
           </span>
           <div className={`font-mono text-2xl font-bold mt-1.5 ${summary.totalMissingFiles > 0 ? 'text-red-400' : 'text-white'}`}>
             {summary.totalMissingFiles} <span className="text-xs font-normal">Berkas</span>
           </div>
           <div className={`text-[11px] mt-1 ${summary.totalMissingFiles > 0 ? 'text-red-300' : 'text-slate-400'}`}>
-            {summary.totalMissingFiles > 0 ? '⚠️ Memerlukan Upload File' : 'Semua file fisik lengkap'}
+            {summary.totalMissingFiles > 0 ? 'Memerlukan Upload File' : 'Semua file fisik lengkap'}
           </div>
         </div>
 
         {/* Card 3: Valid Files (Green) */}
-        <div 
+        <div
           onClick={() => setActiveFilter('valid')}
           className="glass-card p-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 cursor-pointer transition-all"
         >
           <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
-            <CheckCircle size={15} className="text-emerald-400" /> ✅ Valid Files (Tersedia)
+            <CheckCircle size={15} className="text-emerald-400" /> Valid Files (Tersedia)
           </span>
           <div className="font-mono text-2xl font-bold text-emerald-400 mt-1.5">
             {summary.totalValidFiles} <span className="text-xs font-normal">Berkas</span>
@@ -203,18 +202,18 @@ export default function SoundsTab({ serverId }) {
         </div>
 
         {/* Card 4: Folder Extra Files */}
-        <div 
+        <div
           onClick={() => setActiveFilter('extra')}
           className="glass-card p-4 rounded-2xl border border-slate-800 bg-slate-900/60 cursor-pointer transition-all"
         >
           <span className="text-xs font-medium text-slate-400 flex items-center gap-1.5">
-            <Folder size={15} className="text-amber-400" /> 📁 Extra Files (Di Server)
+            <Folder size={15} className="text-amber-400" /> Extra Files (Di Server)
           </span>
           <div className="font-mono text-2xl font-bold text-amber-400 mt-1.5">
             {summary.totalUnreferencedSounds + summary.totalUnreferencedVideos} <span className="text-xs font-normal">Berkas</span>
           </div>
           <div className="text-[11px] text-slate-400 mt-1">
-            🔊 {summary.physicalSoundsCount} Sounds | 🎬 {summary.physicalVideosCount} Videos
+            {summary.physicalSoundsCount} Sounds | {summary.physicalVideosCount} Videos
           </div>
         </div>
 
@@ -222,51 +221,47 @@ export default function SoundsTab({ serverId }) {
 
       {/* Filter Tabs & Search Bar */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        
+
         {/* Filter Buttons */}
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setActiveFilter('all')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-              activeFilter === 'all'
-                ? 'bg-cyan-500/15 border-cyan-400 text-cyan-400'
-                : 'bg-white/5 border-slate-800 text-slate-400 hover:text-slate-200'
-            }`}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${activeFilter === 'all'
+              ? 'bg-cyan-500/15 border-cyan-400 text-cyan-400'
+              : 'bg-white/5 border-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
           >
-            📋 Semua Metadata ({items.length})
+            Semua Metadata ({items.length})
           </button>
 
           <button
             onClick={() => setActiveFilter('missing')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-              activeFilter === 'missing'
-                ? 'bg-red-500/20 border-red-500 text-red-300'
-                : 'bg-white/5 border-slate-800 text-slate-400 hover:text-slate-200'
-            }`}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${activeFilter === 'missing'
+              ? 'bg-red-500/20 border-red-500 text-red-300'
+              : 'bg-white/5 border-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
           >
-            ❌ Missing Files ({summary.totalMissingFiles})
+            Missing Files ({summary.totalMissingFiles})
           </button>
 
           <button
             onClick={() => setActiveFilter('valid')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-              activeFilter === 'valid'
-                ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
-                : 'bg-white/5 border-slate-800 text-slate-400 hover:text-slate-200'
-            }`}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${activeFilter === 'valid'
+              ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
+              : 'bg-white/5 border-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
           >
-            ✅ Valid Files ({summary.totalValidFiles})
+            Valid Files ({summary.totalValidFiles})
           </button>
 
           <button
             onClick={() => setActiveFilter('extra')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-              activeFilter === 'extra'
-                ? 'bg-amber-500/20 border-amber-500 text-amber-300'
-                : 'bg-white/5 border-slate-800 text-slate-400 hover:text-slate-200'
-            }`}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${activeFilter === 'extra'
+              ? 'bg-amber-500/20 border-amber-500 text-amber-300'
+              : 'bg-white/5 border-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
           >
-            📂 Physical Files di Server
+            Physical Files di Server
           </button>
         </div>
 
@@ -289,7 +284,7 @@ export default function SoundsTab({ serverId }) {
       {/* Content Display Mode 1: Physical Files Mode */}
       {activeFilter === 'extra' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          
+
           {/* Sounds Folder List */}
           <div className="glass-card p-5 rounded-2xl border border-slate-800">
             <div className="flex items-center gap-2 mb-3">
@@ -309,7 +304,7 @@ export default function SoundsTab({ serverId }) {
               ) : (
                 unreferencedSounds.map((file, idx) => (
                   <div key={idx} className="font-mono text-xs px-2.5 py-1.5 bg-white/5 rounded-lg border border-white/5 text-amber-400">
-                    🎵 {file}
+                    {file}
                   </div>
                 ))
               )}
@@ -335,7 +330,7 @@ export default function SoundsTab({ serverId }) {
               ) : (
                 unreferencedVideos.map((file, idx) => (
                   <div key={idx} className="font-mono text-xs px-2.5 py-1.5 bg-white/5 rounded-lg border border-white/5 text-purple-400">
-                    🎬 {file}
+                    {file}
                   </div>
                 ))
               )}
@@ -371,7 +366,7 @@ export default function SoundsTab({ serverId }) {
 
                     return (
                       <tr key={idx} className={`border-b border-white/5 hover:bg-white/[0.02] ${hasMissing ? 'bg-red-500/[0.03]' : ''}`}>
-                        
+
                         {/* Title & ID */}
                         <td className="p-3.5">
                           <div className="font-bold text-white">{itemTitle}</div>
@@ -400,22 +395,20 @@ export default function SoundsTab({ serverId }) {
                             ) : (
                               files.map((fileObj, fIdx) => (
                                 <div key={fIdx} className="flex items-center gap-2 flex-wrap">
-                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                                    fileObj.category === 'video' ? 'bg-purple-500/20 text-purple-300' : 'bg-cyan-500/20 text-cyan-300'
-                                  }`}>
-                                    {fileObj.category === 'video' ? '🎬 VIDEO' : '🔊 AUDIO'}
+                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${fileObj.category === 'video' ? 'bg-purple-500/20 text-purple-300' : 'bg-cyan-500/20 text-cyan-300'
+                                    }`}>
+                                    {fileObj.category === 'video' ? 'VIDEO' : 'AUDIO'}
                                   </span>
 
                                   <span className={`font-mono text-xs ${fileObj.exists ? 'text-slate-100' : 'text-red-300'}`}>
                                     {fileObj.filename}
                                   </span>
 
-                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                                    fileObj.exists
-                                      ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                                      : 'bg-red-500/20 text-red-400 border-red-500/40'
-                                  }`}>
-                                    {fileObj.exists ? `✅ ADA (${fileObj.foundPath})` : `❌ MISSING in ${fileObj.targetFolder}`}
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${fileObj.exists
+                                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                                    : 'bg-red-500/20 text-red-400 border-red-500/40'
+                                    }`}>
+                                    {fileObj.exists ? `ADA (${fileObj.foundPath})` : `MISSING in ${fileObj.targetFolder}`}
                                   </span>
                                 </div>
                               ))
@@ -425,12 +418,11 @@ export default function SoundsTab({ serverId }) {
 
                         {/* Overall Item Status */}
                         <td className="p-3.5 text-right">
-                          <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full border ${
-                            hasMissing
-                              ? 'bg-red-500/15 text-red-400 border-red-500/30'
-                              : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                          }`}>
-                            {hasMissing ? '❌ File Incomplete' : '✅ Complete'}
+                          <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full border ${hasMissing
+                            ? 'bg-red-500/15 text-red-400 border-red-500/30'
+                            : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                            }`}>
+                            {hasMissing ? 'File Incomplete' : 'Complete'}
                           </span>
                         </td>
 

@@ -163,7 +163,7 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
                 </div>
                 <div>
                   <div className={`font-bold text-sm ${formData.type === 'vps' ? 'text-cyan-400' : 'text-white'}`}>
-                    🖥️ Standar VPS
+                    Standar VPS
                   </div>
                   <div className="text-xs text-slate-400 mt-0.5">
                     Server Linux fisik atau VM independen.
@@ -184,7 +184,7 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
                 </div>
                 <div>
                   <div className={`font-bold text-sm ${formData.type === 'pod' ? 'text-purple-400' : 'text-white'}`}>
-                    📦 POD Container
+                    POD Container
                   </div>
                   <div className="text-xs text-slate-400 mt-0.5">
                     Lingkungan terisolasi RunPod / Server POD.
