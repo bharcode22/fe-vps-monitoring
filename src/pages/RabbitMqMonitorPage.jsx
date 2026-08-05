@@ -143,6 +143,29 @@ export default function RabbitMqMonitorPage({ onBack }) {
       ].slice(-1000));
     });
 
+    socket.on('rabbitmq:webhook-trace', (data) => {
+      const bodyString = data.payload ? (typeof data.payload === 'object' ? JSON.stringify(data.payload) : data.payload) : '';
+      let formattedText = '';
+      if (data.action === 'publish') {
+        formattedText = `[PUBLISH-WEBHOOK] Dari: ${data.serverName} | TraceID: ${data.traceId} | Body: ${bodyString}`;
+      } else {
+        formattedText = `[SUBSCRIBE-WEBHOOK] Diterima: ${data.serverName} | TraceID: ${data.traceId}`;
+      }
+
+      setTraceLogs(prev => [
+        ...prev,
+        {
+          timestamp: data.timestamp,
+          serverName: data.action === 'publish' ? 'PUBLISH-WEBHOOK' : 'SUBSCRIBE-WEBHOOK',
+          text: formattedText,
+          type: data.action === 'publish' ? 'publish-webhook' : 'subscribe-webhook',
+          rawExchange: '',
+          rawQueue: '',
+          rawBody: `${data.traceId} ${data.serverName} ${bodyString}`
+        }
+      ].slice(-1000));
+    });
+
     socket.on('rabbitmq:trace-error', (err) => {
       setTraceLogs(prev => [
         ...prev,
@@ -896,16 +919,20 @@ export default function RabbitMqMonitorPage({ onBack }) {
                                    <span
                                      className="font-extrabold shrink-0 select-none"
                                      style={{
-                                       color: log.type === 'publish' ? '#fbbf24' : log.type === 'deliver' ? '#34d399' : '#94a3b8'
+                                       color: (log.type === 'publish' || log.type === 'publish-webhook')
+                                         ? '#fbbf24' 
+                                         : (log.type === 'deliver' || log.type === 'subscribe-webhook') 
+                                         ? '#34d399' 
+                                         : '#94a3b8'
                                      }}
                                    >
                                      [{log.serverName}]
                                    </span>
                                    <span
                                      className={`break-all ${
-                                       log.type === 'publish'
+                                       (log.type === 'publish' || log.type === 'publish-webhook')
                                          ? 'text-amber-400 font-bold'
-                                         : log.type === 'deliver'
+                                         : (log.type === 'deliver' || log.type === 'subscribe-webhook')
                                          ? 'text-emerald-400 font-bold'
                                          : log.type === 'error'
                                          ? 'text-red-400 font-bold'
