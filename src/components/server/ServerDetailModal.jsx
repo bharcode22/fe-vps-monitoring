@@ -92,7 +92,7 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-[999] flex items-center justify-center p-4" onClick={onClose}>
       <div
         className="w-[95vw] max-w-7xl max-h-[92vh] overflow-y-auto p-6 md:p-8 bg-slate-950 border border-cyan-500/30 rounded-3xl shadow-2xl shadow-black/90"
         onClick={(e) => e.stopPropagation()}

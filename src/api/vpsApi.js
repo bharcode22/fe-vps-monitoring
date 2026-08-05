@@ -414,3 +414,20 @@ export async function fetchRabbitMqStatusApi(id) {
   if (!data.success) throw new Error(data.error || 'Gagal mengambil live status RabbitMQ');
   return data.data;
 }
+
+/**
+ * Execute generic shell command via SSH on a remote server (Admin only)
+ */
+export async function executeServerCommandApi(serverId, command) {
+  const res = await fetch(`${BACKEND_URL}/api/rabbitmq/${serverId}/commands/execute`, {
+    method: 'POST',
+    headers: {
+      ...getAuthHeaders(),
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ command })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal mengeksekusi perintah');
+  return data;
+}
