@@ -486,7 +486,12 @@ export default function RabbitMqNodeGraph({
       {/* Floating Bottom Dock Panel outside ReactFlow tree */}
       {isFullscreen && (
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 z-[120] pointer-events-auto">
-          <FullscreenOverlayPanel selectedServerId={serverConfig?.id} liveStatus={liveStatus} />
+          <FullscreenOverlayPanel 
+            selectedServerId={serverConfig?.id} 
+            liveStatus={liveStatus} 
+            vpsServers={vpsServers}
+            onOpenServerDetail={onOpenServerDetail}
+          />
         </div>
       )}
     </div>

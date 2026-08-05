@@ -8,14 +8,16 @@ import {
   Users,
   ChevronDown,
   ChevronUp,
-  X
+  X,
+  Box
 } from 'lucide-react';
 import io from 'socket.io-client';
 import { BACKEND_URL } from '../../config';
+import PodV3DockerMatrix from './PodV3DockerMatrix';
 
-export default function FullscreenOverlayPanel({ selectedServerId, liveStatus }) {
+export default function FullscreenOverlayPanel({ selectedServerId, liveStatus, vpsServers, onOpenServerDetail }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState('trace'); // 'trace' | 'queues'
+  const [activeTab, setActiveTab] = useState('trace'); // 'trace' | 'queues' | 'pod_v3'
 
   // --- Trace Logs State ---
   const [isTracing, setIsTracing] = useState(false);
@@ -188,6 +190,20 @@ export default function FullscreenOverlayPanel({ selectedServerId, liveStatus })
           >
             <MessageSquare size={14} />
             <span>Queue List ({filteredQueues.length})</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveTab('pod_v3');
+              if (isCollapsed) setIsCollapsed(false);
+            }}
+            className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer ${activeTab === 'pod_v3'
+              ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+          >
+            <Box size={14} />
+            <span>Status Pod V3 Docker</span>
           </button>
         </div>
 
@@ -381,6 +397,17 @@ export default function FullscreenOverlayPanel({ selectedServerId, liveStatus })
                   )}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* TAB 3: POD V3 DOCKER MATRIX */}
+          {activeTab === 'pod_v3' && (
+            <div 
+              onWheel={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="nowheel nopan nodrag flex-1 overflow-auto custom-scrollbar p-3 bg-slate-955/90"
+            >
+              <PodV3DockerMatrix vpsServers={vpsServers} onOpenServerDetail={onOpenServerDetail} />
             </div>
           )}
         </div>

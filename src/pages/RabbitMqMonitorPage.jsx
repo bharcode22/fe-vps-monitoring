@@ -11,7 +11,8 @@ import {
   Edit3,
   X,
   Terminal,
-  MessageSquare
+  MessageSquare,
+  Box
 } from 'lucide-react';
 import {
   fetchRabbitMqsApi,
@@ -25,6 +26,7 @@ import RabbitMqNodeGraph from '../components/rabbitmq/RabbitMqNodeGraph';
 import LiveActivityTracer from '../components/rabbitmq/LiveActivityTracer';
 import QueuesMonitor from '../components/rabbitmq/QueuesMonitor';
 import ServerDetailModal from '../components/server/ServerDetailModal';
+import PodV3DockerMatrix from '../components/rabbitmq/PodV3DockerMatrix';
 
 export default function RabbitMqMonitorPage({ onBack }) {
   const [servers, setServers] = useState([]);
@@ -415,6 +417,17 @@ export default function RabbitMqMonitorPage({ onBack }) {
                         <span>Daftar Antrean</span>
                       </div>
                     </button>
+                    <button
+                      onClick={() => setActiveTab('pod_v3')}
+                      className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${
+                        activeTab === 'pod_v3' ? 'text-purple-400 border-purple-400 bg-purple-500/5' : 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-900/50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Box size={16} />
+                        <span>Status Pod V3 Docker</span>
+                      </div>
+                    </button>
                   </div>
 
                   {/* Tab Content */}
@@ -444,6 +457,15 @@ export default function RabbitMqMonitorPage({ onBack }) {
                     {activeTab === 'queues' && (
                       <div className="animate-in fade-in duration-300">
                         <QueuesMonitor liveStatus={liveStatus} />
+                      </div>
+                    )}
+
+                    {activeTab === 'pod_v3' && (
+                      <div className="animate-in fade-in duration-300">
+                        <PodV3DockerMatrix 
+                          vpsServers={vpsServers} 
+                          onOpenServerDetail={(server) => setSelectedDetailServer(server)} 
+                        />
                       </div>
                     )}
                   </div>
