@@ -39,7 +39,8 @@ export default function DockerLogModal({ isOpen, onClose, serverId, containerNam
     setErrorMsg('');
     try {
       const data = await fetchDockerLogsApi(serverId, containerName);
-      setLogs(data.logs || 'Log kosong.');
+      const text = typeof data === 'string' ? data : (data?.logs || JSON.stringify(data, null, 2));
+      setLogs(text || 'Log kosong.');
     } catch (err) {
       setErrorMsg(err.message || 'Gagal memuat log container.');
     } finally {

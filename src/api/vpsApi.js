@@ -203,7 +203,7 @@ export async function stopDockerContainerApi(serverId, containerName) {
 }
 
 /**
- * Fetch logs for a Docker container (Admin only)
+ * Fetch logs for a Docker container or System GUI App (Admin only)
  */
 export async function fetchDockerLogsApi(serverId, containerName) {
   const res = await fetch(`${BACKEND_URL}/api/vps/${serverId}/docker/${encodeURIComponent(containerName)}/logs`, {
@@ -211,7 +211,9 @@ export async function fetchDockerLogsApi(serverId, containerName) {
   });
   const data = await res.json();
   if (!data.success) throw new Error(data.error || 'Gagal mengambil log container');
-  return data.data;
+  if (typeof data.data === 'string') return data.data;
+  if (data.data && typeof data.data.logs === 'string') return data.data.logs;
+  return typeof data.data === 'object' ? JSON.stringify(data.data, null, 2) : String(data.data || '');
 }
 
 /**

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, Server, Box, Cpu, HardDrive, ArrowDown, ArrowUp, Zap, Clock, ShieldCheck, Edit3, Activity, FileCode, Music, Layers, Sliders, Rocket, RefreshCw, CheckCircle, AlertTriangle, Terminal } from 'lucide-react';
+import { X, Server, Box, Cpu, HardDrive, ArrowDown, ArrowUp, Zap, Clock, ShieldCheck, Edit3, Activity, FileCode, Music, Layers, Sliders, Rocket, RefreshCw, CheckCircle, AlertTriangle, Terminal, Tv } from 'lucide-react';
 import MetricsChart from '../MetricsChart';
 import { fetchServerHistoryApi, redeployBackendApi } from '../../api/vpsApi';
 import { formatMbToGb } from '../../utils/formatters';
 import { useAuth } from '../../context/AuthContext';
 import DockerContainerTab from './DockerContainerTab';
+import ScreenAppsTab from './ScreenAppsTab';
 import Pm2AppTab from './Pm2AppTab';
 import ScriptExecTab from './ScriptExecTab';
 import SoundsTab from './SoundsTab';
@@ -18,15 +19,23 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
 
   // Redeploy Backend states
   const [showDeployModal, setShowDeployModal] = useState(false);
+  const [deployModalTab, setDeployModalTab] = useState('preview'); // 'preview' | 'terminal'
   const [deploying, setDeploying] = useState(false);
   const [deployOutput, setDeployOutput] = useState('');
   const [deployStatus, setDeployStatus] = useState('idle'); // 'idle' | 'running' | 'success' | 'error'
 
-  const handleRedeployBackend = async () => {
+  const handleOpenDeployModal = () => {
+    setDeployStatus('idle');
+    setDeployModalTab('preview');
+    setDeployOutput('');
+    setShowDeployModal(true);
+  };
+
+  const handleExecuteRedeploy = async () => {
     setDeploying(true);
     setDeployStatus('running');
-    setDeployOutput('Memulai koneksi SSH ke server dan mengeksekusi:\n1. cd /home/pod/dev/be-vps-monitoring\n2. git pull origin main\n3. docker compose down && docker compose up -d --build\n\nSedang memproses build... Harap tunggu...');
-    setShowDeployModal(true);
+    setDeployModalTab('terminal');
+    setDeployOutput('Memulai koneksi SSH ke server dan mengeksekusi script deploy.sh:\n1. Navigasi ke direktori /home/pod/dev/be-vps-monitoring\n2. git pull origin main\n3. docker compose down && docker compose up -d --build\n\nSedang memproses build... Harap tunggu (estimasi 10-60 detik)...');
     try {
       const res = await redeployBackendApi(serverId);
       setDeployOutput(res.output || 'Proses redeploy selesai.');
@@ -168,7 +177,7 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
             {/* Redeploy Backend Button (Admin Only) */}
             {isAuthenticated && (
               <button
-                onClick={handleRedeployBackend}
+                onClick={handleOpenDeployModal}
                 disabled={deploying}
                 className="px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-purple-600/30 transition-all cursor-pointer disabled:opacity-50"
                 title="Git Pull & Rebuild Docker Container Backend"
@@ -220,6 +229,16 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
             </button>
 
             <button
+              onClick={() => setViewMode('screen')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${viewMode === 'screen'
+                ? 'bg-gradient-to-r from-indigo-400 to-purple-500 text-slate-950 shadow-md shadow-indigo-500/20'
+                : 'bg-white/5 text-slate-400 hover:text-slate-200'
+                }`}
+            >
+              <Tv size={16} /> Screen Apps
+            </button>
+
+            <button
               onClick={() => setViewMode('pm2')}
               className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${viewMode === 'pm2'
                 ? 'bg-gradient-to-r from-emerald-400 to-teal-500 text-slate-950 shadow-md shadow-emerald-500/20'
@@ -266,6 +285,8 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
         {/* Dynamic Content View */}
         {viewMode === 'docker' && isAuthenticated ? (
           <DockerContainerTab serverId={server.id} />
+        ) : viewMode === 'screen' && isAuthenticated ? (
+          <ScreenAppsTab serverId={server.id} />
         ) : viewMode === 'pm2' && isAuthenticated ? (
           <Pm2AppTab serverId={server.id} />
         ) : viewMode === 'scripts' && isAuthenticated ? (
@@ -440,10 +461,12 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
           </div>
         )}
 
-        {/* REDEPLOY BACKEND TERMINAL MODAL */}
+        {/* REDEPLOY BACKEND TERMINAL & PREVIEW MODAL */}
         {showDeployModal && (
           <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-[1000] flex items-center justify-center p-4">
-            <div className="w-full max-w-3xl bg-slate-950 border border-purple-500/40 rounded-3xl p-6 flex flex-col gap-5 shadow-2xl animate-scaleUp">
+            <div className="w-full max-w-3xl bg-slate-950 border border-purple-500/40 rounded-3xl p-6 flex flex-col gap-4 shadow-2xl animate-scaleUp">
+              
+              {/* Modal Header */}
               <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 bg-gradient-to-r from-purple-500/20 to-indigo-500/20 border border-purple-500/30 rounded-xl text-purple-400">
@@ -451,46 +474,122 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
                   </div>
                   <div>
                     <h3 className="text-base font-bold text-white">Redeploy Backend Container</h3>
-                    <p className="text-xs text-slate-400 font-mono">cd /home/pod/dev/be-vps-monitoring &amp;&amp; git pull &amp;&amp; docker compose up -d --build</p>
+                    <p className="text-xs text-slate-400 font-mono">Pratinjau Script &amp; Eksekusi Build Docker</p>
                   </div>
                 </div>
-                <button onClick={() => setShowDeployModal(false)} className="text-slate-400 hover:text-white cursor-pointer">
+                <button onClick={() => !deploying && setShowDeployModal(false)} className="text-slate-400 hover:text-white cursor-pointer">
                   <X size={20} />
                 </button>
               </div>
 
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400 font-mono">Terminal Output:</span>
-                  {deploying ? (
-                    <span className="text-purple-400 font-semibold flex items-center gap-1.5 animate-pulse">
-                      <RefreshCw size={13} className="animate-spin" /> Memproses Build Docker...
-                    </span>
-                  ) : deployStatus === 'success' ? (
-                    <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                      <CheckCircle size={13} /> Selesai Dideploy!
-                    </span>
-                  ) : deployStatus === 'error' ? (
-                    <span className="text-red-400 font-semibold flex items-center gap-1">
-                      <AlertTriangle size={13} /> Gagal Deployment
-                    </span>
-                  ) : null}
-                </div>
+              {/* Navigation Tabs (Preview Script vs Terminal Log) */}
+              <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+                <button
+                  onClick={() => setDeployModalTab('preview')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
+                    deployModalTab === 'preview'
+                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <FileCode size={14} />
+                  <span>Pratinjau Script (`deploy.sh`)</span>
+                </button>
 
-                <pre className="p-4 bg-slate-900/90 border border-slate-800 rounded-2xl font-mono text-xs text-emerald-400 overflow-x-auto max-h-96 leading-relaxed whitespace-pre-wrap">
-                  {deployOutput}
-                </pre>
+                <button
+                  onClick={() => setDeployModalTab('terminal')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
+                    deployModalTab === 'terminal'
+                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <Terminal size={14} />
+                  <span>Output Terminal {deployStatus !== 'idle' && `(${deployStatus})`}</span>
+                </button>
               </div>
 
-              <div className="flex items-center justify-between border-t border-slate-800 pt-3">
-                <span className="text-[11px] text-slate-500 font-mono">Executable Script: ./scripts/deploy.sh</span>
+              {/* Tab Content */}
+              {deployModalTab === 'preview' ? (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between text-xs text-slate-400">
+                    <span>File Executable: <code className="text-purple-400 font-mono">scripts/deploy.sh</code></span>
+                    <span>Target Directory: <code className="text-cyan-400 font-mono">/home/pod/dev/be-vps-monitoring</code></span>
+                  </div>
+                  <pre className="p-4 bg-slate-900 border border-slate-800 rounded-2xl font-mono text-xs text-slate-300 overflow-x-auto max-h-80 leading-relaxed whitespace-pre-wrap">
+{`#!/bin/bash
+# ==============================================================================
+# Deploy & Auto-Update VPS Monitoring Backend Container Script
+# ==============================================================================
+
+set -e
+
+# Target project directory: /home/pod/dev/be-vps-monitoring
+
+echo "[+] Step 1/2: Pulling latest updates from GitHub (branch: main)..."
+git pull origin main
+
+echo "[+] Step 2/2: Rebuilding & restarting Docker container..."
+docker compose down && docker compose up -d --build
+
+echo "✓ Backend deployment finished successfully!"`}
+                  </pre>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400 font-mono font-bold">Terminal Output Log:</span>
+                    {deploying ? (
+                      <span className="text-purple-400 font-semibold flex items-center gap-1.5 animate-pulse">
+                        <RefreshCw size={13} className="animate-spin" /> Memproses Build Docker...
+                      </span>
+                    ) : deployStatus === 'success' ? (
+                      <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                        <CheckCircle size={13} /> Selesai Dideploy!
+                      </span>
+                    ) : deployStatus === 'error' ? (
+                      <span className="text-red-400 font-semibold flex items-center gap-1">
+                        <AlertTriangle size={13} /> Gagal Deployment
+                      </span>
+                    ) : (
+                      <span className="text-slate-500">Klik "Eksekusi Script Sekarang" untuk mulai.</span>
+                    )}
+                  </div>
+                  <pre className="p-4 bg-slate-900/90 border border-slate-800 rounded-2xl font-mono text-xs text-emerald-400 overflow-x-auto max-h-80 leading-relaxed whitespace-pre-wrap min-h-[160px]">
+                    {deployOutput || 'Belum ada output. Klik tombol "▶️ Eksekusi Script Sekarang" di bawah untuk menjalankan redeploy.'}
+                  </pre>
+                </div>
+              )}
+
+              {/* Modal Footer Controls */}
+              <div className="flex items-center justify-between border-t border-slate-800 pt-3 mt-1">
                 <button
                   onClick={() => setShowDeployModal(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold cursor-pointer border border-slate-700"
+                  disabled={deploying}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 rounded-xl text-xs font-semibold cursor-pointer border border-slate-700"
                 >
                   Tutup
                 </button>
+
+                <button
+                  onClick={handleExecuteRedeploy}
+                  disabled={deploying}
+                  className="px-5 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-lg shadow-purple-500/25 flex items-center gap-2 cursor-pointer transition-all"
+                >
+                  {deploying ? (
+                    <>
+                      <RefreshCw size={15} className="animate-spin" />
+                      <span>Sedang Mengeksekusi...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Rocket size={15} />
+                      <span>▶️ Eksekusi Script Sekarang</span>
+                    </>
+                  )}
+                </button>
               </div>
+
             </div>
           </div>
         )}

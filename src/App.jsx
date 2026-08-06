@@ -401,9 +401,11 @@ export default function App() {
             )}
 
           </main>
-          <Footer />
         </>
       )}
+
+      {/* Global Footer displayed on all pages */}
+      <Footer />
 
       {/* Add / Edit VPS / POD SSH Modal */}
       <AddServerModal

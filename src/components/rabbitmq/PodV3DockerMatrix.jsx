@@ -3,11 +3,13 @@ import { Box, RefreshCw, Search, CheckCircle2, XCircle, AlertCircle, Layers, Pla
 import { fetchDockerContainersApi, restartDockerContainerApi } from '../../api/vpsApi';
 
 const TARGET_APPS = [
-  { key: 'mobile-api', label: 'mobile-api' },
-  { key: 'mobile-synch', label: 'mobile-synch' },
-  { key: 'assist-api', label: 'assist-api' },
-  { key: 'mobile-consumer', label: 'mobile-consumer' },
-  { key: 'mobile-downloader', label: 'mobile-downloader' }
+  { key: 'mobile-api', label: 'mobile-api', isGui: false },
+  { key: 'mobile-synch', label: 'mobile-synch', isGui: false },
+  { key: 'assist-api', label: 'assist-api', isGui: false },
+  { key: 'mobile-consumer', label: 'mobile-consumer', isGui: false },
+  { key: 'mobile-downloader', label: 'mobile-downloader', isGui: false },
+  { key: 'small-screen', label: 'small-screen', isGui: true },
+  { key: 'big-screen', label: 'big-screen', isGui: true }
 ];
 
 export default function PodV3DockerMatrix({ vpsServers, onOpenServerDetail }) {
@@ -19,7 +21,7 @@ export default function PodV3DockerMatrix({ vpsServers, onOpenServerDetail }) {
   // Filter ONLY Pod V3 servers (type === 'pod' and pod_version !== 'v2')
   const podV3Servers = (vpsServers || []).filter(s => {
     if (s.type !== 'pod') return false;
-    
+
     const podVer = (s.pod_version || '').toLowerCase().trim();
     const nameStr = (s.name || '').toLowerCase().trim();
 
@@ -101,7 +103,7 @@ export default function PodV3DockerMatrix({ vpsServers, onOpenServerDetail }) {
   // Helper to match target container status
   const getContainerInfo = (containers, targetKey) => {
     if (!containers || !Array.isArray(containers)) return { status: 'unknown', label: 'N/A' };
-    
+
     const found = containers.find(c => {
       const name = (c.name || c.Names?.[0] || '').replace(/^\//, '').toLowerCase();
       return name === targetKey || name.includes(targetKey);
@@ -136,13 +138,13 @@ export default function PodV3DockerMatrix({ vpsServers, onOpenServerDetail }) {
           </div>
           <div>
             <h4 className="text-xs font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
-              <span>Matriks Aplikasi Docker (Pod V3)</span>
+              <span>Matriks Aplikasi Pod V3 (Docker &amp; GUI Apps)</span>
               <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full font-mono">
                 {podV3Servers.length} Pods
               </span>
             </h4>
             <p className="text-[10px] text-slate-400 mt-0.5">
-              Status real-time 5 aplikasi utama: mobile-api, mobile-synch, assist-api, mobile-consumer, mobile-downloader
+              Status real-time 5 container Docker + 2 aplikasi GUI (small-screen &amp; big-screen)
             </p>
           </div>
         </div>
@@ -179,7 +181,16 @@ export default function PodV3DockerMatrix({ vpsServers, onOpenServerDetail }) {
             <tr className="bg-slate-900/90 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800">
               <th className="p-3 w-48">Pod Server V3</th>
               {TARGET_APPS.map(app => (
-                <th key={app.key} className="p-3 text-center w-36">{app.label}</th>
+                <th key={app.key} className="p-3 text-center w-36">
+                  <div className="flex flex-col items-center justify-center">
+                    <span>{app.label}</span>
+                    {app.isGui && (
+                      <span className="text-[8px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-1.5 py-0.2 rounded font-sans font-bold mt-0.5">
+                        GUI APP
+                      </span>
+                    )}
+                  </div>
+                </th>
               ))}
               <th className="p-3 text-center w-24">Aksi</th>
             </tr>
@@ -187,7 +198,7 @@ export default function PodV3DockerMatrix({ vpsServers, onOpenServerDetail }) {
           <tbody className="divide-y divide-slate-800/60 text-xs font-mono">
             {filteredServers.length === 0 ? (
               <tr>
-                <td colSpan={7} className="p-8 text-center text-slate-500 italic">
+                <td colSpan={9} className="p-8 text-center text-slate-500 italic">
                   Tidak ada Pod V3 ditemukan.
                 </td>
               </tr>

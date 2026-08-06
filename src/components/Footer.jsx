@@ -15,7 +15,7 @@ export default function Footer() {
           </div>
           <div>
             <div className="flex items-center gap-2 font-bold text-slate-200 text-sm">
-              <span>VPS Server Monitoring</span>
+              <span>VPS Regenesis Server Monitoring</span>
             </div>
             <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1.5">
               <span className="live-dot online w-1.5 h-1.5"></span>
