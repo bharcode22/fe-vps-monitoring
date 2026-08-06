@@ -194,7 +194,7 @@ export default function Navbar({
                 <div>
                   <div className="text-xs font-semibold text-white leading-tight">{user.name || user.email}</div>
                   <div className={`text-[10px] font-bold ${isSuperAdmin ? 'text-cyan-400' : 'text-purple-400'}`}>
-                    {isSuperAdmin ? '⭐ Super Admin' : 'Admin'}
+                    {isSuperAdmin ? 'Super Admin' : 'Admin'}
                   </div>
                 </div>
               </div>
@@ -210,7 +210,10 @@ export default function Navbar({
               )}
 
               <button
-                onClick={logout}
+                onClick={() => {
+                  logout();
+                  if (onNavigateView) onNavigateView('dashboard');
+                }}
                 className="p-2 bg-red-500/15 hover:bg-red-500/25 text-red-400 rounded-lg border border-red-500/30 transition-colors cursor-pointer"
                 title="Logout / Keluar"
               >
@@ -387,7 +390,7 @@ export default function Navbar({
                     <div>
                       <div className="text-xs font-bold text-white">{user.name || user.email}</div>
                       <div className={`text-[10px] font-bold ${isSuperAdmin ? 'text-cyan-400' : 'text-purple-400'}`}>
-                        {isSuperAdmin ? '⭐ Super Admin' : 'Admin'}
+                        {isSuperAdmin ? 'Super Admin' : 'Admin'}
                       </div>
                     </div>
                   </div>
@@ -409,6 +412,7 @@ export default function Navbar({
                 <button
                   onClick={() => {
                     logout();
+                    if (onNavigateView) onNavigateView('dashboard');
                     setIsMobileMenuOpen(false);
                   }}
                   className="w-full py-2 bg-red-500/15 hover:bg-red-500/25 text-red-400 rounded-xl border border-red-500/30 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer"

@@ -17,9 +17,11 @@ import RabbitMqMonitorPage from './pages/RabbitMqMonitorPage';
 import { useServers } from './hooks/useServers';
 import { useSocket } from './hooks/useSocket';
 import { fetchSettingsApi, saveSettingApi } from './api/vpsApi';
+import { useAuth } from './context/AuthContext';
 import { Server, Database, HardDrive, Cpu, ShieldCheck } from 'lucide-react';
 
 export default function App() {
+  const { isAuthenticated } = useAuth();
   const [currentView, setCurrentView] = useState(() => {
     try {
       const saved = localStorage.getItem('vps_monitoring_current_view');
@@ -33,6 +35,13 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('vps_monitoring_current_view', currentView);
   }, [currentView]);
+
+  // Auto switch back to dashboard when user logs out
+  useEffect(() => {
+    if (!isAuthenticated && currentView !== 'dashboard') {
+      setCurrentView('dashboard');
+    }
+  }, [isAuthenticated, currentView]);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAddServiceModalOpen, setIsAddServiceModalOpen] = useState(false);

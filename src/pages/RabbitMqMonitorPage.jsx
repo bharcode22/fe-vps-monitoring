@@ -21,6 +21,8 @@ import {
   deleteRabbitMqApi,
   fetchRabbitMqStatusApi,
   fetchServersApi,
+  restartDockerContainerApi,
+  restartPm2AppApi,
 } from '../api/vpsApi';
 import RabbitMqNodeGraph from '../components/rabbitmq/RabbitMqNodeGraph';
 import LiveActivityTracer from '../components/rabbitmq/LiveActivityTracer';
@@ -53,8 +55,6 @@ export default function RabbitMqMonitorPage({ onBack }) {
   const [formUsername, setFormUsername] = useState('guest');
   const [formPassword, setFormPassword] = useState('');
   const [formError, setFormError] = useState('');
-
-
 
   // 1. Fetch configured servers
   const loadServers = async (autoSelectId = null) => {
@@ -188,8 +188,6 @@ export default function RabbitMqMonitorPage({ onBack }) {
     setIsExecutingCommand(true);
     setCommandResult('');
     try {
-      // Need to import restartDockerContainerApi from '../api/vpsApi'
-      const { restartDockerContainerApi } = await import('../api/vpsApi');
       const res = await restartDockerContainerApi(vpsId, containerName);
       setCommandResult(`Success: ${res.message || 'Container restarted successfully.'}`);
     } catch (err) {
@@ -205,7 +203,6 @@ export default function RabbitMqMonitorPage({ onBack }) {
     setIsExecutingCommand(true);
     setCommandResult('');
     try {
-      const { restartPm2AppApi } = await import('../api/vpsApi');
       const res = await restartPm2AppApi(vpsId, appName);
       setCommandResult(`Success: ${res.message || 'PM2 App restarted successfully.'}`);
     } catch (err) {
@@ -386,9 +383,8 @@ export default function RabbitMqMonitorPage({ onBack }) {
                   <div className="flex items-center gap-2 border-b border-slate-800 pb-0 mt-6 overflow-x-auto">
                     <button
                       onClick={() => setActiveTab('graph')}
-                      className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${
-                        activeTab === 'graph' ? 'text-cyan-400 border-cyan-400 bg-cyan-500/5' : 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-900/50'
-                      }`}
+                      className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeTab === 'graph' ? 'text-cyan-400 border-cyan-400 bg-cyan-500/5' : 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-900/50'
+                        }`}
                     >
                       <div className="flex items-center gap-2">
                         <Activity size={16} />
@@ -397,9 +393,8 @@ export default function RabbitMqMonitorPage({ onBack }) {
                     </button>
                     <button
                       onClick={() => setActiveTab('tracer')}
-                      className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${
-                        activeTab === 'tracer' ? 'text-cyan-400 border-cyan-400 bg-cyan-500/5' : 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-900/50'
-                      }`}
+                      className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeTab === 'tracer' ? 'text-cyan-400 border-cyan-400 bg-cyan-500/5' : 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-900/50'
+                        }`}
                     >
                       <div className="flex items-center gap-2">
                         <Terminal size={16} />
@@ -408,9 +403,8 @@ export default function RabbitMqMonitorPage({ onBack }) {
                     </button>
                     <button
                       onClick={() => setActiveTab('queues')}
-                      className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${
-                        activeTab === 'queues' ? 'text-cyan-400 border-cyan-400 bg-cyan-500/5' : 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-900/50'
-                      }`}
+                      className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeTab === 'queues' ? 'text-cyan-400 border-cyan-400 bg-cyan-500/5' : 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-900/50'
+                        }`}
                     >
                       <div className="flex items-center gap-2">
                         <MessageSquare size={16} />
@@ -419,9 +413,8 @@ export default function RabbitMqMonitorPage({ onBack }) {
                     </button>
                     <button
                       onClick={() => setActiveTab('pod_v3')}
-                      className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${
-                        activeTab === 'pod_v3' ? 'text-purple-400 border-purple-400 bg-purple-500/5' : 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-900/50'
-                      }`}
+                      className={`px-4 py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${activeTab === 'pod_v3' ? 'text-purple-400 border-purple-400 bg-purple-500/5' : 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-900/50'
+                        }`}
                     >
                       <div className="flex items-center gap-2">
                         <Box size={16} />
@@ -462,9 +455,9 @@ export default function RabbitMqMonitorPage({ onBack }) {
 
                     {activeTab === 'pod_v3' && (
                       <div className="animate-in fade-in duration-300">
-                        <PodV3DockerMatrix 
-                          vpsServers={vpsServers} 
-                          onOpenServerDetail={(server) => setSelectedDetailServer(server)} 
+                        <PodV3DockerMatrix
+                          vpsServers={vpsServers}
+                          onOpenServerDetail={(server) => setSelectedDetailServer(server)}
                         />
                       </div>
                     )}
