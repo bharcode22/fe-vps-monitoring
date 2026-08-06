@@ -431,3 +431,53 @@ export async function executeServerCommandApi(serverId, command) {
   if (!data.success) throw new Error(data.error || 'Gagal mengeksekusi perintah');
   return data;
 }
+
+/**
+ * Fetch Pod config and available sound metadata options for a Pod server
+ */
+export async function fetchPodConfigApi(serverId) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/${serverId}/pod-config`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal mengambil konfigurasi Pod');
+  return data.data;
+}
+
+/**
+ * Update Pod config on a Pod server
+ */
+export async function updatePodConfigApi(serverId, configData) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/${serverId}/pod-config`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(configData)
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memperbarui konfigurasi Pod');
+  return data;
+}
+
+/**
+ * Trigger backend redeployment (git pull & docker compose rebuild) on target server
+ */
+export async function redeployBackendApi(serverId) {
+  const url = `${BACKEND_URL}/api/vps/${serverId}/deploy-backend`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    const rawText = await res.text();
+    if (res.status === 404) {
+      throw new Error(`Rute backend tidak ditemukan (404 Not Found). Backend yang sedang berjalan di server belum memiliki rute '/api/vps/${serverId}/deploy-backend'. Jalankan 'bash scripts/deploy.sh' di server sekali secara manual terlebih dahulu untuk memperbarui backend.`);
+    }
+    throw new Error(`Server mengembalikan respons non-JSON (${res.status} ${res.statusText}).`);
+  }
+
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || data.message || 'Gagal meredeploy backend');
+  return data;
+}

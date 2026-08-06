@@ -1,19 +1,43 @@
 import React, { useState, useEffect } from 'react';
-import { X, Server, Box, Cpu, HardDrive, ArrowDown, ArrowUp, Zap, Clock, ShieldCheck, Edit3, Activity, FileCode, Music, Layers } from 'lucide-react';
+import { X, Server, Box, Cpu, HardDrive, ArrowDown, ArrowUp, Zap, Clock, ShieldCheck, Edit3, Activity, FileCode, Music, Layers, Sliders, Rocket, RefreshCw, CheckCircle, AlertTriangle, Terminal } from 'lucide-react';
 import MetricsChart from '../MetricsChart';
-import { fetchServerHistoryApi } from '../../api/vpsApi';
+import { fetchServerHistoryApi, redeployBackendApi } from '../../api/vpsApi';
 import { formatMbToGb } from '../../utils/formatters';
 import { useAuth } from '../../context/AuthContext';
 import DockerContainerTab from './DockerContainerTab';
 import Pm2AppTab from './Pm2AppTab';
 import ScriptExecTab from './ScriptExecTab';
 import SoundsTab from './SoundsTab';
+import PodConfigTab from './PodConfigTab';
 
 export default function ServerDetailModal({ server, onClose, onEdit }) {
   const { isAuthenticated } = useAuth();
   const [viewMode, setViewMode] = useState('metrics'); // 'metrics' | 'docker' | 'scripts' | 'sounds'
   const [activeTab, setActiveTab] = useState('bandwidth');
   const [historyData, setHistoryData] = useState([]);
+
+  // Redeploy Backend states
+  const [showDeployModal, setShowDeployModal] = useState(false);
+  const [deploying, setDeploying] = useState(false);
+  const [deployOutput, setDeployOutput] = useState('');
+  const [deployStatus, setDeployStatus] = useState('idle'); // 'idle' | 'running' | 'success' | 'error'
+
+  const handleRedeployBackend = async () => {
+    setDeploying(true);
+    setDeployStatus('running');
+    setDeployOutput('Memulai koneksi SSH ke server dan mengeksekusi:\n1. cd /home/pod/dev/be-vps-monitoring\n2. git pull origin main\n3. docker compose down && docker compose up -d --build\n\nSedang memproses build... Harap tunggu...');
+    setShowDeployModal(true);
+    try {
+      const res = await redeployBackendApi(serverId);
+      setDeployOutput(res.output || 'Proses redeploy selesai.');
+      setDeployStatus('success');
+    } catch (err) {
+      setDeployOutput(`ERROR DEPLOYMENT:\n${err.message}`);
+      setDeployStatus('error');
+    } finally {
+      setDeploying(false);
+    }
+  };
 
   const serverId = server?.id;
   const metrics = server?.currentMetrics || {};
@@ -141,6 +165,19 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
               <span>{isOnline ? 'ONLINE' : 'OFFLINE'}</span>
             </div>
 
+            {/* Redeploy Backend Button (Admin Only) */}
+            {isAuthenticated && (
+              <button
+                onClick={handleRedeployBackend}
+                disabled={deploying}
+                className="px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-purple-600/30 transition-all cursor-pointer disabled:opacity-50"
+                title="Git Pull & Rebuild Docker Container Backend"
+              >
+                {deploying ? <RefreshCw size={14} className="animate-spin" /> : <Rocket size={14} />}
+                <span>{deploying ? 'Deploying...' : 'Redeploy Backend'}</span>
+              </button>
+            )}
+
             {/* Edit Button (Admin Only) */}
             {isAuthenticated && server.is_local !== 1 && (
               <button
@@ -211,6 +248,18 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
             >
               <Music size={16} /> Sounds Metadata
             </button>
+
+            {isPod && (
+              <button
+                onClick={() => setViewMode('pod-config')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${viewMode === 'pod-config'
+                  ? 'bg-gradient-to-r from-purple-400 to-indigo-500 text-slate-950 shadow-md shadow-purple-500/20'
+                  : 'bg-white/5 text-slate-400 hover:text-slate-200'
+                  }`}
+              >
+                <Sliders size={16} /> Pod Config
+              </button>
+            )}
           </div>
         )}
 
@@ -223,6 +272,8 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
           <ScriptExecTab serverId={server.id} />
         ) : viewMode === 'sounds' && isAuthenticated ? (
           <SoundsTab serverId={server.id} />
+        ) : viewMode === 'pod-config' && isAuthenticated ? (
+          <PodConfigTab serverId={server.id} />
         ) : (
           <div>
             {/* Real-time Current Metrics Grid */}
@@ -385,6 +436,61 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
                 serverName={server.name}
                 activeMetric={activeTab}
               />
+            </div>
+          </div>
+        )}
+
+        {/* REDEPLOY BACKEND TERMINAL MODAL */}
+        {showDeployModal && (
+          <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-[1000] flex items-center justify-center p-4">
+            <div className="w-full max-w-3xl bg-slate-950 border border-purple-500/40 rounded-3xl p-6 flex flex-col gap-5 shadow-2xl animate-scaleUp">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-gradient-to-r from-purple-500/20 to-indigo-500/20 border border-purple-500/30 rounded-xl text-purple-400">
+                    <Rocket size={22} className={deploying ? 'animate-bounce text-purple-400' : 'text-purple-300'} />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white">Redeploy Backend Container</h3>
+                    <p className="text-xs text-slate-400 font-mono">cd /home/pod/dev/be-vps-monitoring &amp;&amp; git pull &amp;&amp; docker compose up -d --build</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowDeployModal(false)} className="text-slate-400 hover:text-white cursor-pointer">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-400 font-mono">Terminal Output:</span>
+                  {deploying ? (
+                    <span className="text-purple-400 font-semibold flex items-center gap-1.5 animate-pulse">
+                      <RefreshCw size={13} className="animate-spin" /> Memproses Build Docker...
+                    </span>
+                  ) : deployStatus === 'success' ? (
+                    <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                      <CheckCircle size={13} /> Selesai Dideploy!
+                    </span>
+                  ) : deployStatus === 'error' ? (
+                    <span className="text-red-400 font-semibold flex items-center gap-1">
+                      <AlertTriangle size={13} /> Gagal Deployment
+                    </span>
+                  ) : null}
+                </div>
+
+                <pre className="p-4 bg-slate-900/90 border border-slate-800 rounded-2xl font-mono text-xs text-emerald-400 overflow-x-auto max-h-96 leading-relaxed whitespace-pre-wrap">
+                  {deployOutput}
+                </pre>
+              </div>
+
+              <div className="flex items-center justify-between border-t border-slate-800 pt-3">
+                <span className="text-[11px] text-slate-500 font-mono">Executable Script: ./scripts/deploy.sh</span>
+                <button
+                  onClick={() => setShowDeployModal(false)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold cursor-pointer border border-slate-700"
+                >
+                  Tutup
+                </button>
+              </div>
             </div>
           </div>
         )}
