@@ -21,7 +21,7 @@ export default function PerformanceSummary({ servers = [] }) {
 
   return (
     <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-      
+
       {/* Total Download */}
       <div className="glass-card p-4 rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-md hover:border-cyan-500/30 transition-all duration-200">
         <div className="flex items-center justify-between">

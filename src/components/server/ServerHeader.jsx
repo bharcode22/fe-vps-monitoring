@@ -1,5 +1,5 @@
-import React from 'react';
-import { Server, Box, Database, HardDrive, ChevronUp, ChevronDown, Edit3, Trash2, GripVertical } from 'lucide-react';
+import React, { useState } from 'react';
+import { Server, Box, Database, HardDrive, ChevronUp, ChevronDown, Edit3, Trash2, GripVertical, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function ServerHeader({
@@ -15,6 +15,7 @@ export default function ServerHeader({
   isLast
 }) {
   const { isAuthenticated } = useAuth();
+  const [showHost, setShowHost] = useState(false);
   const podVersionText = server.pod_version ? server.pod_version.toUpperCase() : 'V3';
 
   const isPostgres = server.type === 'postgresql';
@@ -108,9 +109,22 @@ export default function ServerHeader({
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
           {/* Host IP / Port */}
           {isAuthenticated ? (
-            <span className="font-mono text-slate-300 truncate text-[15px] font-medium" title={`${server.host}${server.port ? `:${server.port}` : ''}`}>
-              {server.host}{server.port ? `:${server.port}` : ''}
-            </span>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="font-mono text-slate-300 truncate text-[15px] font-medium" title={showHost ? `${server.host}${server.port ? `:${server.port}` : ''}` : 'Host tersembunyi'}>
+                {showHost ? `${server.host}${server.port ? `:${server.port}` : ''}` : '••••.••••'}
+              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowHost(!showHost);
+                }}
+                className="p-1 text-slate-400 hover:text-slate-200 transition-colors rounded cursor-pointer shrink-0"
+                title={showHost ? "Sembunyikan Host" : "Tampilkan Host"}
+              >
+                {showHost ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
           ) : (
             <span className="font-mono text-slate-500 opacity-60 tracking-wider shrink-0 text-[11px]">••••.••••</span>
           )}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Server, Box, Cpu, HardDrive, ArrowDown, ArrowUp, Zap, Clock, ShieldCheck, Edit3, Activity, FileCode, Music, Layers, Sliders, Rocket, RefreshCw, CheckCircle, AlertTriangle, Terminal, Tv } from 'lucide-react';
+import { X, Server, Box, Cpu, HardDrive, ArrowDown, ArrowUp, Zap, Clock, ShieldCheck, Edit3, Activity, FileCode, Music, Layers, Sliders, Rocket, RefreshCw, CheckCircle, AlertTriangle, Terminal, Tv, Eye, EyeOff } from 'lucide-react';
 import MetricsChart from '../MetricsChart';
 import { fetchServerHistoryApi, redeployBackendApi } from '../../api/vpsApi';
 import { formatMbToGb } from '../../utils/formatters';
@@ -13,6 +13,7 @@ import PodConfigTab from './PodConfigTab';
 
 export default function ServerDetailModal({ server, onClose, onEdit }) {
   const { isAuthenticated } = useAuth();
+  const [showHost, setShowHost] = useState(false);
   const [viewMode, setViewMode] = useState('metrics'); // 'metrics' | 'docker' | 'scripts' | 'sounds'
   const [activeTab, setActiveTab] = useState('bandwidth');
   const [historyData, setHistoryData] = useState([]);
@@ -149,10 +150,20 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
                   {isPod ? `POD ${podVersionText}` : 'VPS'}
                 </span>
               </div>
-              <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
+              <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
                 {isAuthenticated ? (
                   <>
-                    <span className="font-mono">{server.host}:{server.port}</span>
+                    <span className="font-mono">
+                      {showHost ? `${server.host}:${server.port}` : '••••.••••'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowHost(!showHost)}
+                      className="p-1 text-slate-400 hover:text-slate-200 transition-colors rounded cursor-pointer shrink-0"
+                      title={showHost ? "Sembunyikan Host" : "Tampilkan Host"}
+                    >
+                      {showHost ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
                     <span>•</span>
                     <span>User: {server.username}</span>
                   </>
@@ -465,7 +476,7 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
         {showDeployModal && (
           <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-[1000] flex items-center justify-center p-4">
             <div className="w-full max-w-3xl bg-slate-950 border border-purple-500/40 rounded-3xl p-6 flex flex-col gap-4 shadow-2xl animate-scaleUp">
-              
+
               {/* Modal Header */}
               <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                 <div className="flex items-center gap-3">
@@ -486,11 +497,10 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
               <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
                 <button
                   onClick={() => setDeployModalTab('preview')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
-                    deployModalTab === 'preview'
-                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${deployModalTab === 'preview'
+                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                    : 'text-slate-400 hover:text-slate-200'
+                    }`}
                 >
                   <FileCode size={14} />
                   <span>Pratinjau Script (`deploy.sh`)</span>
@@ -498,11 +508,10 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
 
                 <button
                   onClick={() => setDeployModalTab('terminal')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${
-                    deployModalTab === 'terminal'
-                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all ${deployModalTab === 'terminal'
+                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                    : 'text-slate-400 hover:text-slate-200'
+                    }`}
                 >
                   <Terminal size={14} />
                   <span>Output Terminal {deployStatus !== 'idle' && `(${deployStatus})`}</span>
@@ -517,7 +526,7 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
                     <span>Target Directory: <code className="text-cyan-400 font-mono">/home/pod/dev/be-vps-monitoring</code></span>
                   </div>
                   <pre className="p-4 bg-slate-900 border border-slate-800 rounded-2xl font-mono text-xs text-slate-300 overflow-x-auto max-h-80 leading-relaxed whitespace-pre-wrap">
-{`#!/bin/bash
+                    {`#!/bin/bash
 # ==============================================================================
 # Deploy & Auto-Update VPS Monitoring Backend Container Script
 # ==============================================================================
