@@ -1,0 +1,67 @@
+[build]
+  # Perintah build untuk Vite
+  command = "npm run build"
+  
+  # Folder output dari Vite
+  publish = "dist"
+
+# ==========================================
+# 1. ATURAN PROXY & REDIRECT (PENTING!)
+# ==========================================
+
+# A. Proxy API Backend (Hides backend URL from inspect element)
+# Ganti 'https://backend-anda.com' dengan URL backend production Anda!
+# Ini akan mengarahkan semua request '/api/...' dari frontend ke backend aslinya.
+[[redirects]]
+  from = "/api/*"
+  to = "https://utilities-workstation-hide-economies.trycloudflare.com/api/:splat"
+  status = 200
+  force = true
+
+# B. SPA Routing (React Router)
+# Wajib untuk aplikasi React (SPA) agar tidak muncul error 404 saat refresh halaman
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# ==========================================
+# 2. ATURAN CACHE (Optimasi Bandwidth Akun Gratis)
+# ==========================================
+
+# A. Cache agresif untuk aset statis (JS, CSS, Images) di dalam folder assets/
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# B. Dilarang cache untuk index.html (agar user selalu mendapat update UI terbaru)
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Pragma = "no-cache"
+    Expires = "0"
+
+# ==========================================
+# 3. HEADER KEAMANAN (Security Headers)
+# ==========================================
+
+# Diterapkan ke semua file untuk keamanan maksimal
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Mencegah serangan clickjacking (hanya izinkan iframe dari domain yang sama)
+    X-Frame-Options = "SAMEORIGIN"
+    
+    # Mencegah browser menebak MIME type file (melindungi dari serangan XSS)
+    X-Content-Type-Options = "nosniff"
+    
+    # Mengaktifkan filter XSS bawaan browser modern
+    X-XSS-Protection = "1; mode=block"
+    
+    # Mengontrol informasi referer yang dikirim saat user pindah halaman
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    
+    # Memaksa koneksi HTTPS (HSTS)
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"

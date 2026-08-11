@@ -1,5 +1,2 @@
-# Redirect domain/subdomain lama ke domain/subdomain baru
-https://regenesis-server-monitor.netlify.app/* http://monitor.linkhub.regenesispod.com/:splat 301!
-
-# SPA Fallback (Vite / React Router)
-/* /index.html 200
+/api/*  https://utilities-workstation-hide-economies.trycloudflare.com/api/:splat  200
+/*  /index.html  200
