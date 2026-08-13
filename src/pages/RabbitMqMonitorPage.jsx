@@ -12,7 +12,9 @@ import {
   X,
   Terminal,
   MessageSquare,
-  Box
+  Box,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import {
   fetchRabbitMqsApi,
@@ -35,11 +37,12 @@ export default function RabbitMqMonitorPage({ onBack }) {
   const [vpsServers, setVpsServers] = useState([]);
   const [selectedServerId, setSelectedServerId] = useState(null);
   const [liveStatus, setLiveStatus] = useState(null);
-  const [isLoadingServers, setIsLoadingServers] = useState(false);
+  const [isLoadingServers, setIsLoadingServers] = useState(true);
   const [isLoadingStatus, setIsLoadingStatus] = useState(false);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState('graph'); // 'graph' | 'tracer' | 'queues'
+  const [activeTab, setActiveTab] = useState('graph'); // 'graph' | 'tracer' | 'queues' | 'pod_v3'
   const [selectedDetailServer, setSelectedDetailServer] = useState(null);
+  const [showHost, setShowHost] = useState(false);
 
   // Command Execution State
   const [isExecutingCommand, setIsExecutingCommand] = useState(false);
@@ -242,6 +245,18 @@ export default function RabbitMqMonitorPage({ onBack }) {
 
         <div className="flex items-center gap-2">
           <button
+            type="button"
+            onClick={() => setShowHost(!showHost)}
+            className="flex items-center gap-2 text-xs font-bold text-slate-300 cursor-pointer hover:text-white transition-colors bg-slate-900 px-3.5 py-2 rounded-xl border border-slate-700"
+            title={showHost ? "Sembunyikan IP Host" : "Tampilkan IP Host"}
+          >
+            {showHost ? <EyeOff size={14} className="text-cyan-400" /> : <Eye size={14} className="text-slate-500" />}
+            <span className={showHost ? 'text-cyan-400' : ''}>
+              {showHost ? 'Sembunyikan IP' : 'Tampilkan IP'}
+            </span>
+          </button>
+
+          <button
             onClick={handleOpenAddModal}
             className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-cyan-500/20 transition-all cursor-pointer"
           >
@@ -288,7 +303,9 @@ export default function RabbitMqMonitorPage({ onBack }) {
                   >
                     <div className="flex-1 min-w-0 pr-2">
                       <p className="font-bold text-xs truncate">{server.name}</p>
-                      <p className="text-[10px] font-mono text-slate-500 truncate mt-0.5">{server.host}:{server.port}</p>
+                      <p className="text-[10px] font-mono text-slate-500 truncate mt-0.5">
+                        {showHost ? `${server.host}:${server.port}` : '••••.••••'}
+                      </p>
                     </div>
 
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -327,7 +344,9 @@ export default function RabbitMqMonitorPage({ onBack }) {
               <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                   <h2 className="text-base font-extrabold text-white">{currentSelectedServer.name}</h2>
-                  <p className="text-xs text-slate-400 mt-0.5 font-mono">Endpoint: http://{currentSelectedServer.host}:{currentSelectedServer.port}</p>
+                  <p className="text-xs text-slate-400 mt-0.5 font-mono">
+                    Endpoint: {showHost ? `http://${currentSelectedServer.host}:${currentSelectedServer.port}` : 'http://••••.••••'}
+                  </p>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -365,7 +384,7 @@ export default function RabbitMqMonitorPage({ onBack }) {
                     <h4 className="font-bold">Gagal Menghubungi API Management RabbitMQ</h4>
                     <p className="text-xs text-red-300/80 mt-1">Error: {liveStatus.error}</p>
                     <p className="text-xs text-slate-400 mt-2 list-disc pl-4">
-                      Pastikan rabbitmq_management plugin telah aktif di server ({currentSelectedServer.host}). Perintah: <code className="bg-black/40 px-1 py-0.5 rounded font-mono text-[11px]">rabbitmq-plugins enable rabbitmq_management</code>.
+                      Pastikan rabbitmq_management plugin telah aktif di server ({showHost ? currentSelectedServer.host : '••••.••••'}). Perintah: <code className="bg-black/40 px-1 py-0.5 rounded font-mono text-[11px]">rabbitmq-plugins enable rabbitmq_management</code>.
                     </p>
                   </div>
                 </div>

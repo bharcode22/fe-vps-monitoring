@@ -1,6 +1,6 @@
 import React, { memo, useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { RefreshCw, RadioReceiver, Network, X, CheckCircle2, XCircle, ExternalLink } from 'lucide-react';
+import { RefreshCw, RadioReceiver, Network, X, CheckCircle2, XCircle, ExternalLink, Eye, EyeOff } from 'lucide-react';
 import { fetchDockerContainersApi } from '../../api/vpsApi';
 import NodeInlineLogViewer from './NodeInlineLogViewer';
 
@@ -8,6 +8,7 @@ const SubscriberNode = ({ data, isConnectable }) => {
   const [isChecking, setIsChecking] = useState(false);
   const [dockerStatus, setDockerStatus] = useState(null); // null, 'ready', 'error'
   const [isLogOpen, setIsLogOpen] = useState(false);
+  const [showHost, setShowHost] = useState(false);
 
   const handleCheckConnection = async () => {
     if (!data.podId) return;
@@ -53,7 +54,23 @@ const SubscriberNode = ({ data, isConnectable }) => {
           </div>
           <div>
             <h3 className="text-sm font-extrabold text-white">{data.label || 'Pod Subscriber'}</h3>
-            <p className="text-[10px] text-emerald-400 font-mono mt-0.5">IP: {data.peerHost || 'Unknown'}</p>
+            <div className="flex items-center gap-1 mt-0.5">
+              <p className="text-[10px] text-emerald-400 font-mono">
+                IP: {showHost ? (data.peerHost || 'Unknown') : '••••.••••'}
+              </p>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowHost(!showHost);
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
+                className="text-emerald-400/70 hover:text-emerald-300 p-0.5 transition-colors cursor-pointer"
+                title={showHost ? "Sembunyikan IP" : "Tampilkan IP"}
+              >
+                {showHost ? <EyeOff size={11} /> : <Eye size={11} />}
+              </button>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">

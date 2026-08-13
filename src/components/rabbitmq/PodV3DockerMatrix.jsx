@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, RefreshCw, Search, CheckCircle2, XCircle, AlertCircle, Layers, Play, Square, ExternalLink } from 'lucide-react';
+import { Box, RefreshCw, Search, CheckCircle2, XCircle, AlertCircle, Layers, Play, Square, ExternalLink, Eye, EyeOff } from 'lucide-react';
 import { fetchDockerContainersApi, restartDockerContainerApi } from '../../api/vpsApi';
 
 const TARGET_APPS = [
@@ -17,6 +17,7 @@ export default function PodV3DockerMatrix({ vpsServers, onOpenServerDetail }) {
   const [isLoadingAll, setIsLoadingAll] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [restartingMap, setRestartingMap] = useState({});
+  const [showHost, setShowHost] = useState(false);
 
   // Filter ONLY Pod V3 servers (type === 'pod' and pod_version !== 'v2')
   const podV3Servers = (vpsServers || []).filter(s => {
@@ -179,7 +180,19 @@ export default function PodV3DockerMatrix({ vpsServers, onOpenServerDetail }) {
         <table className="w-full text-left border-collapse min-w-[900px]">
           <thead>
             <tr className="bg-slate-900/90 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800">
-              <th className="p-3 w-48">Pod Server V3</th>
+              <th className="p-3 w-48">
+                <div className="flex items-center gap-1.5">
+                  <span>Pod Server V3</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowHost(!showHost)}
+                    className="text-slate-400 hover:text-slate-200 p-0.5 transition-colors cursor-pointer"
+                    title={showHost ? "Sembunyikan Host/IP" : "Tampilkan Host/IP"}
+                  >
+                    {showHost ? <EyeOff size={12} /> : <Eye size={12} />}
+                  </button>
+                </div>
+              </th>
               {TARGET_APPS.map(app => (
                 <th key={app.key} className="p-3 text-center w-36">
                   <div className="flex flex-col items-center justify-center">
@@ -219,7 +232,9 @@ export default function PodV3DockerMatrix({ vpsServers, onOpenServerDetail }) {
                               {server.pod_version ? server.pod_version.toUpperCase() : 'V3'}
                             </span>
                           </div>
-                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">{server.host}</div>
+                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                            {showHost ? server.host : '••••.••••'}
+                          </div>
                         </div>
                       </div>
                     </td>

@@ -7,7 +7,9 @@ import {
   XCircle,
   AlertTriangle,
   Filter,
-  Search
+  Search,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { fetchCompareMetadataApi } from '../api/vpsApi';
 import MetadataSkeletonTable from '../components/common/MetadataSkeletonTable';
@@ -20,6 +22,7 @@ export default function MetadataComparisonPage({ onBack }) {
 
   const [showOnlyMismatch, setShowOnlyMismatch] = useState(false);
   const [hideSessionAny, setHideSessionAny] = useState(false);
+  const [showHost, setShowHost] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const loadData = async () => {
@@ -164,7 +167,7 @@ export default function MetadataComparisonPage({ onBack }) {
               </h4>
               <ul className="text-xs text-amber-200/80 space-y-1 list-disc pl-5">
                 {data.pods.filter(p => !p.fetchSuccess).map(p => (
-                  <li key={p.id}>{p.name} ({p.host}): {p.error}</li>
+                  <li key={p.id}>{p.name} {showHost ? `(${p.host})` : ''}: {p.error}</li>
                 ))}
               </ul>
             </div>
@@ -185,6 +188,18 @@ export default function MetadataComparisonPage({ onBack }) {
                 <Search size={14} className="absolute left-3 top-2.5 text-slate-500" />
               </div>
               <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowHost(!showHost)}
+                  className="flex items-center gap-2 text-xs font-bold text-slate-300 cursor-pointer hover:text-white transition-colors bg-slate-900 px-3 py-2 rounded-lg border border-slate-700"
+                  title={showHost ? "Sembunyikan IP Host" : "Tampilkan IP Host"}
+                >
+                  {showHost ? <EyeOff size={14} className="text-purple-400" /> : <Eye size={14} className="text-slate-500" />}
+                  <span className={showHost ? 'text-purple-400' : ''}>
+                    {showHost ? 'Sembunyikan IP' : 'Tampilkan IP'}
+                  </span>
+                </button>
+
                 <label className="flex items-center gap-2 text-xs font-bold text-slate-300 cursor-pointer hover:text-white transition-colors bg-slate-900 px-3 py-2 rounded-lg border border-slate-700">
                   <Filter size={14} className={hideSessionAny ? 'text-purple-400' : 'text-slate-500'} />
                   <input
@@ -224,7 +239,9 @@ export default function MetadataComparisonPage({ onBack }) {
                       <th key={pod.id} className="p-4 text-xs font-bold text-slate-300 sticky top-0 bg-slate-950 z-20 border-b border-l border-slate-800 shadow-[0_1px_0_0_#1e293b] w-[350px] min-w-[280px] whitespace-normal break-words">
                         <div className="flex flex-col items-start">
                           <span className="text-white">{pod.name}</span>
-                          <span className="text-[10px] text-slate-500 font-mono mt-1 break-all">{pod.host}</span>
+                          <span className="text-[10px] text-slate-500 font-mono mt-1 break-all">
+                            {showHost ? pod.host : '••••.••••'}
+                          </span>
                         </div>
                       </th>
                     ))}

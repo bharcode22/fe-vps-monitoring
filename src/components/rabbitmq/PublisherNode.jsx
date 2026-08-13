@@ -1,11 +1,12 @@
 import React, { memo, useState, useEffect } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { Server, Activity, RefreshCw, Database, Box, ExternalLink } from 'lucide-react';
+import { Server, Activity, RefreshCw, Database, Box, ExternalLink, Eye, EyeOff } from 'lucide-react';
 import NodeInlineLogViewer from './NodeInlineLogViewer';
 
 const PublisherNode = ({ data, isConnectable }) => {
   const [selectedVpsId, setSelectedVpsId] = useState('');
   const [isLogOpen, setIsLogOpen] = useState(false);
+  const [showHost, setShowHost] = useState(false);
 
   // Auto-detect and select VPS matching RabbitMQ host/IP
   useEffect(() => {
@@ -29,7 +30,23 @@ const PublisherNode = ({ data, isConnectable }) => {
           </div>
           <div>
             <h3 className="text-sm font-extrabold text-white">Publisher (RabbitMQ)</h3>
-            <p className="text-[10px] text-amber-400 font-mono mt-0.5">Host: {data.host}</p>
+            <div className="flex items-center gap-1 mt-0.5">
+              <p className="text-[10px] text-amber-400 font-mono">
+                Host: {showHost ? data.host : '••••.••••'}
+              </p>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowHost(!showHost);
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
+                className="text-amber-400/70 hover:text-amber-300 p-0.5 transition-colors cursor-pointer"
+                title={showHost ? "Sembunyikan Host" : "Tampilkan Host"}
+              >
+                {showHost ? <EyeOff size={11} /> : <Eye size={11} />}
+              </button>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-1.5 bg-slate-950 px-2.5 py-1 rounded-full border border-slate-800">
@@ -64,7 +81,7 @@ const PublisherNode = ({ data, isConnectable }) => {
           >
             <option value="">-- Pilih Server --</option>
             {data.vpsList && data.vpsList.map(vps => (
-              <option key={vps.id} value={vps.id}>{vps.name} ({vps.host})</option>
+              <option key={vps.id} value={vps.id}>{vps.name} {showHost ? `(${vps.host})` : ''}</option>
             ))}
           </select>
         </div>

@@ -414,7 +414,7 @@ export default function RabbitMqNodeGraph({
                   : '-- Pilih Hasil Pencarian --'}
               </option>
               {filteredUnselectedPods.map(pod => (
-                <option key={pod.id} value={pod.id}>{pod.name} ({pod.host})</option>
+                <option key={pod.id} value={pod.id}>{pod.name}</option>
               ))}
             </select>
           </div>
