@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Terminal, Play, Square, ChevronDown, ChevronUp } from 'lucide-react';
 import io from 'socket.io-client';
-import { BACKEND_URL } from '../../config';
+import { SOCKET_URL } from '../../config';
 
 export default function NodeInlineLogViewer({ type = 'docker', serverId, targetName, title, onToggleOpen }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -29,13 +29,13 @@ export default function NodeInlineLogViewer({ type = 'docker', serverId, targetN
     stopStream();
 
     const token = localStorage.getItem('vps_monitoring_token') || localStorage.getItem('token') || '';
-    const socket = io(BACKEND_URL);
+    const socket = io(SOCKET_URL);
     socketRef.current = socket;
 
     const startEvent = type === 'docker' ? 'docker:start-stream' : 'pm2:start-stream';
     const dataEvent = type === 'docker' ? 'docker:stream-data' : 'pm2:stream-data';
     const errorEvent = type === 'docker' ? 'docker:stream-error' : 'pm2:stream-error';
-    const payload = type === 'docker' 
+    const payload = type === 'docker'
       ? { serverId, containerName: targetName, token }
       : { serverId, appName: targetName, token };
 
@@ -81,13 +81,13 @@ export default function NodeInlineLogViewer({ type = 'docker', serverId, targetN
   };
 
   return (
-    <div 
+    <div
       className="nodrag nopan bg-slate-955/90 border border-slate-800/90 rounded-xl overflow-hidden mt-3"
       onMouseDown={(e) => e.stopPropagation()}
     >
       {/* Header bar */}
       <div className="px-3 py-2 bg-slate-900/80 border-b border-slate-800/80 flex items-center justify-between">
-        <div 
+        <div
           onClick={toggleOpen}
           className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors"
         >

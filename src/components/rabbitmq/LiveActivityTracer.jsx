@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Sliders, Square, Play, ShieldCheck } from 'lucide-react';
 import io from 'socket.io-client';
-import { BACKEND_URL } from '../../config';
+import { SOCKET_URL } from '../../config';
 
 export default function LiveActivityTracer({ selectedServerId }) {
   const [isTracing, setIsTracing] = useState(false);
@@ -27,7 +27,7 @@ export default function LiveActivityTracer({ selectedServerId }) {
     setIsTracing(true);
 
     const token = localStorage.getItem('vps_monitoring_token') || '';
-    const socket = io(BACKEND_URL);
+    const socket = io(SOCKET_URL);
     socketRef.current = socket;
 
     socket.on('connect', () => {

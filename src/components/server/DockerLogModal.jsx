@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { X, Terminal, RefreshCw, Copy, Check, AlertCircle, Radio, Play, Square } from 'lucide-react';
 import { io } from 'socket.io-client';
-import { BACKEND_URL } from '../../config';
+import { SOCKET_URL } from '../../config';
 import { fetchDockerLogsApi } from '../../api/vpsApi';
 
 export default function DockerLogModal({ isOpen, onClose, serverId, containerName }) {
@@ -55,7 +55,7 @@ export default function DockerLogModal({ isOpen, onClose, serverId, containerNam
     setLogs(`=== LIVE STREAMING STARTED: docker logs -f --tail 100 ${containerName} ===\n`);
 
     const token = localStorage.getItem('vps_monitoring_token') || '';
-    const socket = io(BACKEND_URL);
+    const socket = io(SOCKET_URL);
     socketRef.current = socket;
 
     socket.on('connect', () => {
@@ -176,7 +176,7 @@ export default function DockerLogModal({ isOpen, onClose, serverId, containerNam
 
           {/* Action Controls & Mode Switcher */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            
+
             {/* Live Stream Toggle Button */}
             <button
               onClick={toggleStreamingMode}

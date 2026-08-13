@@ -12,7 +12,7 @@ import {
   Box
 } from 'lucide-react';
 import io from 'socket.io-client';
-import { BACKEND_URL } from '../../config';
+import { SOCKET_URL } from '../../config';
 import PodV3DockerMatrix from './PodV3DockerMatrix';
 
 export default function FullscreenOverlayPanel({ selectedServerId, liveStatus, vpsServers, onOpenServerDetail }) {
@@ -46,7 +46,7 @@ export default function FullscreenOverlayPanel({ selectedServerId, liveStatus, v
     if (socketRef.current) socketRef.current.disconnect();
 
     const token = localStorage.getItem('vps_monitoring_token') || localStorage.getItem('token') || '';
-    const socket = io(BACKEND_URL);
+    const socket = io(SOCKET_URL);
     socketRef.current = socket;
 
     socket.on('connect', () => {
@@ -307,7 +307,7 @@ export default function FullscreenOverlayPanel({ selectedServerId, liveStatus, v
 
           {/* TAB 2: QUEUE MONITOR LIST */}
           {activeTab === 'queues' && (
-            <div 
+            <div
               onWheel={(e) => e.stopPropagation()}
               onMouseDown={(e) => e.stopPropagation()}
               className="nowheel nopan nodrag flex-1 overflow-auto custom-scrollbar bg-slate-950/90"
@@ -402,7 +402,7 @@ export default function FullscreenOverlayPanel({ selectedServerId, liveStatus, v
 
           {/* TAB 3: POD V3 DOCKER MATRIX */}
           {activeTab === 'pod_v3' && (
-            <div 
+            <div
               onWheel={(e) => e.stopPropagation()}
               onMouseDown={(e) => e.stopPropagation()}
               className="nowheel nopan nodrag flex-1 overflow-auto custom-scrollbar p-3 bg-slate-955/90"

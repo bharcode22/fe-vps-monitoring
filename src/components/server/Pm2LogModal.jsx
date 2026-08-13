@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { X, Terminal, RefreshCw, Copy, Check, AlertCircle, Radio } from 'lucide-react';
 import { io } from 'socket.io-client';
-import { BACKEND_URL } from '../../config';
+import { SOCKET_URL } from '../../config';
 import { fetchPm2LogsApi } from '../../api/vpsApi';
 
 export default function Pm2LogModal({ isOpen, onClose, serverId, appName }) {
@@ -54,7 +54,7 @@ export default function Pm2LogModal({ isOpen, onClose, serverId, appName }) {
     setLogs(`=== LIVE STREAMING STARTED: pm2 logs ${appName} ===\n`);
 
     const token = localStorage.getItem('vps_monitoring_token') || '';
-    const socket = io(BACKEND_URL);
+    const socket = io(SOCKET_URL);
     socketRef.current = socket;
 
     socket.on('connect', () => {
