@@ -405,7 +405,7 @@ export default function InstallationPage({ onBack }) {
                 </span>
               </h1>
               <p className="text-xs text-slate-400">
-                Visualisasi Jenkins Pipeline Stage Matrix, download paralel & streaming log WebSockets real-time
+                Visualisasi Karboe Pipeline Stage Matrix, download paralel & streaming log WebSockets real-time
               </p>
             </div>
           </div>
@@ -475,11 +475,10 @@ export default function InstallationPage({ onBack }) {
                     <div
                       key={srv.id}
                       onClick={() => toggleServerSelect(String(srv.id))}
-                      className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-3 ${
-                        isSelected
-                          ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border-cyan-500/50 text-white shadow-lg shadow-cyan-500/10'
-                          : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 text-slate-400'
-                      }`}
+                      className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-3 ${isSelected
+                        ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border-cyan-500/50 text-white shadow-lg shadow-cyan-500/10'
+                        : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 text-slate-400'
+                        }`}
                     >
                       <div className={`p-1 rounded-md ${isSelected ? 'text-cyan-400' : 'text-slate-600'}`}>
                         {isSelected ? <CheckSquare size={20} /> : <Square size={20} />}
@@ -516,21 +515,19 @@ export default function InstallationPage({ onBack }) {
               <div className="flex items-center bg-black/50 p-1 rounded-xl border border-slate-800">
                 <button
                   onClick={() => setEnv('dev')}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    env === 'dev'
-                      ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-400 border border-cyan-500/40 shadow-sm'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${env === 'dev'
+                    ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-400 border border-cyan-500/40 shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                    }`}
                 >
                   DEV
                 </button>
                 <button
                   onClick={() => setEnv('release')}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    env === 'release'
-                      ? 'bg-gradient-to-r from-purple-500/30 to-pink-500/30 text-purple-400 border border-purple-500/40 shadow-sm'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${env === 'release'
+                    ? 'bg-gradient-to-r from-purple-500/30 to-pink-500/30 text-purple-400 border border-purple-500/40 shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                    }`}
                 >
                   RELEASE
                 </button>
@@ -564,11 +561,10 @@ export default function InstallationPage({ onBack }) {
                   <div
                     key={app.id}
                     onClick={() => toggleAppSelect(app.id)}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2.5 ${
-                      isSelected
-                        ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border-cyan-500/50 text-white shadow-md'
-                        : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 text-slate-400'
-                    }`}
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2.5 ${isSelected
+                      ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border-cyan-500/50 text-white shadow-md'
+                      : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 text-slate-400'
+                      }`}
                   >
                     <div className={`p-1 rounded-md ${isSelected ? 'text-cyan-400' : 'text-slate-600'}`}>
                       {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
@@ -645,11 +641,10 @@ export default function InstallationPage({ onBack }) {
 
                           <button
                             onClick={() => toggleAppPrisma(appId)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
-                              isPrismaActive
-                                ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-400 border border-cyan-500/40 shadow-sm'
-                                : 'bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700'
-                            }`}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${isPrismaActive
+                              ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-400 border border-cyan-500/40 shadow-sm'
+                              : 'bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700'
+                              }`}
                             title="Jalankan npx prisma migrate dev --name 'deploy' saat instalasi aplikasi ini"
                           >
                             {isPrismaActive ? <CheckSquare size={15} /> : <Square size={15} />}
@@ -712,11 +707,10 @@ export default function InstallationPage({ onBack }) {
               <button
                 onClick={handleStartBatchDeploy}
                 disabled={isDeploying || selectedServerIds.length === 0 || selectedAppIds.length === 0}
-                className={`w-full py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer ${
-                  isDeploying || selectedServerIds.length === 0 || selectedAppIds.length === 0
-                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-60'
-                    : 'bg-gradient-to-r from-cyan-400 via-sky-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 shadow-cyan-500/25'
-                }`}
+                className={`w-full py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer ${isDeploying || selectedServerIds.length === 0 || selectedAppIds.length === 0
+                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-60'
+                  : 'bg-gradient-to-r from-cyan-400 via-sky-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 shadow-cyan-500/25'
+                  }`}
               >
                 {isDeploying ? (
                   <>
@@ -745,7 +739,7 @@ export default function InstallationPage({ onBack }) {
                 </div>
                 <div>
                   <h3 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
-                    Jenkins Pipeline Stage Matrix
+                    Karboe Pipeline Stage
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300">
                       Build #105
                     </span>
@@ -871,9 +865,8 @@ export default function InstallationPage({ onBack }) {
               </div>
               <div className="flex justify-between pb-2 border-b border-slate-800">
                 <span className="text-slate-400">Environment:</span>
-                <span className={`font-bold px-2 py-0.5 rounded text-[10px] ${
-                  env === 'dev' ? 'bg-cyan-500/20 text-cyan-400' : 'bg-purple-500/20 text-purple-400'
-                }`}>
+                <span className={`font-bold px-2 py-0.5 rounded text-[10px] ${env === 'dev' ? 'bg-cyan-500/20 text-cyan-400' : 'bg-purple-500/20 text-purple-400'
+                  }`}>
                   {env.toUpperCase()}
                 </span>
               </div>
@@ -941,11 +934,10 @@ export default function InstallationPage({ onBack }) {
               <div className="flex items-center gap-1.5 mb-3 overflow-x-auto pb-1 scrollbar-none">
                 <button
                   onClick={() => setActiveLogFilter('ALL')}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-colors ${
-                    activeLogFilter === 'ALL'
-                      ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
-                      : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-                  }`}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-colors ${activeLogFilter === 'ALL'
+                    ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
+                    : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                    }`}
                 >
                   Semua Log
                 </button>
@@ -955,11 +947,10 @@ export default function InstallationPage({ onBack }) {
                     <button
                       key={srv.id}
                       onClick={() => setActiveLogFilter(srv.name)}
-                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-colors ${
-                        activeLogFilter === srv.name
-                          ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
-                          : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-                      }`}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-colors ${activeLogFilter === srv.name
+                        ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
+                        : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                        }`}
                     >
                       {srv.name}
                     </button>
@@ -967,11 +958,10 @@ export default function InstallationPage({ onBack }) {
               </div>
 
               {batchSummary && (
-                <div className={`p-3 mb-3 rounded-xl text-xs flex items-center gap-2 ${
-                  batchSummary.totalFail === 0
-                    ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
-                    : 'bg-amber-500/15 border border-amber-500/30 text-amber-400'
-                }`}>
+                <div className={`p-3 mb-3 rounded-xl text-xs flex items-center gap-2 ${batchSummary.totalFail === 0
+                  ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
+                  : 'bg-amber-500/15 border border-amber-500/30 text-amber-400'
+                  }`}>
                   {batchSummary.totalFail === 0 ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
                   <span>
                     Jenkins Build Selesai: {batchSummary.totalSuccess} Tugas Sukses, {batchSummary.totalFail} Gagal.
@@ -994,12 +984,12 @@ export default function InstallationPage({ onBack }) {
                       logLine.includes('❌')
                         ? 'text-red-400 font-bold'
                         : logLine.includes('✔')
-                        ? 'text-emerald-400 font-bold'
-                        : logLine.includes('>>>')
-                        ? 'text-cyan-300 font-bold mt-2'
-                        : logLine.includes('[JENKINS_STAGE:')
-                        ? 'hidden'
-                        : 'text-slate-300'
+                          ? 'text-emerald-400 font-bold'
+                          : logLine.includes('>>>')
+                            ? 'text-cyan-300 font-bold mt-2'
+                            : logLine.includes('[JENKINS_STAGE:')
+                              ? 'hidden'
+                              : 'text-slate-300'
                     }
                   >
                     {logLine}
