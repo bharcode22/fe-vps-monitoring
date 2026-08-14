@@ -518,7 +518,20 @@ export async function executeInstallationApi(payload) {
     headers: getAuthHeaders(),
     body: JSON.stringify(payload)
   });
-  const data = await res.json();
-  if (!data.success) throw new Error(data.error || 'Gagal mengeksekusi instalasi POD v3');
+
+  const responseText = await res.text();
+  let data;
+  try {
+    data = JSON.parse(responseText);
+  } catch (e) {
+    if (!res.ok) {
+      throw new Error(`Koneksi Timeout (HTTP ${res.status}: ${res.statusText || 'Gateway Timeout'}). Proses deployment di server mungkin masih berlangsung.`);
+    }
+    throw new Error(`Respon server tidak valid (${responseText.slice(0, 100)})`);
+  }
+
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || `Gagal mengeksekusi instalasi POD v3 (HTTP ${res.status})`);
+  }
   return data;
 }

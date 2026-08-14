@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import io from 'socket.io-client';
+import { SOCKET_URL } from '../config';
 import {
   ArrowLeft,
   Download,
@@ -10,19 +12,22 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
-  FolderGit2,
   FileCode,
-  Database,
   CheckSquare,
   Square,
   Copy,
-  Check
+  Check,
+  Clock,
+  Layers,
+  Cpu,
+  PackageCheck,
+  Zap,
+  RotateCw
 } from 'lucide-react';
 import {
   fetchServersApi,
   fetchInstallationVersionsApi,
-  fetchInstallationEnvFilesApi,
-  executeInstallationApi
+  fetchInstallationEnvFilesApi
 } from '../api/vpsApi';
 
 const POD_APPS = [
@@ -33,7 +38,23 @@ const POD_APPS = [
   { id: 'assist-api', label: 'Assist API', desc: 'AI & Assist Subservice' }
 ];
 
+const JENKINS_STAGES = [
+  { id: 1, name: 'Stage 1: Clean & Download', short: '1. Download', icon: Download, desc: 'Parallel mc cp from MinIO' },
+  { id: 2, name: 'Stage 2: Artifact Unzip', short: '2. Unzip', icon: FolderGit2Icon, desc: 'Unzip artifact-bundle zip' },
+  { id: 3, name: 'Stage 3: Env & Prisma', short: '3. Config/Prisma', icon: FileCode, desc: 'Inject .env & Prisma migrate' },
+  { id: 4, name: 'Stage 4: Docker Load', short: '4. Docker Load', icon: Cpu, desc: 'docker load < image.tar.gz' },
+  { id: 5, name: 'Stage 5: Compose Up', short: '5. Compose Up', icon: Play, desc: 'docker compose -f ... up -d' }
+];
+
+function FolderGit2Icon(props) {
+  return <Layers {...props} />;
+}
+
 export default function InstallationPage({ onBack }) {
+  // Socket.io persistent connection reference
+  const socketRef = useRef(null);
+  const terminalEndRef = useRef(null);
+
   // POD v3 servers state (strictly pod_version === 'v3')
   const [podV3Servers, setPodV3Servers] = useState([]);
   const [selectedServerIds, setSelectedServerIds] = useState([]);
@@ -55,12 +76,124 @@ export default function InstallationPage({ onBack }) {
   // Prisma migration toggle mapping per application (appId -> boolean)
   const [appPrismaMapping, setAppPrismaMapping] = useState({});
 
-  // Batch deployment execution state
+  // Jenkins Pipeline State Matrix
+  // Structure: { [serverName]: { [stageId]: 'pending' | 'running' | 'completed' | 'failed' } }
+  const [stageMatrix, setStageMatrix] = useState({});
+  const [stageDurations, setStageDurations] = useState({});
+  const [activeLogFilter, setActiveLogFilter] = useState('ALL');
+
+  // Elapsed Timer state
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const timerRef = useRef(null);
+
+  // Batch deployment execution state (WebSockets streaming)
   const [isDeploying, setIsDeploying] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0, currentLabel: '' });
   const [batchLogs, setBatchLogs] = useState([]);
   const [batchSummary, setBatchSummary] = useState(null);
   const [isCopied, setIsCopied] = useState(false);
+
+  // Elapsed timer ticker effect
+  useEffect(() => {
+    if (isDeploying) {
+      setElapsedSeconds(0);
+      timerRef.current = setInterval(() => {
+        setElapsedSeconds(prev => prev + 1);
+      }, 1000);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isDeploying]);
+
+  // Socket.io initialization for real-time streamed logs and Jenkins Stage Matrix updates
+  useEffect(() => {
+    const socket = io(SOCKET_URL, {
+      transports: ['websocket', 'polling']
+    });
+
+    socketRef.current = socket;
+
+    socket.on('installation_batch_start', (data) => {
+      setIsDeploying(true);
+      setBatchProgress({ current: 0, total: data.totalTasks, currentLabel: 'Jenkins Pipeline Deployment Dimulai...' });
+
+      // Reset stage matrix for all target servers
+      const initialMatrix = {};
+      podV3Servers.forEach(srv => {
+        if (selectedServerIds.includes(String(srv.id))) {
+          initialMatrix[srv.name] = { 1: 'pending', 2: 'pending', 3: 'pending', 4: 'pending', 5: 'pending' };
+        }
+      });
+      setStageMatrix(initialMatrix);
+      setStageDurations({});
+    });
+
+    socket.on('installation_batch_log', (data) => {
+      if (data.text) {
+        const text = data.text;
+        setBatchLogs(prev => [...prev, text]);
+
+        // Parse JENKINS_STAGE tags from log text stream
+        // Format: [JENKINS_STAGE:stageId:START|END:serverName]
+        const stageMatches = text.match(/\[JENKINS_STAGE:(\d):(START|END):([^\]:]+)(?::([^\]]+))?\]/g);
+        if (stageMatches) {
+          stageMatches.forEach(matchStr => {
+            const parts = matchStr.replace('[JENKINS_STAGE:', '').replace(']', '').split(':');
+            const stageId = Number(parts[0]);
+            const action = parts[1]; // 'START' or 'END'
+            const serverName = parts[2];
+
+            setStageMatrix(prev => {
+              const currentServerObj = prev[serverName] || { 1: 'pending', 2: 'pending', 3: 'pending', 4: 'pending', 5: 'pending' };
+              const newStatus = action === 'START' ? 'running' : 'completed';
+              return {
+                ...prev,
+                [serverName]: {
+                  ...currentServerObj,
+                  [stageId]: newStatus
+                }
+              };
+            });
+          });
+        }
+      }
+    });
+
+    socket.on('installation_batch_complete', (data) => {
+      setIsDeploying(false);
+      setBatchSummary(data);
+
+      // Mark all running stages to completed if finished successfully
+      if (data.totalFail === 0) {
+        setStageMatrix(prev => {
+          const next = { ...prev };
+          Object.keys(next).forEach(srvName => {
+            next[srvName] = { 1: 'completed', 2: 'completed', 3: 'completed', 4: 'completed', 5: 'completed' };
+          });
+          return next;
+        });
+      }
+    });
+
+    socket.on('installation_batch_error', (data) => {
+      setIsDeploying(false);
+      alert(data.error || 'Terjadi kesalahan pada Jenkins batch installation');
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [podV3Servers, selectedServerIds]);
+
+  // Auto-scroll terminal log to bottom on new log chunk
+  useEffect(() => {
+    if (terminalEndRef.current) {
+      terminalEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [batchLogs]);
 
   // Load available POD v3 servers (strictly pod_version === 'v3')
   useEffect(() => {
@@ -85,7 +218,6 @@ export default function InstallationPage({ onBack }) {
         const files = res.files || [];
         setEnvFiles(files);
 
-        // Pre-fill initial appEnvMapping with matching .env filenames
         if (files.length > 0) {
           const mapping = {};
           POD_APPS.forEach(app => {
@@ -137,6 +269,13 @@ export default function InstallationPage({ onBack }) {
     loadVersionsForApps();
   }, [selectedAppIds, env]);
 
+  // Format seconds to MM:SS timer
+  const formatTimer = (totalSecs) => {
+    const mins = Math.floor(totalSecs / 60);
+    const secs = totalSecs % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+
   // Handle POD v3 server multi-select toggle
   const toggleServerSelect = (idStr) => {
     setSelectedServerIds(prev =>
@@ -175,8 +314,8 @@ export default function InstallationPage({ onBack }) {
     }));
   };
 
-  // Execute Batch Deployment runner
-  const handleStartBatchDeploy = async () => {
+  // Execute Streamed Batch Deployment runner over WebSockets
+  const handleStartBatchDeploy = () => {
     if (selectedServerIds.length === 0) {
       alert('Pilih setidaknya 1 Server POD v3!');
       return;
@@ -186,7 +325,6 @@ export default function InstallationPage({ onBack }) {
       return;
     }
 
-    // Verify each selected app has a version selected
     for (const appId of selectedAppIds) {
       if (!selectedAppVersions[appId]) {
         alert(`Pilih versi artefak MinIO terlebih dahulu untuk aplikasi: ${appId}`);
@@ -194,83 +332,37 @@ export default function InstallationPage({ onBack }) {
       }
     }
 
-    const totalTasks = selectedServerIds.length * selectedAppIds.length;
+    const appConfigs = selectedAppIds.map(appId => ({
+      app_name: appId,
+      version: selectedAppVersions[appId],
+      env_filename: appEnvMapping[appId] || '',
+      run_prisma_migrate: Boolean(appPrismaMapping[appId])
+    }));
+
     setIsDeploying(true);
     setBatchLogs([]);
     setBatchSummary(null);
-    setBatchProgress({ current: 0, total: totalTasks, currentLabel: 'Menyiapkan batch deployment...' });
 
-    const newLogs = [];
-    newLogs.push(`=== MEMULAI BATCH DEPLOYMENT POD V3 (${totalTasks} TUGAS) ===`);
-    newLogs.push(`Target POD v3: ${selectedServerIds.length} server | Aplikasi: ${selectedAppIds.length} app | Environment: ${env.toUpperCase()}`);
-    newLogs.push(`----------------------------------------------------------------------`);
-    setBatchLogs([...newLogs]);
-
-    let successCount = 0;
-    let failCount = 0;
-    let taskCounter = 0;
-
-    for (const serverIdStr of selectedServerIds) {
-      const serverObj = podV3Servers.find(s => String(s.id) === String(serverIdStr));
-      const serverName = serverObj ? serverObj.name : `Server #${serverIdStr}`;
-
-      for (const appId of selectedAppIds) {
-        taskCounter++;
-        const appVersion = selectedAppVersions[appId] || '';
-        const appEnvFile = appEnvMapping[appId] || '';
-        const appRunPrisma = Boolean(appPrismaMapping[appId]);
-
-        const currentTaskLabel = `[${taskCounter}/${totalTasks}] Deploying ${appId} (${appVersion}) -> ${serverName}`;
-        setBatchProgress({ current: taskCounter, total: totalTasks, currentLabel: currentTaskLabel });
-
-        newLogs.push(`\n>>> TASK ${taskCounter}/${totalTasks}: ${appId} -> ${serverName} (Versi: ${appVersion})`);
-        if (appEnvFile) {
-          newLogs.push(`   File .env: ${appEnvFile}`);
-        } else {
-          newLogs.push(`   File .env: (Tanpa .env)`);
-        }
-        newLogs.push(`   Prisma Migrate: ${appRunPrisma ? 'YA (npx prisma migrate)' : 'TIDAK'}`);
-        setBatchLogs([...newLogs]);
-
-        try {
-          const res = await executeInstallationApi({
-            server_id: Number(serverIdStr),
-            app_name: appId,
-            env,
-            version: appVersion,
-            env_filename: appEnvFile,
-            run_prisma_migrate: appRunPrisma
-          });
-
-          if (res.success) {
-            successCount++;
-            (res.logs || []).forEach(l => newLogs.push(`   ${l}`));
-            if (res.output) newLogs.push(`   [Output] ${res.output.slice(0, 300)}...`);
-            newLogs.push(`✔ ${appId} berhasil di-deploy ke ${serverName}`);
-          } else {
-            failCount++;
-            newLogs.push(`❌ GAGAL: ${res.error || 'Terjadi kesalahan saat deployment'}`);
-          }
-        } catch (err) {
-          failCount++;
-          newLogs.push(`❌ GAGAL: ${err.message}`);
-        }
-        setBatchLogs([...newLogs]);
+    // Initialize Stage Matrix UI
+    const initialMatrix = {};
+    podV3Servers.forEach(srv => {
+      if (selectedServerIds.includes(String(srv.id))) {
+        initialMatrix[srv.name] = { 1: 'pending', 2: 'pending', 3: 'pending', 4: 'pending', 5: 'pending' };
       }
+    });
+    setStageMatrix(initialMatrix);
+
+    if (!socketRef.current) {
+      alert('Koneksi WebSocket belum terhubung. Coba refresh halaman.');
+      setIsDeploying(false);
+      return;
     }
 
-    newLogs.push(`\n----------------------------------------------------------------------`);
-    newLogs.push(`=== BATCH DEPLOYMENT SELESAI ===`);
-    newLogs.push(`Total Sukses: ${successCount} | Total Gagal: ${failCount}`);
-    setBatchLogs([...newLogs]);
-
-    setBatchSummary({
-      total: totalTasks,
-      successCount,
-      failCount
+    socketRef.current.emit('start_batch_installation', {
+      server_ids: selectedServerIds.map(Number),
+      env,
+      app_configs: appConfigs
     });
-
-    setIsDeploying(false);
   };
 
   const handleCopyLogs = () => {
@@ -281,6 +373,12 @@ export default function InstallationPage({ onBack }) {
   };
 
   const totalBatchCombinations = selectedServerIds.length * selectedAppIds.length;
+
+  // Filter logs for Jenkins terminal drawer based on activeLogFilter
+  const filteredLogs = batchLogs.filter(line => {
+    if (activeLogFilter === 'ALL') return true;
+    return line.includes(activeLogFilter);
+  });
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-300">
@@ -297,35 +395,43 @@ export default function InstallationPage({ onBack }) {
 
           <div className="flex items-center gap-3">
             <div className="bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/40 p-2.5 rounded-xl text-cyan-400">
-              <Download size={22} />
+              <Layers size={22} />
             </div>
             <div>
               <h1 className="text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
-                Instalasi POD v3 (Multi-Server & App)
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
-                  Batch Runner
+                Jenkins CI/CD Pipeline Dashboard
+                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-md bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 font-mono">
+                  #BUILD-105
                 </span>
               </h1>
               <p className="text-xs text-slate-400">
-                Pilih multiple POD v3, aplikasi, pemetaan versi MinIO, file .env & Prisma Migration khusus per aplikasi
+                Visualisasi Jenkins Pipeline Stage Matrix, download paralel & streaming log WebSockets real-time
               </p>
             </div>
           </div>
         </div>
 
-        <button
-          onClick={() => loadVersionsForApps()}
-          className="hidden sm:flex items-center gap-2 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 font-semibold text-xs transition-all cursor-pointer"
-        >
-          <RefreshCw size={14} className="text-cyan-400" />
-          <span>Refresh Versi MinIO</span>
-        </button>
+        {/* Build Status Indicator & Timer */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-slate-950/80 px-3.5 py-2 rounded-xl border border-slate-800 font-mono text-xs text-slate-300">
+            <Clock size={15} className="text-cyan-400 animate-pulse" />
+            <span>Elapsed: <strong className="text-cyan-300">{formatTimer(elapsedSeconds)}</strong></span>
+          </div>
+
+          <button
+            onClick={() => loadVersionsForApps()}
+            className="hidden sm:flex items-center gap-2 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 font-semibold text-xs transition-all cursor-pointer"
+          >
+            <RefreshCw size={14} className="text-cyan-400" />
+            <span>Refresh Versi MinIO</span>
+          </button>
+        </div>
       </div>
 
       {/* Main Configuration Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Left 2 Columns: Config Controls */}
+        {/* Left 2 Columns: Config Controls & Jenkins Pipeline View */}
         <div className="lg:col-span-2 flex flex-col gap-6">
 
           {/* Step 1: Select Target POD v3 Servers (strictly pod_version === 'v3') */}
@@ -485,7 +591,7 @@ export default function InstallationPage({ onBack }) {
             </div>
           </div>
 
-          {/* Step 3: Config FOR EACH SELECTED APP (MinIO Version, .env & Prisma Migration) */}
+          {/* Step 3: Config FOR EACH SELECTED APP */}
           <div className="glass-card p-5 sm:p-6 rounded-2xl border border-cyan-500/20 bg-slate-900/60 backdrop-blur-md shadow-xl">
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2.5">
@@ -524,7 +630,6 @@ export default function InstallationPage({ onBack }) {
 
                     return (
                       <div key={appId} className="p-4 bg-slate-950/80 border border-slate-800 rounded-2xl flex flex-col gap-3.5">
-                        {/* App Header */}
                         <div className="flex items-center justify-between pb-2.5 border-b border-slate-800">
                           <div className="flex items-center gap-2.5">
                             <div className="p-1.5 rounded-lg bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
@@ -538,7 +643,6 @@ export default function InstallationPage({ onBack }) {
                             </div>
                           </div>
 
-                          {/* Prisma Migrate Toggle Button */}
                           <button
                             onClick={() => toggleAppPrisma(appId)}
                             className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
@@ -553,9 +657,7 @@ export default function InstallationPage({ onBack }) {
                           </button>
                         </div>
 
-                        {/* Selectors Grid: MinIO Version & .env File */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {/* MinIO Version Selector */}
                           <div>
                             <label className="block text-[11px] font-bold text-slate-400 mb-1">
                               Versi Artefak MinIO ({label}):
@@ -580,7 +682,6 @@ export default function InstallationPage({ onBack }) {
                             </select>
                           </div>
 
-                          {/* .env File Selector */}
                           <div>
                             <label className="block text-[11px] font-bold text-slate-400 mb-1">
                               File .env (backend/envoirment):
@@ -620,17 +721,132 @@ export default function InstallationPage({ onBack }) {
                 {isDeploying ? (
                   <>
                     <RefreshCw size={18} className="animate-spin" />
-                    <span>Mengeksekusi Batch Deployment ({batchProgress.current}/{batchProgress.total})...</span>
+                    <span>Mengeksekusi Jenkins CI/CD Pipeline Stream...</span>
                   </>
                 ) : (
                   <>
                     <Play size={18} className="fill-slate-950" />
-                    <span>Mulai Batch Instalasi ({totalBatchCombinations} Kombinasi Target)</span>
+                    <span>Jalankan Jenkins Pipeline Batch ({totalBatchCombinations} Target)</span>
                   </>
                 )}
               </button>
             </div>
 
+          </div>
+
+          {/* ========================================================================= */}
+          {/* JENKINS-STYLE PIPELINE STAGE MATRIX DASHBOARD */}
+          {/* ========================================================================= */}
+          <div className="glass-card p-5 sm:p-6 rounded-2xl border border-cyan-500/30 bg-slate-950/80 backdrop-blur-md shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/40">
+                  <Layers size={20} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+                    Jenkins Pipeline Stage Matrix
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                      Build #105
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Status eksekusi panggung pipeline CI/CD per server target POD v3
+                  </p>
+                </div>
+              </div>
+
+              {isDeploying && (
+                <div className="flex items-center gap-2 text-xs font-bold text-cyan-400 bg-cyan-500/10 px-3 py-1.5 rounded-xl border border-cyan-500/30 animate-pulse">
+                  <RotateCw size={14} className="animate-spin" />
+                  <span>Pipeline Running</span>
+                </div>
+              )}
+            </div>
+
+            {selectedServerIds.length === 0 ? (
+              <div className="text-xs text-slate-500 italic p-6 text-center">
+                Pilih server POD v3 pada Step 1 untuk melihat Pipeline Stage Matrix.
+              </div>
+            ) : (
+              <div className="space-y-4 overflow-x-auto">
+                {podV3Servers
+                  .filter(srv => selectedServerIds.includes(String(srv.id)))
+                  .map(srv => {
+                    const serverStages = stageMatrix[srv.name] || { 1: 'pending', 2: 'pending', 3: 'pending', 4: 'pending', 5: 'pending' };
+
+                    return (
+                      <div key={srv.id} className="bg-slate-900/90 border border-slate-800 rounded-xl p-4">
+                        {/* Server Node Header */}
+                        <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800/80">
+                          <div className="flex items-center gap-2">
+                            <Server size={16} className="text-cyan-400" />
+                            <span className="text-xs font-extrabold text-white">{srv.name}</span>
+                            <span className="text-[10px] font-mono text-slate-400">({srv.host})</span>
+                          </div>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
+                            {selectedAppIds.length} Apps Target
+                          </span>
+                        </div>
+
+                        {/* 5 Stages Grid for this Server */}
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                          {JENKINS_STAGES.map(stage => {
+                            const status = serverStages[stage.id] || 'pending';
+                            const StageIcon = stage.icon;
+
+                            let cardStyle = 'bg-slate-950/60 border-slate-800 text-slate-400';
+                            let badgeStyle = 'bg-slate-800 text-slate-400';
+                            let badgeLabel = 'PENDING';
+                            let iconElement = <Clock size={13} />;
+
+                            if (status === 'running') {
+                              cardStyle = 'bg-gradient-to-b from-cyan-500/20 to-blue-500/20 border-cyan-500/50 text-white shadow-lg shadow-cyan-500/10 animate-pulse';
+                              badgeStyle = 'bg-cyan-500/30 text-cyan-300 border border-cyan-500/40';
+                              badgeLabel = 'RUNNING';
+                              iconElement = <RotateCw size={13} className="animate-spin" />;
+                            } else if (status === 'completed') {
+                              cardStyle = 'bg-slate-900 border-emerald-500/50 text-emerald-300';
+                              badgeStyle = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40';
+                              badgeLabel = 'SUCCESS';
+                              iconElement = <CheckCircle2 size={13} />;
+                            } else if (status === 'failed') {
+                              cardStyle = 'bg-rose-950/40 border-rose-500/50 text-rose-300';
+                              badgeStyle = 'bg-rose-500/20 text-rose-400 border border-rose-500/40';
+                              badgeLabel = 'FAILED';
+                              iconElement = <XCircle size={13} />;
+                            }
+
+                            return (
+                              <div
+                                key={stage.id}
+                                onClick={() => setActiveLogFilter(srv.name)}
+                                className={`p-2.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between gap-2 text-left ${cardStyle}`}
+                                title={`Klik untuk melihat log terminal ${srv.name}`}
+                              >
+                                <div>
+                                  <div className="flex items-center gap-1.5 mb-1">
+                                    <StageIcon size={14} className="shrink-0" />
+                                    <span className="text-[11px] font-extrabold truncate">{stage.short}</span>
+                                  </div>
+                                  <div className="text-[9px] opacity-75 truncate">{stage.desc}</div>
+                                </div>
+
+                                <div className="flex items-center justify-between pt-1">
+                                  <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded flex items-center gap-1 ${badgeStyle}`}>
+                                    {iconElement}
+                                    <span>{badgeLabel}</span>
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
           </div>
 
         </div>
@@ -698,64 +914,80 @@ export default function InstallationPage({ onBack }) {
             </div>
           </div>
 
-          {/* Real-time Execution Console Log Box */}
-          <div className="glass-card p-5 rounded-2xl border border-cyan-500/20 bg-slate-950/90 shadow-2xl flex flex-col min-h-[420px] justify-between">
+          {/* Real-time Jenkins Console Terminal Drawer Box */}
+          <div className="glass-card p-5 rounded-2xl border border-cyan-500/20 bg-slate-950/90 shadow-2xl flex flex-col min-h-[460px] justify-between">
             <div>
               <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
                 <div className="flex items-center gap-2">
                   <Terminal size={16} className="text-cyan-400" />
-                  <span className="text-xs font-bold text-slate-300">Console Log Batch</span>
+                  <span className="text-xs font-bold text-slate-300">Jenkins Console Log</span>
                 </div>
-                {batchLogs.length > 0 && (
-                  <button
-                    onClick={handleCopyLogs}
-                    className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors cursor-pointer text-xs flex items-center gap-1"
-                    title="Copy Console Log"
-                  >
-                    {isCopied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
-                    <span>{isCopied ? 'Copied' : 'Copy'}</span>
-                  </button>
-                )}
+
+                <div className="flex items-center gap-2">
+                  {batchLogs.length > 0 && (
+                    <button
+                      onClick={handleCopyLogs}
+                      className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors cursor-pointer text-xs flex items-center gap-1"
+                      title="Copy Console Log"
+                    >
+                      {isCopied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+                      <span>{isCopied ? 'Copied' : 'Copy'}</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
-              {/* Progress Indicator */}
-              {isDeploying && (
-                <div className="p-3 mb-3 bg-cyan-500/10 border border-cyan-500/30 rounded-xl text-cyan-400 text-xs flex flex-col gap-1.5 animate-pulse">
-                  <div className="flex items-center justify-between font-bold">
-                    <span>{batchProgress.currentLabel}</span>
-                    <span>{Math.round((batchProgress.current / batchProgress.total) * 100)}%</span>
-                  </div>
-                  <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                    <div
-                      className="bg-cyan-400 h-full transition-all duration-300"
-                      style={{ width: `${(batchProgress.current / batchProgress.total) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              )}
+              {/* Log Filter Buttons */}
+              <div className="flex items-center gap-1.5 mb-3 overflow-x-auto pb-1 scrollbar-none">
+                <button
+                  onClick={() => setActiveLogFilter('ALL')}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-colors ${
+                    activeLogFilter === 'ALL'
+                      ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
+                      : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  Semua Log
+                </button>
+                {podV3Servers
+                  .filter(srv => selectedServerIds.includes(String(srv.id)))
+                  .map(srv => (
+                    <button
+                      key={srv.id}
+                      onClick={() => setActiveLogFilter(srv.name)}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-colors ${
+                        activeLogFilter === srv.name
+                          ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
+                          : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                      }`}
+                    >
+                      {srv.name}
+                    </button>
+                  ))}
+              </div>
 
               {batchSummary && (
                 <div className={`p-3 mb-3 rounded-xl text-xs flex items-center gap-2 ${
-                  batchSummary.failCount === 0
+                  batchSummary.totalFail === 0
                     ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
                     : 'bg-amber-500/15 border border-amber-500/30 text-amber-400'
                 }`}>
-                  {batchSummary.failCount === 0 ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+                  {batchSummary.totalFail === 0 ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
                   <span>
-                    Batch Selesai: {batchSummary.successCount} Sukses, {batchSummary.failCount} Gagal.
+                    Jenkins Build Selesai: {batchSummary.totalSuccess} Tugas Sukses, {batchSummary.totalFail} Gagal.
                   </span>
                 </div>
               )}
 
               {/* Console Output Screen */}
-              <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 font-mono text-[11px] text-slate-300 max-h-[300px] overflow-y-auto space-y-1 scrollbar-thin">
-                {batchLogs.length === 0 && !isDeploying ? (
+              <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 font-mono text-[11px] text-slate-300 max-h-[340px] overflow-y-auto space-y-1 scrollbar-thin">
+                {filteredLogs.length === 0 && !isDeploying ? (
                   <div className="text-slate-500 italic text-center py-12">
-                    Konsol log eksekusi batch akan tampil di sini saat instalasi dimulai.
+                    Konsol log Jenkins WebSockets akan tampil di sini saat pipeline dijalankan.
                   </div>
                 ) : null}
 
-                {batchLogs.map((logLine, idx) => (
+                {filteredLogs.map((logLine, idx) => (
                   <div
                     key={idx}
                     className={
@@ -763,19 +995,22 @@ export default function InstallationPage({ onBack }) {
                         ? 'text-red-400 font-bold'
                         : logLine.includes('✔')
                         ? 'text-emerald-400 font-bold'
-                        : logLine.startsWith('>>>')
+                        : logLine.includes('>>>')
                         ? 'text-cyan-300 font-bold mt-2'
+                        : logLine.includes('[JENKINS_STAGE:')
+                        ? 'hidden'
                         : 'text-slate-300'
                     }
                   >
                     {logLine}
                   </div>
                 ))}
+                <div ref={terminalEndRef} />
               </div>
             </div>
 
             <div className="mt-3 text-[10px] text-slate-500 text-center">
-              Powered by MinIO Artifact Repository & Multi-POD v3 Batch Runner
+              Jenkins CI/CD Stage Engine powered by WebSockets & Parallel MinIO Downloader
             </div>
           </div>
 
