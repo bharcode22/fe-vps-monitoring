@@ -14,6 +14,7 @@ import DatabaseSyncPage from './pages/DatabaseSyncPage';
 import SoundsComparisonPage from './pages/SoundsComparisonPage';
 import MetadataComparisonPage from './pages/MetadataComparisonPage';
 import RabbitMqMonitorPage from './pages/RabbitMqMonitorPage';
+import InstallationPage from './pages/InstallationPage';
 import { useServers } from './hooks/useServers';
 import { useSocket } from './hooks/useSocket';
 import { fetchSettingsApi, saveSettingApi } from './api/vpsApi';
@@ -21,7 +22,7 @@ import { useAuth } from './context/AuthContext';
 import { Server, Database, HardDrive, Cpu, ShieldCheck } from 'lucide-react';
 
 export default function App() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
   const [currentView, setCurrentView] = useState(() => {
     try {
       const saved = localStorage.getItem('vps_monitoring_current_view');
@@ -29,19 +30,20 @@ export default function App() {
     } catch (e) {
       return 'dashboard';
     }
-  }); // 'dashboard' | 'sync' | 'sounds-comparison' | 'metadata-comparison' | 'rabbitmq'
+  }); // 'dashboard' | 'sync' | 'sounds-comparison' | 'metadata-comparison' | 'rabbitmq' | 'installation'
 
   // Persist currentView changes to localStorage
   useEffect(() => {
     localStorage.setItem('vps_monitoring_current_view', currentView);
   }, [currentView]);
 
-  // Auto switch back to dashboard when user logs out
+  // Auto switch back to dashboard when user logs out (wait until auth initialization completes)
   useEffect(() => {
-    if (!isAuthenticated && currentView !== 'dashboard') {
+    const protectedViews = ['sync', 'sounds-comparison', 'metadata-comparison', 'rabbitmq', 'installation', 'instalation'];
+    if (!loading && !isAuthenticated && protectedViews.includes(currentView)) {
       setCurrentView('dashboard');
     }
-  }, [isAuthenticated, currentView]);
+  }, [isAuthenticated, loading, currentView]);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAddServiceModalOpen, setIsAddServiceModalOpen] = useState(false);
@@ -173,7 +175,9 @@ export default function App() {
       />
 
       {/* Render View: Database Synchronization Page or Main Dashboard */}
-      {currentView === 'metadata-comparison' ? (
+      {currentView === 'installation' || currentView === 'instalation' ? (
+        <InstallationPage onBack={() => setCurrentView('dashboard')} />
+      ) : currentView === 'metadata-comparison' ? (
         <MetadataComparisonPage onBack={() => setCurrentView('dashboard')} />
       ) : currentView === 'sounds-comparison' ? (
         <SoundsComparisonPage onBack={() => setCurrentView('dashboard')} />

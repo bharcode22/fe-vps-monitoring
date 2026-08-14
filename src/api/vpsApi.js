@@ -483,3 +483,42 @@ export async function redeployBackendApi(serverId) {
   if (!data.success) throw new Error(data.error || data.message || 'Gagal meredeploy backend');
   return data;
 }
+
+/**
+ * Fetch available .env configuration files from backend/envoirment
+ */
+export async function fetchInstallationEnvFilesApi() {
+  const res = await fetch(`${BACKEND_URL}/api/vps/installation/env-files`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal mengambil daftar file .env');
+  return data;
+}
+
+/**
+ * Fetch available artifact versions for an app & environment from MinIO
+ */
+export async function fetchInstallationVersionsApi(appName, env) {
+  const query = new URLSearchParams({ app_name: appName || 'mobile-api', env: env || 'dev' }).toString();
+  const res = await fetch(`${BACKEND_URL}/api/vps/installation/versions?${query}`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal mengambil versi instalasi dari MinIO');
+  return data;
+}
+
+/**
+ * Execute automated deployment on target POD v3 server
+ */
+export async function executeInstallationApi(payload) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/installation/deploy`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal mengeksekusi instalasi POD v3');
+  return data;
+}
