@@ -19,9 +19,10 @@ import BackendInstallationTab from '../components/installation/BackendInstallati
 import FrontendInstallationTab from '../components/installation/FrontendInstallationTab';
 import PipelineStageMatrix from '../components/installation/PipelineStageMatrix';
 import InstallationConsole from '../components/installation/InstallationConsole';
+import MinioArtifactManagerTab from '../components/installation/MinioArtifactManagerTab';
 
 export default function InstallationPage({ onBack }) {
-  // Main Tab Navigation State ('backend' | 'frontend')
+  // Main Tab Navigation State ('backend' | 'frontend' | 'artifacts')
   const [activeTab, setActiveTab] = useState('backend');
 
   // Socket.io persistent connection reference
@@ -431,106 +432,111 @@ export default function InstallationPage({ onBack }) {
         onRefreshVersions={() => activeTab === 'backend' ? loadVersionsForBackendApps() : loadVersionsForFrontendApps()}
       />
 
-      {/* Main Mode Navigation Tabs (Backend vs Frontend) */}
+      {/* Main Mode Navigation Tabs (Backend vs Frontend vs MinIO Artifacts) */}
       <InstallationTabSwitcher
         activeTab={activeTab}
         setActiveTab={setActiveTab}
       />
 
-      {/* Main Configuration Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Tab 3: MinIO Artifact & Version Manager */}
+      {activeTab === 'artifacts' ? (
+        <MinioArtifactManagerTab />
+      ) : (
+        /* Main Configuration Grid for Backend & Frontend Deployment */
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Left 2 Columns: Config Controls & Pipeline Stage Matrix */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
+          {/* Left 2 Columns: Config Controls & Pipeline Stage Matrix */}
+          <div className="lg:col-span-2 flex flex-col gap-6">
 
-          {/* Backend Installation Tab */}
-          {activeTab === 'backend' && (
-            <BackendInstallationTab
-              podV3Servers={podV3Servers}
-              selectedServerIds={selectedServerIds}
-              setSelectedServerIds={setSelectedServerIds}
-              toggleServerSelect={toggleServerSelect}
-              selectedAppIds={selectedAppIds}
-              setSelectedAppIds={setSelectedAppIds}
-              toggleAppSelect={toggleAppSelect}
-              env={env}
-              setEnv={setEnv}
-              appVersionsMap={appVersionsMap}
-              selectedAppVersions={selectedAppVersions}
-              setSelectedAppVersions={setSelectedAppVersions}
-              isAppVersionsLoadingMap={isAppVersionsLoadingMap}
-              appEnvMapping={appEnvMapping}
-              setAppEnvMapping={setAppEnvMapping}
-              appPrismaMapping={appPrismaMapping}
-              setAppPrismaMapping={setAppPrismaMapping}
-              envFiles={envFiles}
-              isEnvLoading={isEnvLoading}
+            {/* Backend Installation Tab */}
+            {activeTab === 'backend' && (
+              <BackendInstallationTab
+                podV3Servers={podV3Servers}
+                selectedServerIds={selectedServerIds}
+                setSelectedServerIds={setSelectedServerIds}
+                toggleServerSelect={toggleServerSelect}
+                selectedAppIds={selectedAppIds}
+                setSelectedAppIds={setSelectedAppIds}
+                toggleAppSelect={toggleAppSelect}
+                env={env}
+                setEnv={setEnv}
+                appVersionsMap={appVersionsMap}
+                selectedAppVersions={selectedAppVersions}
+                setSelectedAppVersions={setSelectedAppVersions}
+                isAppVersionsLoadingMap={isAppVersionsLoadingMap}
+                appEnvMapping={appEnvMapping}
+                setAppEnvMapping={setAppEnvMapping}
+                appPrismaMapping={appPrismaMapping}
+                setAppPrismaMapping={setAppPrismaMapping}
+                envFiles={envFiles}
+                isEnvLoading={isEnvLoading}
+                isDeploying={isDeploying}
+                onStartDeploy={handleStartBatchDeploy}
+                totalBatchCombinations={totalBatchCombinations}
+              />
+            )}
+
+            {/* Frontend Screen Applications Tab */}
+            {activeTab === 'frontend' && (
+              <FrontendInstallationTab
+                podV3Servers={podV3Servers}
+                feSelectedServerIds={feSelectedServerIds}
+                setFeSelectedServerIds={setFeSelectedServerIds}
+                toggleFeServerSelect={toggleFeServerSelect}
+                feSelectedAppIds={feSelectedAppIds}
+                setFeSelectedAppIds={setFeSelectedAppIds}
+                toggleFeAppSelect={toggleFeAppSelect}
+                feEnv={feEnv}
+                setFeEnv={setFeEnv}
+                feAppVersionsMap={feAppVersionsMap}
+                feSelectedAppVersions={feSelectedAppVersions}
+                setFeSelectedAppVersions={setFeSelectedAppVersions}
+                isFeVersionsLoadingMap={isFeVersionsLoadingMap}
+                isEnvLoading={isEnvLoading}
+                isDeploying={isDeploying}
+                onStartDeploy={handleStartBatchDeploy}
+                totalBatchCombinations={totalBatchCombinations}
+              />
+            )}
+
+            {/* Jenkins-Style Pipeline Stage Matrix */}
+            <PipelineStageMatrix
+              activeTab={activeTab}
+              targetServersList={targetServersList}
+              currentStages={currentStages}
+              currentAppIds={currentAppIds}
+              stageMatrix={stageMatrix}
               isDeploying={isDeploying}
-              onStartDeploy={handleStartBatchDeploy}
-              totalBatchCombinations={totalBatchCombinations}
+              setActiveLogFilter={setActiveLogFilter}
             />
-          )}
 
-          {/* Frontend Screen Applications Tab */}
-          {activeTab === 'frontend' && (
-            <FrontendInstallationTab
-              podV3Servers={podV3Servers}
-              feSelectedServerIds={feSelectedServerIds}
-              setFeSelectedServerIds={setFeSelectedServerIds}
-              toggleFeServerSelect={toggleFeServerSelect}
-              feSelectedAppIds={feSelectedAppIds}
-              setFeSelectedAppIds={setFeSelectedAppIds}
-              toggleFeAppSelect={toggleFeAppSelect}
-              feEnv={feEnv}
-              setFeEnv={setFeEnv}
-              feAppVersionsMap={feAppVersionsMap}
-              feSelectedAppVersions={feSelectedAppVersions}
-              setFeSelectedAppVersions={setFeSelectedAppVersions}
-              isFeVersionsLoadingMap={isFeVersionsLoadingMap}
-              isEnvLoading={isEnvLoading}
-              isDeploying={isDeploying}
-              onStartDeploy={handleStartBatchDeploy}
-              totalBatchCombinations={totalBatchCombinations}
-            />
-          )}
+          </div>
 
-          {/* Jenkins-Style Pipeline Stage Matrix */}
-          <PipelineStageMatrix
+          {/* Right 1 Column: Deployment Logs & Batch Progress Summary */}
+          <InstallationConsole
             activeTab={activeTab}
-            targetServersList={targetServersList}
-            currentStages={currentStages}
+            currentServerIds={currentServerIds}
             currentAppIds={currentAppIds}
-            stageMatrix={stageMatrix}
-            isDeploying={isDeploying}
+            env={env}
+            feEnv={feEnv}
+            selectedAppVersions={selectedAppVersions}
+            feSelectedAppVersions={feSelectedAppVersions}
+            appEnvMapping={appEnvMapping}
+            appPrismaMapping={appPrismaMapping}
+            batchLogs={batchLogs}
+            filteredLogs={filteredLogs}
+            batchSummary={batchSummary}
+            activeLogFilter={activeLogFilter}
             setActiveLogFilter={setActiveLogFilter}
+            targetServersList={targetServersList}
+            isDeploying={isDeploying}
+            isCopied={isCopied}
+            onCopyLogs={handleCopyLogs}
+            terminalEndRef={terminalEndRef}
           />
 
         </div>
-
-        {/* Right 1 Column: Deployment Logs & Batch Progress Summary */}
-        <InstallationConsole
-          activeTab={activeTab}
-          currentServerIds={currentServerIds}
-          currentAppIds={currentAppIds}
-          env={env}
-          feEnv={feEnv}
-          selectedAppVersions={selectedAppVersions}
-          feSelectedAppVersions={feSelectedAppVersions}
-          appEnvMapping={appEnvMapping}
-          appPrismaMapping={appPrismaMapping}
-          batchLogs={batchLogs}
-          filteredLogs={filteredLogs}
-          batchSummary={batchSummary}
-          activeLogFilter={activeLogFilter}
-          setActiveLogFilter={setActiveLogFilter}
-          targetServersList={targetServersList}
-          isDeploying={isDeploying}
-          isCopied={isCopied}
-          onCopyLogs={handleCopyLogs}
-          terminalEndRef={terminalEndRef}
-        />
-
-      </div>
+      )}
     </div>
   );
 }

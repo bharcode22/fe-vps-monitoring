@@ -15,6 +15,7 @@ import SoundsComparisonPage from './pages/SoundsComparisonPage';
 import MetadataComparisonPage from './pages/MetadataComparisonPage';
 import RabbitMqMonitorPage from './pages/RabbitMqMonitorPage';
 import InstallationPage from './pages/InstallationPage';
+import EnvManagerPage from './pages/EnvManagerPage';
 import { useServers } from './hooks/useServers';
 import { useSocket } from './hooks/useSocket';
 import { fetchSettingsApi, saveSettingApi } from './api/vpsApi';
@@ -174,8 +175,10 @@ export default function App() {
         onNavigateView={setCurrentView}
       />
 
-      {/* Render View: Database Synchronization Page or Main Dashboard */}
-      {currentView === 'installation' || currentView === 'instalation' ? (
+      {/* Render View: Database Synchronization Page, Env Manager or Main Dashboard */}
+      {currentView === 'env-manager' ? (
+        <EnvManagerPage onBack={() => setCurrentView('dashboard')} />
+      ) : currentView === 'installation' || currentView === 'instalation' ? (
         <InstallationPage onBack={() => setCurrentView('dashboard')} />
       ) : currentView === 'metadata-comparison' ? (
         <MetadataComparisonPage onBack={() => setCurrentView('dashboard')} />

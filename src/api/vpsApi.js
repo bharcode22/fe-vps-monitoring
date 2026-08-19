@@ -535,3 +535,127 @@ export async function executeInstallationApi(payload) {
   }
   return data;
 }
+
+/**
+ * Fetch all .env files with detailed variables (Environment Manager)
+ */
+export async function fetchEnvManagerFilesApi() {
+  const res = await fetch(`${BACKEND_URL}/api/vps/env-manager/files`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memuat daftar file environment');
+  return data.files || [];
+}
+
+/**
+ * Create a new .env file in backend/envoirment
+ */
+export async function createEnvFileApi(filename, content = '') {
+  const res = await fetch(`${BACKEND_URL}/api/vps/env-manager/files`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ filename, content })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal membuat file environment baru');
+  return data;
+}
+
+/**
+ * Save / Update an existing .env file
+ */
+export async function saveEnvFileApi(filename, content) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/env-manager/files/${encodeURIComponent(filename)}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ filename, content })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal menyimpan perubahan file environment');
+  return data;
+}
+
+/**
+ * Delete a .env file
+ */
+export async function deleteEnvFileApi(filename) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/env-manager/files/${encodeURIComponent(filename)}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal menghapus file environment');
+  return data;
+}
+
+/**
+ * Compare two .env files side-by-side
+ */
+export async function compareEnvFilesApi(sourceFileA, sourceFileB) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/env-manager/compare`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ sourceFileA, sourceFileB })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal melakukan komparasi environment');
+  return data;
+}
+
+/**
+ * Fetch detailed artifact versions with file list & sizes from MinIO
+ */
+export async function fetchMinioArtifactDetailsApi(appName, env) {
+  const query = new URLSearchParams({ app_name: appName || 'mobile-api', env: env || 'dev' }).toString();
+  const res = await fetch(`${BACKEND_URL}/api/vps/installation/minio-artifacts/details?${query}`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memuat rincian artefak MinIO');
+  return data;
+}
+
+/**
+ * Delete a single artifact version from MinIO
+ */
+export async function deleteMinioArtifactVersionApi(appName, env, version) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/installation/minio-artifacts/version`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ app_name: appName, env, version })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal menghapus versi dari MinIO');
+  return data;
+}
+
+/**
+ * Delete multiple artifact versions in batch from MinIO
+ */
+export async function deleteMinioBatchArtifactVersionsApi(appName, env, versions) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/installation/minio-artifacts/batch-delete`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ app_name: appName, env, versions })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal melakukan batch delete MinIO');
+  return data;
+}
+
+/**
+ * Cleanup older artifact versions, keeping N newest
+ */
+export async function cleanupMinioOlderArtifactVersionsApi(appName, env, keepCount = 3) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/installation/minio-artifacts/cleanup-older`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ app_name: appName, env, keepCount })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal melakukan cleanup versi lama MinIO');
+  return data;
+}
+
+

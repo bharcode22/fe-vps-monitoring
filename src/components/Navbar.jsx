@@ -19,7 +19,8 @@ import {
   Layers,
   Check,
   ShieldCheck,
-  Globe
+  Globe,
+  FileCode
 } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { useLanguage } from '../context/LanguageContext';
@@ -77,9 +78,10 @@ export default function Navbar({
     }
   });
 
-  const isToolsActive = ['sounds-comparison', 'metadata-comparison', 'rabbitmq'].includes(currentView);
+  const isToolsActive = ['sounds-comparison', 'metadata-comparison', 'rabbitmq', 'env-manager'].includes(currentView);
 
   const getToolsLabel = () => {
+    if (currentView === 'env-manager') return 'Environment Manager';
     if (currentView === 'sounds-comparison') return 'Compare Sounds';
     if (currentView === 'metadata-comparison') return 'Compare Metadata';
     if (currentView === 'rabbitmq') return 'RabbitMQ Monitor';
@@ -130,8 +132,8 @@ export default function Navbar({
             <button
               onClick={() => onNavigateView('dashboard')}
               className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${currentView === 'dashboard'
-                  ? 'bg-gradient-to-r from-cyan-500/25 to-blue-500/25 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                ? 'bg-gradient-to-r from-cyan-500/25 to-blue-500/25 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                 }`}
             >
               <Activity size={14} className={currentView === 'dashboard' ? 'text-cyan-400' : 'text-slate-500'} />
@@ -144,8 +146,8 @@ export default function Navbar({
                 <button
                   onClick={() => onNavigateView('installation')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${currentView === 'installation' || currentView === 'instalation'
-                      ? 'bg-gradient-to-r from-cyan-500/25 to-blue-500/25 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                    ? 'bg-gradient-to-r from-cyan-500/25 to-blue-500/25 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                     }`}
                 >
                   <Download size={14} className={currentView === 'installation' || currentView === 'instalation' ? 'text-cyan-400' : 'text-slate-500'} />
@@ -156,8 +158,8 @@ export default function Navbar({
                 <button
                   onClick={() => onNavigateView('sync')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${currentView === 'sync'
-                      ? 'bg-gradient-to-r from-cyan-500/25 to-blue-500/25 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                    ? 'bg-gradient-to-r from-cyan-500/25 to-blue-500/25 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                     }`}
                 >
                   <Zap size={14} className={currentView === 'sync' ? 'text-cyan-400' : 'text-slate-500'} />
@@ -169,8 +171,8 @@ export default function Navbar({
                   <button
                     onClick={() => setIsToolsMenuOpen(!isToolsMenuOpen)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${isToolsActive
-                        ? 'bg-gradient-to-r from-purple-500/25 to-indigo-500/25 text-purple-300 border border-purple-500/40 shadow-sm'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                      ? 'bg-gradient-to-r from-purple-500/25 to-indigo-500/25 text-purple-300 border border-purple-500/40 shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                       }`}
                   >
                     <Layers size={14} className={isToolsActive ? 'text-purple-400' : 'text-slate-500'} />
@@ -191,8 +193,8 @@ export default function Navbar({
                           setIsToolsMenuOpen(false);
                         }}
                         className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-colors cursor-pointer text-xs font-bold ${currentView === 'sounds-comparison'
-                            ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'
-                            : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                          ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'
+                          : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                           }`}
                       >
                         <Volume2 size={15} className="text-cyan-400 shrink-0" />
@@ -209,8 +211,8 @@ export default function Navbar({
                           setIsToolsMenuOpen(false);
                         }}
                         className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-colors cursor-pointer text-xs font-bold ${currentView === 'metadata-comparison'
-                            ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
-                            : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                          ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
+                          : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                           }`}
                       >
                         <Database size={15} className="text-purple-400 shrink-0" />
@@ -227,14 +229,32 @@ export default function Navbar({
                           setIsToolsMenuOpen(false);
                         }}
                         className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-colors cursor-pointer text-xs font-bold ${currentView === 'rabbitmq'
-                            ? 'bg-sky-500/15 text-sky-300 border border-sky-500/30'
-                            : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                          ? 'bg-sky-500/15 text-sky-300 border border-sky-500/30'
+                          : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                           }`}
                       >
                         <Shuffle size={15} className="text-sky-400 shrink-0" />
                         <div className="flex-1">
                           <div>RabbitMQ Monitor</div>
                           <div className="text-[10px] text-slate-400 font-normal">Pantau Antrean Queue & Consumer</div>
+                        </div>
+                      </button>
+
+                      {/* Environment Manager & Diff */}
+                      <button
+                        onClick={() => {
+                          onNavigateView('env-manager');
+                          setIsToolsMenuOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-colors cursor-pointer text-xs font-bold ${currentView === 'env-manager'
+                          ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                          : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                          }`}
+                      >
+                        <FileCode size={15} className="text-emerald-400 shrink-0" />
+                        <div className="flex-1">
+                          <div>Environment Manager</div>
+                          <div className="text-[10px] text-slate-400 font-normal">Kelola & Bandingkan File .env</div>
                         </div>
                       </button>
                     </div>
@@ -306,8 +326,8 @@ export default function Navbar({
             <button
               onClick={onToggleTvMode}
               className={`px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all duration-200 cursor-pointer ${isTvMode
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                 }`}
               title="Toggle TV Wall / NOC View Mode"
             >
@@ -386,8 +406,8 @@ export default function Navbar({
                       <div className="text-[10px] text-slate-400 truncate">{user.email}</div>
                       <div className="mt-1">
                         <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${isSuperAdmin
-                            ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
-                            : 'bg-purple-500/20 text-purple-300 border-purple-500/30'
+                          ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
+                          : 'bg-purple-500/20 text-purple-300 border-purple-500/30'
                           }`}>
                           {isSuperAdmin ? 'SUPER ADMIN' : 'ADMINISTRATOR'}
                         </span>
@@ -492,8 +512,8 @@ export default function Navbar({
                   setIsMobileMenuOpen(false);
                 }}
                 className={`py-2 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${currentView === 'dashboard'
-                    ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                    : 'text-slate-400 hover:text-white'
+                  ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
                   }`}
               >
                 <Activity size={15} />
@@ -508,8 +528,8 @@ export default function Navbar({
                       setIsMobileMenuOpen(false);
                     }}
                     className={`py-2 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${currentView === 'installation' || currentView === 'instalation'
-                        ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                        : 'text-slate-400 hover:text-white'
+                      ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                      : 'text-slate-400 hover:text-white'
                       }`}
                   >
                     <Download size={15} />
@@ -522,8 +542,8 @@ export default function Navbar({
                       setIsMobileMenuOpen(false);
                     }}
                     className={`py-2 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${currentView === 'sync'
-                        ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                        : 'text-slate-400 hover:text-white'
+                      ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                      : 'text-slate-400 hover:text-white'
                       }`}
                   >
                     <Zap size={15} />
@@ -536,8 +556,8 @@ export default function Navbar({
                       setIsMobileMenuOpen(false);
                     }}
                     className={`py-2 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${currentView === 'sounds-comparison'
-                        ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                        : 'text-slate-400 hover:text-white'
+                      ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                      : 'text-slate-400 hover:text-white'
                       }`}
                   >
                     <Volume2 size={15} />
@@ -550,8 +570,8 @@ export default function Navbar({
                       setIsMobileMenuOpen(false);
                     }}
                     className={`py-2 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${currentView === 'metadata-comparison'
-                        ? 'bg-gradient-to-r from-purple-500/30 to-pink-500/30 text-purple-300 border border-purple-500/40 shadow-sm'
-                        : 'text-slate-400 hover:text-white'
+                      ? 'bg-gradient-to-r from-purple-500/30 to-pink-500/30 text-purple-300 border border-purple-500/40 shadow-sm'
+                      : 'text-slate-400 hover:text-white'
                       }`}
                   >
                     <Database size={15} />
@@ -564,12 +584,26 @@ export default function Navbar({
                       setIsMobileMenuOpen(false);
                     }}
                     className={`py-2 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${currentView === 'rabbitmq'
-                        ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                        : 'text-slate-400 hover:text-white'
+                      ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                      : 'text-slate-400 hover:text-white'
                       }`}
                   >
                     <Shuffle size={15} />
                     <span>RabbitMQ</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      onNavigateView('env-manager');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`col-span-2 py-2 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${currentView === 'env-manager'
+                      ? 'bg-gradient-to-r from-emerald-500/30 to-cyan-500/30 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                      }`}
+                  >
+                    <FileCode size={15} />
+                    <span>Environment Manager (.env)</span>
                   </button>
                 </>
               )}

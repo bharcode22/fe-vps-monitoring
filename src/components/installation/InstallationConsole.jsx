@@ -133,8 +133,8 @@ export default function InstallationConsole({
             <button
               onClick={() => setActiveLogFilter('ALL')}
               className={`px-2.5 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-colors ${activeLogFilter === 'ALL'
-                  ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
-                  : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
+                : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                 }`}
             >
               Semua Log
@@ -144,8 +144,8 @@ export default function InstallationConsole({
                 key={srv.id}
                 onClick={() => setActiveLogFilter(srv.name)}
                 className={`px-2.5 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-colors ${activeLogFilter === srv.name
-                    ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
-                    : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                  ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
+                  : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                   }`}
               >
                 {srv.name}
@@ -155,8 +155,8 @@ export default function InstallationConsole({
 
           {batchSummary && (
             <div className={`p-3 mb-3 rounded-xl text-xs flex items-center gap-2 ${batchSummary.totalFail === 0
-                ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
-                : 'bg-amber-500/15 border border-amber-500/30 text-amber-400'
+              ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
+              : 'bg-amber-500/15 border border-amber-500/30 text-amber-400'
               }`}>
               {batchSummary.totalFail === 0 ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
               <span>

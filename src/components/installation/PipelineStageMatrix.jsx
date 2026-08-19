@@ -21,11 +21,10 @@ export default function PipelineStageMatrix({
     <div className="glass-card p-5 sm:p-6 rounded-2xl border border-cyan-500/30 bg-slate-950/80 backdrop-blur-md shadow-2xl overflow-hidden">
       <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-800">
         <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-xl border ${
-            activeTab === 'backend'
-              ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40'
-              : 'bg-purple-500/20 text-purple-400 border-purple-500/40'
-          }`}>
+          <div className={`p-2 rounded-xl border ${activeTab === 'backend'
+            ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40'
+            : 'bg-purple-500/20 text-purple-400 border-purple-500/40'
+            }`}>
             <Layers size={20} />
           </div>
           <div>
@@ -42,11 +41,10 @@ export default function PipelineStageMatrix({
         </div>
 
         {isDeploying && (
-          <div className={`flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-xl border animate-pulse ${
-            activeTab === 'backend'
-              ? 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30'
-              : 'text-purple-400 bg-purple-500/10 border-purple-500/30'
-          }`}>
+          <div className={`flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-xl border animate-pulse ${activeTab === 'backend'
+            ? 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30'
+            : 'text-purple-400 bg-purple-500/10 border-purple-500/30'
+            }`}>
             <RotateCw size={14} className="animate-spin" />
             <span>Pipeline Running</span>
           </div>
@@ -71,11 +69,10 @@ export default function PipelineStageMatrix({
                     <span className="text-xs font-extrabold text-white">{srv.name}</span>
                     <span className="text-[10px] font-mono text-slate-400">({srv.host})</span>
                   </div>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
-                    activeTab === 'backend'
-                      ? 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30'
-                      : 'bg-purple-500/15 text-purple-400 border-purple-500/30'
-                  }`}>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${activeTab === 'backend'
+                    ? 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30'
+                    : 'bg-purple-500/15 text-purple-400 border-purple-500/30'
+                    }`}>
                     {currentAppIds.length} Apps Target
                   </span>
                 </div>
