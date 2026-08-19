@@ -43,9 +43,8 @@ export default function InstallationConsole({
           </div>
           <div className="flex justify-between pb-2 border-b border-slate-800">
             <span className="text-slate-400">Environment:</span>
-            <span className={`font-bold px-2 py-0.5 rounded text-[10px] ${
-              (activeTab === 'backend' ? env : feEnv) === 'dev' ? 'bg-cyan-500/20 text-cyan-400' : 'bg-purple-500/20 text-purple-400'
-            }`}>
+            <span className={`font-bold px-2 py-0.5 rounded text-[10px] ${(activeTab === 'backend' ? env : feEnv) === 'dev' ? 'bg-cyan-500/20 text-cyan-400' : 'bg-purple-500/20 text-purple-400'
+              }`}>
               {(activeTab === 'backend' ? env : feEnv).toUpperCase()}
             </span>
           </div>
@@ -102,12 +101,17 @@ export default function InstallationConsole({
       </div>
 
       {/* Real-time Jenkins Console Terminal Drawer Box */}
-      <div className="glass-card p-5 rounded-2xl border border-cyan-500/20 bg-slate-950/90 shadow-2xl flex flex-col min-h-[460px] justify-between">
-        <div>
+      <div className="glass-card p-5 rounded-2xl border border-cyan-500/20 bg-slate-950/90 shadow-2xl flex flex-col flex-1 min-h-[620px] lg:min-h-[780px] justify-between">
+        <div className="flex flex-col flex-1">
           <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
             <div className="flex items-center gap-2">
               <Terminal size={16} className={activeTab === 'backend' ? 'text-cyan-400' : 'text-purple-400'} />
               <span className="text-xs font-bold text-slate-300">Jenkins Console Log</span>
+              {batchLogs.length > 0 && (
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 border border-slate-700">
+                  {filteredLogs.length} baris
+                </span>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
@@ -128,11 +132,10 @@ export default function InstallationConsole({
           <div className="flex items-center gap-1.5 mb-3 overflow-x-auto pb-1 scrollbar-none">
             <button
               onClick={() => setActiveLogFilter('ALL')}
-              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-colors ${
-                activeLogFilter === 'ALL'
+              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-colors ${activeLogFilter === 'ALL'
                   ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
                   : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-              }`}
+                }`}
             >
               Semua Log
             </button>
@@ -140,11 +143,10 @@ export default function InstallationConsole({
               <button
                 key={srv.id}
                 onClick={() => setActiveLogFilter(srv.name)}
-                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-colors ${
-                  activeLogFilter === srv.name
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold cursor-pointer transition-colors ${activeLogFilter === srv.name
                     ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
                     : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-                }`}
+                  }`}
               >
                 {srv.name}
               </button>
@@ -152,11 +154,10 @@ export default function InstallationConsole({
           </div>
 
           {batchSummary && (
-            <div className={`p-3 mb-3 rounded-xl text-xs flex items-center gap-2 ${
-              batchSummary.totalFail === 0
+            <div className={`p-3 mb-3 rounded-xl text-xs flex items-center gap-2 ${batchSummary.totalFail === 0
                 ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
                 : 'bg-amber-500/15 border border-amber-500/30 text-amber-400'
-            }`}>
+              }`}>
               {batchSummary.totalFail === 0 ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
               <span>
                 Jenkins Build Selesai: {batchSummary.totalSuccess} Tugas Sukses, {batchSummary.totalFail} Gagal.
@@ -165,9 +166,9 @@ export default function InstallationConsole({
           )}
 
           {/* Console Output Screen */}
-          <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 font-mono text-[11px] text-slate-300 max-h-[340px] overflow-y-auto space-y-1 scrollbar-thin">
+          <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 font-mono text-[11px] text-slate-300 flex-1 min-h-[480px] lg:min-h-[600px] max-h-[850px] overflow-y-auto space-y-1 scrollbar-thin">
             {filteredLogs.length === 0 && !isDeploying ? (
-              <div className="text-slate-500 italic text-center py-12">
+              <div className="text-slate-500 italic text-center py-24">
                 Konsol log Jenkins WebSockets akan tampil di sini saat pipeline dijalankan.
               </div>
             ) : null}
@@ -179,12 +180,12 @@ export default function InstallationConsole({
                   logLine.includes('❌')
                     ? 'text-red-400 font-bold'
                     : logLine.includes('✔')
-                    ? 'text-emerald-400 font-bold'
-                    : logLine.includes('>>>')
-                    ? 'text-cyan-300 font-bold mt-2'
-                    : logLine.includes('[JENKINS_STAGE:')
-                    ? 'hidden'
-                    : 'text-slate-300'
+                      ? 'text-emerald-400 font-bold'
+                      : logLine.includes('>>>')
+                        ? 'text-cyan-300 font-bold mt-2'
+                        : logLine.includes('[JENKINS_STAGE:')
+                          ? 'hidden'
+                          : 'text-slate-300'
                 }
               >
                 {logLine}
