@@ -18,7 +18,7 @@ export default function FilterTabs({
 
   return (
     <div className="flex items-center justify-between flex-wrap gap-4">
-      
+
       {/* Title & Search Bar */}
       <div className="flex items-center gap-4 flex-wrap">
         <h2 className="text-xl font-bold text-white flex items-center gap-2.5">
@@ -49,15 +49,14 @@ export default function FilterTabs({
 
       {/* Category Filter Buttons */}
       <div className="flex gap-1.5 bg-black/40 p-1 rounded-xl border border-slate-800 flex-wrap">
-        
+
         {/* Semua (All) */}
         <button
           onClick={() => setFilterType('all')}
-          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer ${
-            filterType === 'all'
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer ${filterType === 'all'
               ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 shadow-sm shadow-cyan-500/20'
               : 'text-slate-400 hover:text-slate-200'
-          }`}
+            }`}
         >
           {t('all')} ({totalCount})
         </button>
@@ -65,11 +64,10 @@ export default function FilterTabs({
         {/* VPS */}
         <button
           onClick={() => setFilterType('vps')}
-          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
-            filterType === 'vps'
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${filterType === 'vps'
               ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
               : 'text-slate-400 hover:text-slate-200 border border-transparent'
-          }`}
+            }`}
         >
           <Server size={14} />
           <span>VPS ({vpsCount || 0})</span>
@@ -78,11 +76,10 @@ export default function FilterTabs({
         {/* POD V3 */}
         <button
           onClick={() => setFilterType('pod_v3')}
-          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
-            filterType === 'pod_v3'
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${filterType === 'pod_v3'
               ? 'bg-purple-500/25 text-purple-400 border border-purple-400'
               : 'text-slate-400 hover:text-slate-200 border border-transparent'
-          }`}
+            }`}
         >
           <Box size={14} />
           <span>POD V3 ({podV3Count || 0})</span>
@@ -91,11 +88,10 @@ export default function FilterTabs({
         {/* POD V2 */}
         <button
           onClick={() => setFilterType('pod_v2')}
-          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
-            filterType === 'pod_v2'
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${filterType === 'pod_v2'
               ? 'bg-amber-500/25 text-amber-400 border border-amber-400'
               : 'text-slate-400 hover:text-slate-200 border border-transparent'
-          }`}
+            }`}
         >
           <Box size={14} />
           <span>POD V2 ({podV2Count || 0})</span>
@@ -104,11 +100,10 @@ export default function FilterTabs({
         {/* Database (PostgreSQL) */}
         <button
           onClick={() => setFilterType('postgresql')}
-          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
-            filterType === 'postgresql'
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${filterType === 'postgresql'
               ? 'bg-sky-500/25 text-sky-400 border border-sky-400'
               : 'text-slate-400 hover:text-slate-200 border border-transparent'
-          }`}
+            }`}
         >
           <Database size={14} />
           <span>Database ({postgresCount || 0})</span>
@@ -117,11 +112,10 @@ export default function FilterTabs({
         {/* Storage (MinIO & S3) */}
         <button
           onClick={() => setFilterType('storage')}
-          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${
-            filterType === 'storage'
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer ${filterType === 'storage'
               ? 'bg-pink-500/25 text-pink-400 border border-pink-400'
               : 'text-slate-400 hover:text-slate-200 border border-transparent'
-          }`}
+            }`}
         >
           <HardDrive size={14} />
           <span>Storage ({storageCount || 0})</span>

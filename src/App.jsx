@@ -6,9 +6,9 @@ import AddServerModal from './components/AddServerModal';
 import AddServiceModal from './components/AddServiceModal';
 import ServerDetailModal from './components/server/ServerDetailModal';
 import UserManagementModal from './components/admin/UserManagementModal';
-import PerformanceSummary from './components/dashboard/PerformanceSummary';
-import FilterTabs from './components/dashboard/FilterTabs';
-import SkeletonPerformanceSummary from './components/dashboard/SkeletonPerformanceSummary';
+import PerformanceSummary from './components/serverList/PerformanceSummary';
+import FilterTabs from './components/serverList/FilterTabs';
+import SkeletonPerformanceSummary from './components/serverList/SkeletonPerformanceSummary';
 import SkeletonCard from './components/common/SkeletonCard';
 import DatabaseSyncPage from './pages/DatabaseSyncPage';
 import SoundsComparisonPage from './pages/SoundsComparisonPage';
@@ -16,6 +16,7 @@ import MetadataComparisonPage from './pages/MetadataComparisonPage';
 import RabbitMqMonitorPage from './pages/RabbitMqMonitorPage';
 import InstallationPage from './pages/InstallationPage';
 import EnvManagerPage from './pages/EnvManagerPage';
+import DashboardPage from './pages/DashboardPage';
 import { useServers } from './hooks/useServers';
 import { useSocket } from './hooks/useSocket';
 import { fetchSettingsApi, saveSettingApi } from './api/vpsApi';
@@ -175,7 +176,7 @@ export default function App() {
         onNavigateView={setCurrentView}
       />
 
-      {/* Render View: Database Synchronization Page, Env Manager or Main Dashboard */}
+      {/* Render View: Dashboard, Server List, Installation, or Tools */}
       {currentView === 'env-manager' ? (
         <EnvManagerPage onBack={() => setCurrentView('dashboard')} />
       ) : currentView === 'installation' || currentView === 'instalation' ? (
@@ -191,7 +192,10 @@ export default function App() {
           servers={servers}
           onBack={() => setCurrentView('dashboard')}
         />
+      ) : currentView === 'dashboard' ? (
+        <DashboardPage onNavigateView={setCurrentView} />
       ) : (
+        /* Server List & Infrastructure Monitoring View */
         <>
           {/* Global Performance Summary Bar */}
           {isLoading ? (

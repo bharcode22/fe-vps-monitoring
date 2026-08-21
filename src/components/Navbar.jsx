@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Activity,
+  LayoutDashboard,
   Download,
   Zap,
   Volume2,
@@ -78,9 +79,10 @@ export default function Navbar({
     }
   });
 
-  const isToolsActive = ['sounds-comparison', 'metadata-comparison', 'rabbitmq', 'env-manager'].includes(currentView);
+  const isToolsActive = ['sync', 'sounds-comparison', 'metadata-comparison', 'rabbitmq', 'env-manager'].includes(currentView);
 
   const getToolsLabel = () => {
+    if (currentView === 'sync') return 'Database Sync';
     if (currentView === 'env-manager') return 'Environment Manager';
     if (currentView === 'sounds-comparison') return 'Compare Sounds';
     if (currentView === 'metadata-comparison') return 'Compare Metadata';
@@ -136,13 +138,25 @@ export default function Navbar({
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                 }`}
             >
-              <Activity size={14} className={currentView === 'dashboard' ? 'text-cyan-400' : 'text-slate-500'} />
+              <LayoutDashboard size={14} className={currentView === 'dashboard' ? 'text-cyan-400' : 'text-slate-500'} />
               <span>Dashboard</span>
+            </button>
+
+            {/* 2. Server List */}
+            <button
+              onClick={() => onNavigateView('server-list')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${currentView === 'server-list'
+                ? 'bg-gradient-to-r from-cyan-500/25 to-blue-500/25 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+            >
+              <Server size={14} className={currentView === 'server-list' ? 'text-cyan-400' : 'text-slate-500'} />
+              <span>Server List</span>
             </button>
 
             {isAuthenticated && (
               <>
-                {/* 2. Installation */}
+                {/* 3. Installation */}
                 <button
                   onClick={() => onNavigateView('installation')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${currentView === 'installation' || currentView === 'instalation'
@@ -154,19 +168,7 @@ export default function Navbar({
                   <span>Installation</span>
                 </button>
 
-                {/* 3. Database Sync */}
-                <button
-                  onClick={() => onNavigateView('sync')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${currentView === 'sync'
-                    ? 'bg-gradient-to-r from-cyan-500/25 to-blue-500/25 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
-                    }`}
-                >
-                  <Zap size={14} className={currentView === 'sync' ? 'text-cyan-400' : 'text-slate-500'} />
-                  <span>Database Sync</span>
-                </button>
-
-                {/* 4. Tools / Secondary Views Dropdown */}
+                {/* 3. Tools / Secondary Views Dropdown */}
                 <div className="relative" ref={toolsMenuRef}>
                   <button
                     onClick={() => setIsToolsMenuOpen(!isToolsMenuOpen)}
@@ -183,8 +185,26 @@ export default function Navbar({
                   {isToolsMenuOpen && (
                     <div className="absolute left-0 mt-2 w-56 bg-slate-900/95 border border-purple-500/30 rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-xl">
                       <div className="px-2.5 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                        Perbandingan & Antrean
+                        Tools & Utilitas Database
                       </div>
+
+                      {/* Database Sync */}
+                      <button
+                        onClick={() => {
+                          onNavigateView('sync');
+                          setIsToolsMenuOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-colors cursor-pointer text-xs font-bold ${currentView === 'sync'
+                          ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                          : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                          }`}
+                      >
+                        <Zap size={15} className="text-amber-400 shrink-0" />
+                        <div className="flex-1">
+                          <div>Database Sync</div>
+                          <div className="text-[10px] text-slate-400 font-normal">Sinkronisasi Tabel & Data DB</div>
+                        </div>
+                      </button>
 
                       {/* Compare Sounds */}
                       <button
@@ -516,8 +536,22 @@ export default function Navbar({
                   : 'text-slate-400 hover:text-white'
                   }`}
               >
-                <Activity size={15} />
+                <LayoutDashboard size={15} />
                 <span>Dashboard</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  onNavigateView('server-list');
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`py-2 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${currentView === 'server-list'
+                  ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+                  }`}
+              >
+                <Server size={15} />
+                <span>Server List</span>
               </button>
 
               {isAuthenticated && (
