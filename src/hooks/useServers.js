@@ -60,7 +60,7 @@ export function useServers() {
     // Smart merge: Update currentMetrics on matching servers without overwriting server metadata
     const mergeMetrics = (serverArray) => {
       return serverArray.map(srv => {
-        const match = metricsList.find(m => m.id === srv.id && (m.type ? m.type === (srv.type || 'vps') : true));
+        const match = metricsList.find(m => String(m.id) === String(srv.id) && (m.type ? m.type === (srv.type || 'vps') : true));
         if (match && match.currentMetrics) {
           return { ...srv, currentMetrics: match.currentMetrics };
         }
