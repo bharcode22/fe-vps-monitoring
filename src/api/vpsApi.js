@@ -658,4 +658,29 @@ export async function cleanupMinioOlderArtifactVersionsApi(appName, env, keepCou
   return data;
 }
 
+/**
+ * Fetch live Heartbeat PODs and location data
+ */
+export async function fetchHeartbeatLiveApi() {
+  const res = await fetch(`${BACKEND_URL}/api/heartbeat/live`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memuat data heartbeat live');
+  return data;
+}
+
+/**
+ * Sync Heartbeat location, MAC address, and code to servers database
+ */
+export async function syncHeartbeatApi() {
+  const res = await fetch(`${BACKEND_URL}/api/heartbeat/sync`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal melakukan sinkronisasi heartbeat');
+  return data;
+}
+
 

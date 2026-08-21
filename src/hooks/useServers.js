@@ -177,6 +177,7 @@ export function useServers() {
 
   return {
     servers,
+    allServers,
     displayedServers,
     isLoading,
     filterType,

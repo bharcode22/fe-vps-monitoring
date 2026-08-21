@@ -142,17 +142,19 @@ export default function Navbar({
               <span>Dashboard</span>
             </button>
 
-            {/* 2. Server List */}
-            <button
-              onClick={() => onNavigateView('server-list')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${currentView === 'server-list'
-                ? 'bg-gradient-to-r from-cyan-500/25 to-blue-500/25 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
-                }`}
-            >
-              <Server size={14} className={currentView === 'server-list' ? 'text-cyan-400' : 'text-slate-500'} />
-              <span>Server List</span>
-            </button>
+            {/* 2. Server List (Only for Authenticated Admins) */}
+            {isAuthenticated && (
+              <button
+                onClick={() => onNavigateView('server-list')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${currentView === 'server-list'
+                  ? 'bg-gradient-to-r from-cyan-500/25 to-blue-500/25 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                  }`}
+              >
+                <Server size={14} className={currentView === 'server-list' ? 'text-cyan-400' : 'text-slate-500'} />
+                <span>Server List</span>
+              </button>
+            )}
 
             {isAuthenticated && (
               <>
@@ -355,13 +357,15 @@ export default function Navbar({
               <span className="hidden xl:inline">{isTvMode ? t('normalView') : t('tvMode')}</span>
             </button>
 
-            <button
-              onClick={onRefresh}
-              className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 rounded-lg transition-colors cursor-pointer"
-              title={t('refresh')}
-            >
-              <RefreshCw size={14} />
-            </button>
+            {isAuthenticated && (
+              <button
+                onClick={onRefresh}
+                className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 rounded-lg transition-colors cursor-pointer"
+                title={t('refresh')}
+              >
+                <RefreshCw size={14} />
+              </button>
+            )}
 
             {/* Language Switcher Pill */}
             <div className="flex items-center bg-slate-900 p-0.5 rounded-lg border border-slate-800 ml-0.5">
@@ -496,16 +500,18 @@ export default function Navbar({
         </div>
 
         {/* ========================================================================= */}
-        {/* MOBILE: Hamburger Menu Toggle Button */}
+        {/* MOBILE MENU TOGGLE BUTTON (Screens < lg) */}
         {/* ========================================================================= */}
         <div className="flex lg:hidden items-center gap-1.5">
-          <button
-            onClick={onRefresh}
-            className="p-2 bg-slate-800 text-slate-300 hover:text-white rounded-xl border border-slate-700 cursor-pointer"
-            title={t('refresh')}
-          >
-            <RefreshCw size={15} />
-          </button>
+          {isAuthenticated && (
+            <button
+              onClick={onRefresh}
+              className="p-2 bg-slate-800 text-slate-300 hover:text-white rounded-xl border border-slate-700 cursor-pointer"
+              title={t('refresh')}
+            >
+              <RefreshCw size={15} />
+            </button>
+          )}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="p-2 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-400 rounded-xl border border-cyan-500/40 cursor-pointer hover:bg-cyan-500/30 transition-all"
@@ -525,7 +531,7 @@ export default function Navbar({
 
           {/* Navigation Views */}
           {onNavigateView && (
-            <div className="grid grid-cols-2 gap-2 bg-slate-950/70 p-2 rounded-2xl border border-slate-800">
+            <div className={`grid ${isAuthenticated ? 'grid-cols-2' : 'grid-cols-1'} gap-2 bg-slate-950/70 p-2 rounded-2xl border border-slate-800`}>
               <button
                 onClick={() => {
                   onNavigateView('dashboard');
@@ -540,19 +546,21 @@ export default function Navbar({
                 <span>Dashboard</span>
               </button>
 
-              <button
-                onClick={() => {
-                  onNavigateView('server-list');
-                  setIsMobileMenuOpen(false);
-                }}
-                className={`py-2 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${currentView === 'server-list'
-                  ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-                  }`}
-              >
-                <Server size={15} />
-                <span>Server List</span>
-              </button>
+              {isAuthenticated && (
+                <button
+                  onClick={() => {
+                    onNavigateView('server-list');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`py-2 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${currentView === 'server-list'
+                    ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                    }`}
+                >
+                  <Server size={15} />
+                  <span>Server List</span>
+                </button>
+              )}
 
               {isAuthenticated && (
                 <>

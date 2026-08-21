@@ -94,6 +94,7 @@ export default function App() {
 
   const {
     servers,
+    allServers,
     displayedServers,
     isLoading,
     filterType,
@@ -144,7 +145,7 @@ export default function App() {
 
   // Keep detail modal server object updated with latest live metrics
   const activeDetailServer = selectedDetailServerId
-    ? servers.find(s => s.id === selectedDetailServerId)
+    ? ((allServers && allServers.length > 0 ? allServers : servers).find(s => s.id === selectedDetailServerId) || servers.find(s => s.id === selectedDetailServerId))
     : null;
 
   // Group servers by categories
@@ -193,7 +194,12 @@ export default function App() {
           onBack={() => setCurrentView('dashboard')}
         />
       ) : currentView === 'dashboard' ? (
-        <DashboardPage onNavigateView={setCurrentView} />
+        <DashboardPage
+          servers={allServers && allServers.length > 0 ? allServers : servers}
+          onRefreshServers={fetchServers}
+          onSelectServer={(srv) => setSelectedDetailServerId(srv.id)}
+          onNavigateView={setCurrentView}
+        />
       ) : (
         /* Server List & Infrastructure Monitoring View */
         <>
