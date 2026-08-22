@@ -13,7 +13,7 @@ export default function MinioDeleteConfirmModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
       <div className="glass-card w-full max-w-md p-6 rounded-2xl border border-rose-500/40 bg-slate-950/95 shadow-2xl flex flex-col gap-4">
         {/* Modal Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-800">

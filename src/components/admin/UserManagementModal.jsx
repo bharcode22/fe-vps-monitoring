@@ -42,7 +42,7 @@ export default function UserManagementModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-[999] flex items-center justify-center p-4" onClick={onClose}>
       <div
         className="w-[92vw] max-w-5xl max-h-[90vh] overflow-y-auto p-6 md:p-8 bg-slate-950 border border-cyan-500/30 rounded-3xl shadow-2xl shadow-black/90"
         onClick={(e) => e.stopPropagation()}
@@ -125,13 +125,12 @@ export default function UserManagementModal({ isOpen, onClose }) {
 
                       {/* Status */}
                       <td className="p-3.5">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
-                          isApproved
-                            ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                            : isPending
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${isApproved
+                          ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                          : isPending
                             ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
                             : 'bg-red-500/15 text-red-400 border-red-500/30'
-                        }`}>
+                          }`}>
                           {isApproved && <ShieldCheck size={13} />}
                           {isPending && <Clock size={13} />}
                           {!isApproved && !isPending && <UserX size={13} />}
