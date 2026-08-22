@@ -57,21 +57,27 @@ export default function InstallationConsole({
             ) : (
               <div className="space-y-2">
                 {currentAppIds.map(appId => {
-                  const ver = (activeTab === 'backend' ? selectedAppVersions[appId] : feSelectedAppVersions[appId]) || 'Belum dipilih';
-                  const envFile = (activeTab === 'backend' ? appEnvMapping[appId] : null);
-                  const isPrisma = activeTab === 'backend' ? Boolean(appPrismaMapping[appId]) : false;
+                  let rawVer = (activeTab === 'backend' ? selectedAppVersions[appId] : feSelectedAppVersions[appId]);
+                  if (rawVer && typeof rawVer === 'object') {
+                    rawVer = rawVer.version || rawVer.name || '';
+                  }
+                  const ver = typeof rawVer === 'string' && rawVer ? rawVer : 'Belum dipilih';
+
+                  const isDeb = appId === 'small-screen' || appId === 'big-screen';
+                  const envFile = !isDeb ? (appEnvMapping[appId] || null) : null;
+                  const isPrisma = !isDeb ? Boolean(appPrismaMapping[appId]) : false;
 
                   return (
                     <div key={appId} className="bg-black/40 p-2 rounded-lg border border-slate-800 text-[11px] font-mono space-y-1">
                       <div className="flex items-center justify-between font-bold">
-                        <span className={activeTab === 'backend' ? 'text-cyan-400' : 'text-purple-400'}>{appId}</span>
-                        {activeTab === 'backend' ? (
-                          <span className={`text-[10px] px-1 rounded ${isPrisma ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-600'}`}>
-                            {isPrisma ? 'PRISMA' : 'NO-MIGRATE'}
-                          </span>
-                        ) : (
+                        <span className={isDeb ? 'text-purple-400' : 'text-cyan-400'}>{appId}</span>
+                        {isDeb ? (
                           <span className="text-[10px] px-1 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 uppercase">
                             DEBIAN PKG
+                          </span>
+                        ) : (
+                          <span className={`text-[10px] px-1 rounded ${isPrisma ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-600'}`}>
+                            {isPrisma ? 'PRISMA' : 'NO-MIGRATE'}
                           </span>
                         )}
                       </div>

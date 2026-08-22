@@ -78,11 +78,10 @@ export default function BackendInstallationTab({
                 <div
                   key={srv.id}
                   onClick={() => toggleServerSelect(String(srv.id))}
-                  className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-3 ${
-                    isSelected
+                  className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-3 ${isSelected
                       ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border-cyan-500/50 text-white shadow-lg shadow-cyan-500/10'
                       : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 text-slate-400'
-                  }`}
+                    }`}
                 >
                   <div className={`p-1 rounded-md ${isSelected ? 'text-cyan-400' : 'text-slate-600'}`}>
                     {isSelected ? <CheckSquare size={20} /> : <Square size={20} />}
@@ -118,21 +117,19 @@ export default function BackendInstallationTab({
           <div className="flex items-center bg-black/50 p-1 rounded-xl border border-slate-800">
             <button
               onClick={() => setEnv('dev')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                env === 'dev'
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${env === 'dev'
                   ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-400 border border-cyan-500/40 shadow-sm'
                   : 'text-slate-400 hover:text-white'
-              }`}
+                }`}
             >
               DEV
             </button>
             <button
               onClick={() => setEnv('release')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                env === 'release'
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${env === 'release'
                   ? 'bg-gradient-to-r from-purple-500/30 to-pink-500/30 text-purple-400 border border-purple-500/40 shadow-sm'
                   : 'text-slate-400 hover:text-white'
-              }`}
+                }`}
             >
               RELEASE
             </button>
@@ -164,11 +161,10 @@ export default function BackendInstallationTab({
               <div
                 key={app.id}
                 onClick={() => toggleAppSelect(app.id)}
-                className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2.5 ${
-                  isSelected
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2.5 ${isSelected
                     ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border-cyan-500/50 text-white shadow-md'
                     : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 text-slate-400'
-                }`}
+                  }`}
               >
                 <div className={`p-1 rounded-md ${isSelected ? 'text-cyan-400' : 'text-slate-600'}`}>
                   {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
@@ -242,11 +238,10 @@ export default function BackendInstallationTab({
 
                     <button
                       onClick={() => setAppPrismaMapping(prev => ({ ...prev, [appId]: !prev[appId] }))}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
-                        isPrismaActive
+                      className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${isPrismaActive
                           ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-400 border border-cyan-500/40 shadow-sm'
                           : 'bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700'
-                      }`}
+                        }`}
                     >
                       {isPrismaActive ? <CheckSquare size={15} /> : <Square size={15} />}
                       <span>Prisma Migrate</span>
@@ -306,11 +301,10 @@ export default function BackendInstallationTab({
           <button
             onClick={onStartDeploy}
             disabled={isDeploying || selectedServerIds.length === 0 || selectedAppIds.length === 0}
-            className={`w-full py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer ${
-              isDeploying || selectedServerIds.length === 0 || selectedAppIds.length === 0
+            className={`w-full py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer ${isDeploying || selectedServerIds.length === 0 || selectedAppIds.length === 0
                 ? 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-60'
                 : 'bg-gradient-to-r from-cyan-400 via-sky-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 shadow-cyan-500/25'
-            }`}
+              }`}
           >
             {isDeploying ? (
               <>

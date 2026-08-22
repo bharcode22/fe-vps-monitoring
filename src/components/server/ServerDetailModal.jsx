@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Server, Box, Cpu, HardDrive, ArrowDown, ArrowUp, Zap, Clock, ShieldCheck, Edit3, Activity, FileCode, Music, Layers, Sliders, Rocket, RefreshCw, CheckCircle, AlertTriangle, Terminal, Tv, Eye, EyeOff } from 'lucide-react';
+import { X, Server, Box, Cpu, HardDrive, ArrowDown, ArrowUp, Zap, Clock, ShieldCheck, Edit3, Activity, FileCode, Music, Layers, Sliders, Rocket, RefreshCw, CheckCircle, AlertTriangle, Terminal, Tv, Eye, EyeOff, Package } from 'lucide-react';
 import MetricsChart from '../MetricsChart';
 import { fetchServerHistoryApi, redeployBackendApi } from '../../api/vpsApi';
 import { formatMbToGb } from '../../utils/formatters';
@@ -10,6 +10,7 @@ import Pm2AppTab from './Pm2AppTab';
 import ScriptExecTab from './ScriptExecTab';
 import SoundsTab from './SoundsTab';
 import PodConfigTab from './PodConfigTab';
+import InstalledVersionsTab from './InstalledVersionsTab';
 
 export default function ServerDetailModal({ server, onClose, onEdit }) {
   const { isAuthenticated } = useAuth();
@@ -290,6 +291,18 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
                 <Sliders size={16} /> Pod Config
               </button>
             )}
+
+            {isPod && (
+              <button
+                onClick={() => setViewMode('versions')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${viewMode === 'versions'
+                  ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 shadow-md shadow-amber-500/20'
+                  : 'bg-white/5 text-slate-400 hover:text-slate-200'
+                  }`}
+              >
+                <Package size={16} /> Versi Aplikasi
+              </button>
+            )}
           </div>
         )}
 
@@ -306,6 +319,8 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
           <SoundsTab serverId={server.id} />
         ) : viewMode === 'pod-config' && isAuthenticated ? (
           <PodConfigTab serverId={server.id} />
+        ) : viewMode === 'versions' && isAuthenticated ? (
+          <InstalledVersionsTab server={server} />
         ) : (
           <div>
             {/* Real-time Current Metrics Grid */}

@@ -23,6 +23,17 @@ export const FRONTEND_APPS = [
   { id: 'big-screen', label: 'Big Screen App', minioFolder: 'Screen-Apps/big-screen-app', desc: 'Debian Application Package (big-screen)' }
 ];
 
+// Combined All 7 Target Applications
+export const ALL_POD_APPS = [
+  { id: 'mobile-api', label: 'Mobile API', name: 'mobile-api', desc: 'Main Mobile Gateway Service', type: 'backend', color: 'cyan' },
+  { id: 'mobile-synch', label: 'Mobile Sync', name: 'mobile-synch', desc: 'Data Synchronization Service', type: 'backend', color: 'sky' },
+  { id: 'mobile-consume', label: 'Mobile Consume', name: 'mobile-consume', desc: 'Queue Message Consumer', type: 'backend', color: 'blue' },
+  { id: 'mobile-downloader', label: 'Mobile Downloader', name: 'mobile-downloader', desc: 'File & Asset Downloader', type: 'backend', color: 'indigo' },
+  { id: 'assist-api', label: 'Assist API', name: 'assist-api', desc: 'AI & Assist Subservice', type: 'backend', color: 'violet' },
+  { id: 'small-screen', label: 'Small Screen App', name: 'small-screen', desc: 'Debian Application Package', type: 'frontend', color: 'purple' },
+  { id: 'big-screen', label: 'Big Screen App', name: 'big-screen', desc: 'Debian Application Package', type: 'frontend', color: 'pink' }
+];
+
 // Pipeline Stages for Backend Apps
 export const BACKEND_JENKINS_STAGES = [
   { id: 1, name: 'Stage 1: Clean & Download', short: '1. Download', icon: Download, desc: 'Parallel mc cp from MinIO' },

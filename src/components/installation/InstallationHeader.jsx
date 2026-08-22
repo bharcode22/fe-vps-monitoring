@@ -3,11 +3,15 @@ import { ArrowLeft, Layers, Clock, RefreshCw } from 'lucide-react';
 
 export default function InstallationHeader({
   onBack,
-  elapsedSeconds,
+  elapsedSeconds = 0,
   formatTimer,
   activeTab,
   onRefreshVersions
 }) {
+  const displayTimer = typeof formatTimer === 'function'
+    ? formatTimer(elapsedSeconds)
+    : `${String(Math.floor((elapsedSeconds || 0) / 60)).padStart(2, '0')}:${String((elapsedSeconds || 0) % 60).padStart(2, '0')}`;
+
   return (
     <div className="flex flex-col md:flex-row md:items-center justify-between bg-slate-900/80 backdrop-blur-xl p-4 sm:p-5 rounded-2xl border border-cyan-500/20 shadow-xl gap-4">
       <div className="flex items-center gap-3.5">
@@ -41,16 +45,18 @@ export default function InstallationHeader({
       <div className="flex items-center gap-3 self-end md:self-auto">
         <div className="flex items-center gap-2 bg-slate-950/80 px-3.5 py-2 rounded-xl border border-slate-800 font-mono text-xs text-slate-300">
           <Clock size={15} className="text-cyan-400 animate-pulse" />
-          <span>Elapsed: <strong className="text-cyan-300">{formatTimer(elapsedSeconds)}</strong></span>
+          <span>Elapsed: <strong className="text-cyan-300">{displayTimer}</strong></span>
         </div>
 
-        <button
-          onClick={onRefreshVersions}
-          className="hidden sm:flex items-center gap-2 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 font-semibold text-xs transition-all cursor-pointer"
-        >
-          <RefreshCw size={14} className="text-cyan-400" />
-          <span>Refresh Versi MinIO</span>
-        </button>
+        {onRefreshVersions && (
+          <button
+            onClick={onRefreshVersions}
+            className="hidden sm:flex items-center gap-2 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 font-semibold text-xs transition-all cursor-pointer"
+          >
+            <RefreshCw size={14} className="text-cyan-400" />
+            <span>Refresh Versi MinIO</span>
+          </button>
+        )}
       </div>
     </div>
   );

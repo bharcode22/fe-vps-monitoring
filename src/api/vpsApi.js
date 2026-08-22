@@ -683,4 +683,184 @@ export async function syncHeartbeatApi() {
   return data;
 }
 
+/**
+ * Fetch paginated deployment history with filters
+ */
+export async function fetchDeploymentHistoryApi(params = {}) {
+  const query = new URLSearchParams();
+  if (params.pod_code) query.append('pod_code', params.pod_code);
+  if (params.app_name) query.append('app_name', params.app_name);
+  if (params.environment) query.append('environment', params.environment);
+  if (params.status) query.append('status', params.status);
+  if (params.search) query.append('search', params.search);
+  if (params.page) query.append('page', params.page);
+  if (params.limit) query.append('limit', params.limit);
+
+  const qs = query.toString() ? `?${query.toString()}` : '';
+  const res = await fetch(`${BACKEND_URL}/api/vps/installation/history${qs}`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memuat riwayat deployment');
+  return data;
+}
+
+/**
+ * Fetch full deployment detail with terminal logs
+ */
+export async function fetchDeploymentDetailApi(id) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/installation/history/${id}`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memuat detail riwayat deployment');
+  return data.data;
+}
+
+/**
+ * Delete a specific deployment history item
+ */
+export async function deleteDeploymentHistoryApi(id) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/installation/history/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal menghapus riwayat deployment');
+  return data;
+}
+
+/**
+ * Cleanup old deployment history
+ */
+export async function cleanupDeploymentHistoryApi(keepCount = 100) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/installation/history/cleanup`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ keepCount })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal membersihkan riwayat deployment');
+  return data;
+}
+
+/**
+ * Fetch current application versions matrix across all PODs
+ */
+export async function fetchPodAppVersionsApi() {
+  const res = await fetch(`${BACKEND_URL}/api/vps/installation/pod-versions`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memuat matriks versi aplikasi POD');
+  return data.data;
+}
+
+/**
+ * Scan live application versions on PODs via SSH
+ */
+export async function scanPodAppVersionsApi(serverIds = null) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/installation/pod-versions/scan`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ server_ids: serverIds })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal melakukan pemindaian versi POD');
+  return data;
+}
+
+/**
+ * Fetch all bundle definitions with optional environment filter
+ */
+export async function fetchBundleDefinitionsApi(env = '') {
+  const qs = env ? `?env=${encodeURIComponent(env)}` : '';
+  const res = await fetch(`${BACKEND_URL}/api/vps/installation/bundles${qs}`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memuat daftar bundle');
+  return data.data || [];
+}
+
+/**
+ * Fetch single bundle detail
+ */
+export async function fetchBundleDetailApi(id) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/installation/bundles/${id}`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memuat detail bundle');
+  return data.data;
+}
+
+/**
+ * Create a new bundle definition
+ */
+export async function createBundleDefinitionApi(payload) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/installation/bundles`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal membuat bundle baru');
+  return data;
+}
+
+/**
+ * Update an existing bundle definition
+ */
+export async function updateBundleDefinitionApi(id, payload) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/installation/bundles/${id}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memperbarui bundle');
+  return data;
+}
+
+/**
+ * Delete a bundle definition
+ */
+export async function deleteBundleDefinitionApi(id) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/installation/bundles/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal menghapus bundle');
+  return data;
+}
+
+/**
+ * Fetch POD v3 bundle compliance matrix
+ */
+export async function fetchPodBundleMatrixApi() {
+  const res = await fetch(`${BACKEND_URL}/api/vps/installation/bundles/pod-matrix`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memuat matriks bundle POD');
+  return data.data || [];
+}
+
+/**
+ * Assign a bundle to a POD
+ */
+export async function assignPodBundleApi(podCode, bundleId) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/installation/bundles/assign`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ pod_code: podCode, bundle_id: bundleId })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal menugaskan bundle ke POD');
+  return data;
+}
+
+
 
