@@ -862,5 +862,146 @@ export async function assignPodBundleApi(podCode, bundleId) {
   return data;
 }
 
+// =========================================================================
+// AWS S3 CONTENT MANAGEMENT & POD v3 STORAGE CLEANUP APIs
+// =========================================================================
 
+/**
+ * Fetch all code folders in AWS S3 media/
+ */
+export async function fetchS3MediaFoldersApi() {
+  const res = await fetch(`${BACKEND_URL}/api/vps/content/s3/folders`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal mengambil data folder AWS S3');
+  return data.data;
+}
+
+/**
+ * Fetch files inside a specific S3 code folder (e.g. 144411)
+ */
+export async function fetchS3FolderFilesApi(code) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/content/s3/files?code=${encodeURIComponent(code)}`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || `Gagal mengambil file folder ${code} di AWS S3`);
+  return data.data;
+}
+
+/**
+ * Fetch real-time storage metrics (1 TB disk meter, /home/pod breakdown) for all POD v3
+ */
+export async function fetchPodsStorageSummaryApi(version = 'v3') {
+  const res = await fetch(`${BACKEND_URL}/api/vps/content/pods/storage?version=${encodeURIComponent(version)}`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memuat status storage POD v3');
+  return data.data;
+}
+
+/**
+ * Scan a single POD server for physical files and detect orphan/junk files
+ */
+export async function scanPodJunkFilesApi(serverId, s3Code = '') {
+  const query = s3Code ? `?s3Code=${encodeURIComponent(s3Code)}` : '';
+  const res = await fetch(`${BACKEND_URL}/api/vps/content/pods/${serverId}/scan${query}`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal melakukan scan file di POD');
+  return data.data;
+}
+
+/**
+ * Clean up selected junk files from a POD server (with dry-run support)
+ */
+export async function cleanupPodJunkFilesApi(serverId, filePaths, isDryRun = true) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/content/pods/cleanup`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ serverId, filePaths, isDryRun })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal membersihkan file sampah di POD');
+  return data.data;
+}
+
+/**
+ * Sync selected AWS S3 code folder to target POD servers
+ */
+export async function syncS3ToPodApi(serverIds, s3Code) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/content/pods/sync`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ serverIds, s3Code })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal melakukan sinkronisasi AWS S3 ke POD');
+  return data;
+}
+
+/**
+ * Hard delete entire code folder from AWS S3
+ */
+export async function deleteS3FolderApi(code) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/content/s3/folder/${encodeURIComponent(code)}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || `Gagal menghapus folder #${code} di AWS S3`);
+  return data.data;
+}
+
+/**
+ * Check file presence for a single S3 code across all or selected PODs (Lazy Matrix Row Check)
+ */
+export async function checkCodeOnPodsApi(s3Code, filenames = [], serverIds = []) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/content/matrix/check-pods`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ s3Code, filenames, serverIds })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || `Gagal memeriksa ketersediaan file #${s3Code} di POD`);
+  return data.data;
+}
+
+/**
+ * Hard delete files matching a specific S3 code on a specific POD
+ */
+export async function deleteCodeOnPodApi(serverId, s3Code, filenames = []) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/content/pods/delete-code`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ serverId, s3Code, filenames })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || `Gagal menghapus file #${s3Code} di POD`);
+  return data.data;
+}
+
+/**
+ * Batch delete code files across multiple PODs and/or AWS S3
+ */
+export async function batchDeleteCodeApi(s3Code, filenames = [], serverIds = [], deleteFromS3 = false) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/content/batch-delete`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ s3Code, filenames, serverIds, deleteFromS3 })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memproses batch delete file');
+  return data.data;
+}
+
+/**
+ * Helper to build media streaming URL directly from remote POD via SFTP proxy
+ */
+export function getPodFileStreamUrl(serverId, filePath) {
+  return `${BACKEND_URL}/api/vps/content/pods/file-stream?serverId=${encodeURIComponent(serverId)}&filePath=${encodeURIComponent(filePath)}`;
+}
 

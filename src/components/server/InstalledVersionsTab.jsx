@@ -200,7 +200,9 @@ export default function InstalledVersionsTab({ server }) {
                         {item.app_name} <span className="text-cyan-300 font-mono ml-1">({item.version})</span>
                       </div>
                       <div className="text-[10px] text-slate-500 mt-0.5">
-                        {new Date(item.created_at).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}
+                        {item.created_at && !isNaN(new Date(item.created_at).getTime())
+                          ? new Date(item.created_at).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })
+                          : '-'}
                       </div>
                     </div>
                   </div>

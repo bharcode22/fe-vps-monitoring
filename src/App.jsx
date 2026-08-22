@@ -16,6 +16,7 @@ import MetadataComparisonPage from './pages/MetadataComparisonPage';
 import RabbitMqMonitorPage from './pages/RabbitMqMonitorPage';
 import InstallationPage from './pages/InstallationPage';
 import EnvManagerPage from './pages/EnvManagerPage';
+import ContentManagementPage from './pages/ContentManagementPage';
 import DashboardPage from './pages/DashboardPage';
 import { useServers } from './hooks/useServers';
 import { useSocket } from './hooks/useSocket';
@@ -41,7 +42,7 @@ export default function App() {
 
   // Auto switch back to dashboard when user logs out (wait until auth initialization completes)
   useEffect(() => {
-    const protectedViews = ['sync', 'sounds-comparison', 'metadata-comparison', 'rabbitmq', 'installation', 'instalation'];
+    const protectedViews = ['sync', 'sounds-comparison', 'metadata-comparison', 'rabbitmq', 'installation', 'instalation', 'content-manager', 'content'];
     if (!loading && !isAuthenticated && protectedViews.includes(currentView)) {
       setCurrentView('dashboard');
     }
@@ -178,7 +179,9 @@ export default function App() {
       />
 
       {/* Render View: Dashboard, Server List, Installation, or Tools */}
-      {currentView === 'env-manager' ? (
+      {currentView === 'content-manager' || currentView === 'content' ? (
+        <ContentManagementPage onBack={() => setCurrentView('dashboard')} />
+      ) : currentView === 'env-manager' ? (
         <EnvManagerPage onBack={() => setCurrentView('dashboard')} />
       ) : currentView === 'installation' || currentView === 'instalation' ? (
         <InstallationPage onBack={() => setCurrentView('dashboard')} />

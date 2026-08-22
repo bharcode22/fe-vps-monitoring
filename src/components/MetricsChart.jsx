@@ -10,9 +10,31 @@ import {
 } from 'recharts';
 import { Activity, Wifi, Cpu, HardDrive, Zap } from 'lucide-react';
 
+const formatTime = (timestamp) => {
+  if (!timestamp) return '';
+  // If already formatted like "18:27:30" or "06:27 PM"
+  if (typeof timestamp === 'string' && /^\d{1,2}:\d{2}(:\d{2})?(\s?[AP]M)?$/i.test(timestamp.trim())) {
+    return timestamp.trim();
+  }
+  // Try standard Date parsing
+  const d = new Date(timestamp);
+  if (!isNaN(d.getTime())) {
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+  // If epoch number or numeric string
+  const num = Number(timestamp);
+  if (!isNaN(num) && num > 0) {
+    const epochDate = new Date(num > 1e11 ? num : num * 1000);
+    if (!isNaN(epochDate.getTime())) {
+      return epochDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+  }
+  return '';
+};
+
 export default function MetricsChart({ historyData, serverName, activeMetric = 'bandwidth' }) {
   const formattedData = (historyData || []).map(item => ({
-    time: new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    time: formatTime(item.timestamp),
     cpu: item.cpu_usage,
     ram: item.ram_usage,
     gpu: item.gpu_usage || 0,
