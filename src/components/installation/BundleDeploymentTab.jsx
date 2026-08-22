@@ -2,34 +2,38 @@ import React from 'react';
 import {
   Package,
   Server,
-  Layers,
   Cpu,
   Tv,
   Play,
   ArrowLeft,
   Sparkles,
   Check,
-  HardDrive,
   FileCode,
-  Database
+  Database,
+  Layers,
+  Box,
+  CheckSquare,
+  Square,
+  RefreshCw,
+  Info
 } from 'lucide-react';
 import { POD_APPS, FRONTEND_APPS } from './constants';
 
 export default function BundleDeploymentTab({
   activeBundle,
   onBackToBundles,
-  podV3Servers,
-  selectedServerIds,
+  podV3Servers = [],
+  selectedServerIds = [],
   setSelectedServerIds,
   toggleServerSelect,
   // 5 Backend States
-  backendConfigs,
+  backendConfigs = {},
   setBackendConfigs,
   // 2 Frontend States
-  frontendConfigs,
+  frontendConfigs = {},
   setFrontendConfigs,
   // Environment Files
-  envFiles,
+  envFiles = [],
   isEnvLoading,
   isDeploying,
   onStartDeploy
@@ -80,45 +84,51 @@ export default function BundleDeploymentTab({
   };
 
   // Calculate active apps count
-  const activeBackendCount = Object.values(backendConfigs || {}).filter(c => c?.enabled !== false).length;
-  const activeFrontendCount = Object.values(frontendConfigs || {}).filter(c => c?.enabled !== false).length;
+  const activeBackendCount = POD_APPS.filter(app => backendConfigs[app.id]?.enabled !== false).length;
+  const activeFrontendCount = FRONTEND_APPS.filter(app => frontendConfigs[app.id]?.enabled !== false).length;
   const totalActiveApps = activeBackendCount + activeFrontendCount;
   const totalTasks = selectedServerIds.length * totalActiveApps;
 
   return (
     <div className="flex flex-col gap-5 animate-in fade-in duration-300">
       {/* 1. Active Bundle Top Banner */}
-      <div className={`p-4 sm:p-5 rounded-2xl border shadow-xl relative overflow-hidden ${
-        isDev
-          ? 'border-amber-500/30 bg-gradient-to-r from-slate-950 via-amber-950/20 to-slate-950'
-          : 'border-emerald-500/30 bg-gradient-to-r from-slate-950 via-emerald-950/20 to-slate-950'
-      }`}>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className={`p-2.5 rounded-xl border shadow-md ${
-              isDev
-                ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-                : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-            }`}>
-              <Package size={22} />
+      <div
+        className={`p-4 sm:p-5 rounded-2xl border shadow-xl relative overflow-hidden transition-all ${
+          isDev
+            ? 'border-amber-500/30 bg-gradient-to-r from-slate-950 via-amber-950/20 to-slate-950'
+            : 'border-emerald-500/30 bg-gradient-to-r from-slate-950 via-emerald-950/20 to-slate-950'
+        }`}
+      >
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div
+              className={`p-3 rounded-xl border shadow-md shrink-0 ${
+                isDev
+                  ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                  : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+              }`}
+            >
+              <Package size={24} />
             </div>
             <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase border ${
-                  isDev
-                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                    : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                }`}>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <span
+                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                    isDev
+                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                      : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                  }`}
+                >
                   {activeBundle?.environment || 'dev'}
                 </span>
-                <h2 className="text-sm sm:text-base font-black text-white">
+                <h2 className="text-base sm:text-lg font-black text-white">
                   {activeBundle?.bundle_name || 'Bundle Suite'}
                 </h2>
-                <span className="text-xs font-mono font-bold text-slate-400">
-                  (v{activeBundle?.bundle_version || '3.2.0'})
+                <span className="text-xs font-mono font-bold text-slate-400 bg-slate-900/80 px-2 py-0.5 rounded-md border border-slate-800">
+                  v{activeBundle?.bundle_version || '3.2.0'}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">
+              <p className="text-xs text-slate-400 mt-1">
                 {activeBundle?.description || 'Paket deployment 7 aplikasi (5 Backend Microservices + 2 Layar Frontend)'}
               </p>
             </div>
@@ -126,35 +136,40 @@ export default function BundleDeploymentTab({
 
           <button
             onClick={onBackToBundles}
-            className="px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 text-xs font-bold flex items-center gap-1.5 border border-slate-700 transition-colors cursor-pointer shrink-0"
+            className="px-3.5 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-bold flex items-center gap-2 border border-slate-700 hover:border-slate-600 transition-all cursor-pointer shrink-0 shadow-sm"
           >
-            <ArrowLeft size={13} />
+            <ArrowLeft size={14} />
             <span>Ganti Resep Bundle</span>
           </button>
         </div>
       </div>
 
-      {/* 2. Step 1: Select Target POD v3 Servers */}
+      {/* 2. Step 1: Pilih Server POD Target (Khusus POD v3) */}
       <div className="glass-card p-4 sm:p-5 rounded-2xl border border-cyan-500/20 bg-slate-900/60 backdrop-blur-md shadow-xl">
-        <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-slate-800/80">
-          <div className="flex items-center gap-2">
-            <Server size={16} className="text-cyan-400" />
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3.5 pb-2.5 border-b border-slate-800/80">
+          <div className="flex items-center gap-2.5">
+            <Server size={17} className="text-cyan-400" />
             <h3 className="text-xs font-black text-white uppercase tracking-wider">
               1. Pilih Server POD Target (Khusus POD v3)
             </h3>
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+              {selectedServerIds.length} / {podV3Servers.length} Terpilih
+            </span>
           </div>
 
           {podV3Servers.length > 0 && (
             <div className="flex items-center gap-2">
               <button
+                type="button"
                 onClick={() => setSelectedServerIds(podV3Servers.map(s => String(s.id)))}
-                className="text-[10px] font-bold text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 px-2 py-0.5 rounded-lg border border-cyan-500/30 transition-colors cursor-pointer"
+                className="text-[11px] font-bold text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 px-2.5 py-1 rounded-lg border border-cyan-500/30 transition-colors cursor-pointer"
               >
                 Pilih Semua ({podV3Servers.length})
               </button>
               <button
+                type="button"
                 onClick={() => setSelectedServerIds([])}
-                className="text-[10px] font-bold text-slate-400 hover:text-slate-200 bg-slate-800 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
+                className="text-[11px] font-bold text-slate-400 hover:text-slate-200 bg-slate-800/80 hover:bg-slate-700 px-2.5 py-1 rounded-lg border border-slate-700 transition-colors cursor-pointer"
               >
                 Reset
               </button>
@@ -163,34 +178,41 @@ export default function BundleDeploymentTab({
         </div>
 
         {podV3Servers.length === 0 ? (
-          <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-slate-400 text-center">
+          <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-slate-400 text-center">
             Tidak ada unit POD v3 yang terdaftar.
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
             {podV3Servers.map(server => {
               const isSelected = selectedServerIds.includes(String(server.id));
               return (
                 <div
                   key={server.id}
                   onClick={() => toggleServerSelect(server.id)}
-                  className={`p-2.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                  className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between select-none ${
                     isSelected
-                      ? 'bg-cyan-500/15 border-cyan-500/60 shadow-md shadow-cyan-500/10 ring-1 ring-cyan-500/30'
-                      : 'bg-slate-950/40 border-slate-800/80 hover:border-slate-700'
+                      ? 'bg-gradient-to-b from-cyan-500/20 to-sky-500/10 border-cyan-500/60 shadow-md shadow-cyan-500/10 ring-1 ring-cyan-500/30'
+                      : 'bg-slate-950/50 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900/50'
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-1 mb-0.5">
-                    <span className="font-extrabold text-[11px] text-white truncate" title={server.name}>
+                  <div className="flex items-center justify-between gap-1 mb-1">
+                    <span className="font-bold text-xs text-white truncate" title={server.name}>
                       {server.name}
                     </span>
+                    <div className={`w-3.5 h-3.5 rounded flex items-center justify-center shrink-0 ${
+                      isSelected ? 'bg-cyan-500 text-slate-950' : 'border border-slate-700'
+                    }`}>
+                      {isSelected && <Check size={11} strokeWidth={3} />}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono mt-1">
+                    <span className="truncate">{server.host}</span>
                     {server.code && (
-                      <span className="px-1 py-0.1 rounded bg-cyan-500/20 text-cyan-300 font-mono text-[8.5px] font-bold shrink-0">
+                      <span className="px-1 py-0.2 rounded bg-cyan-500/15 text-cyan-300 font-bold shrink-0 ml-1">
                         #{server.code}
                       </span>
                     )}
                   </div>
-                  <div className="text-[9.5px] text-slate-400 font-mono truncate">{server.host}</div>
                 </div>
               );
             })}
@@ -198,36 +220,41 @@ export default function BundleDeploymentTab({
         )}
       </div>
 
-      {/* 3. Step 2 & 3: 2-Column Responsive Layout (Clean & Uncluttered) */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
-        {/* Left Column (7 cols): 5 Microservices Backend */}
-        <div className="xl:col-span-7 flex flex-col gap-3">
-          <div className="glass-card p-4 sm:p-5 rounded-2xl border border-sky-500/20 bg-slate-900/60 backdrop-blur-md shadow-xl flex-1">
-            {/* Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-3">
-              <div className="flex items-center gap-2">
-                <Cpu size={16} className="text-sky-400" />
-                <h3 className="text-xs font-black text-white uppercase tracking-wider">
-                  A. 5 Microservices Backend (Docker)
-                </h3>
+      {/* 3. Step 2: Konfigurasi Aplikasi Deployment (Backend & Frontend) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Section A: 5 Microservices Backend (7 cols on lg/xl screens) */}
+        <div className="lg:col-span-7 flex flex-col">
+          <div className="glass-card p-4 sm:p-5 rounded-2xl border border-sky-500/20 bg-slate-900/60 backdrop-blur-md shadow-xl flex-1 flex flex-col">
+            {/* Section Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-3.5">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                  <Cpu size={16} />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black text-white uppercase tracking-wider">
+                    A. 5 Microservices Backend
+                  </h3>
+                  <span className="text-[10px] text-slate-400">Docker Container Services</span>
+                </div>
               </div>
 
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-bold text-sky-300 bg-sky-500/15 px-2 py-0.5 rounded-md border border-sky-500/30">
-                  {activeBackendCount}/5 Aktif
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono font-bold text-sky-300 bg-sky-500/15 px-2 py-0.5 rounded-full border border-sky-500/30">
+                  {activeBackendCount} / 5 Aktif
                 </span>
                 <button
                   type="button"
                   onClick={() => setAllBackend(activeBackendCount < 5)}
-                  className="text-[10px] font-semibold text-slate-400 hover:text-white px-1.5 py-0.5 rounded hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="text-[10.5px] font-semibold text-slate-400 hover:text-white px-2 py-0.5 rounded-md hover:bg-slate-800 transition-colors cursor-pointer border border-transparent hover:border-slate-700"
                 >
                   {activeBackendCount < 5 ? 'Pilih Semua' : 'Batal'}
                 </button>
               </div>
             </div>
 
-            {/* Compact Backend Rows */}
-            <div className="space-y-2">
+            {/* Backend Apps List (Spacious Two-Tier Cards) */}
+            <div className="flex flex-col gap-2.5 flex-1">
               {POD_APPS.map(app => {
                 const cfg = backendConfigs[app.id] || { enabled: true, version: '', env_filename: '', run_prisma_migrate: false };
                 const isEnabled = cfg.enabled !== false;
@@ -235,39 +262,46 @@ export default function BundleDeploymentTab({
                 return (
                   <div
                     key={app.id}
-                    className={`p-2.5 rounded-xl border transition-all ${
+                    className={`rounded-xl border transition-all p-3 ${
                       isEnabled
-                        ? 'bg-slate-950/90 border-sky-500/30 shadow-sm'
+                        ? 'bg-slate-950/80 border-sky-500/30 shadow-md shadow-sky-950/10'
                         : 'bg-slate-950/30 border-slate-800/60 opacity-50'
                     }`}
                   >
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                      {/* Left: Checkbox + Title */}
-                      <div className="flex items-center gap-2.5 min-w-[170px]">
+                    {/* Top Tier: Checkbox + Name + Version Badge */}
+                    <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-slate-800/60">
+                      <label className="flex items-center gap-2.5 cursor-pointer select-none min-w-0">
                         <input
                           type="checkbox"
                           checked={isEnabled}
                           onChange={() => toggleBackendAppActive(app.id)}
                           className="w-4 h-4 rounded text-sky-500 bg-slate-900 border-slate-700 cursor-pointer accent-sky-500 shrink-0"
                         />
-                        <div>
-                          <div className="font-extrabold text-xs text-white flex items-center gap-1.5">
-                            <span>{app.label}</span>
-                            <span className="text-[8.5px] font-mono text-sky-400 bg-sky-500/10 px-1 py-0.1 rounded border border-sky-500/20">
-                              {app.id}
-                            </span>
-                          </div>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className={`font-bold text-xs truncate ${isEnabled ? 'text-white' : 'text-slate-400'}`}>
+                            {app.label}
+                          </span>
+                          <span className="text-[9px] font-mono text-sky-400 bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20 shrink-0">
+                            {app.id}
+                          </span>
                         </div>
-                      </div>
+                      </label>
 
-                      {/* Right: Version + Env + Prisma Controls */}
-                      <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-start sm:justify-end">
-                        {/* Version Pill */}
-                        <span className="font-mono text-[10.5px] font-bold text-sky-300 bg-sky-950/80 px-2 py-1 rounded-lg border border-sky-500/30 truncate max-w-[130px]" title={cfg.version}>
-                          {cfg.version || 'dev-latest'}
-                        </span>
+                      {/* Version Pill */}
+                      <span
+                        className="font-mono text-[10.5px] font-bold text-sky-300 bg-sky-950/90 px-2 py-0.5 rounded-md border border-sky-500/30 shrink-0"
+                        title={cfg.version || 'dev-latest'}
+                      >
+                        {cfg.version || 'dev-latest'}
+                      </span>
+                    </div>
 
-                        {/* Env File Dropdown */}
+                    {/* Bottom Tier: Controls (Env selector + Prisma toggle) */}
+                    <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 pt-0.5">
+                      {/* Env Selector */}
+                      <div className="flex items-center gap-1.5 flex-1 min-w-[140px] bg-slate-900/90 px-2.5 py-1 rounded-lg border border-slate-800">
+                        <FileCode size={13} className="text-amber-400 shrink-0" />
+                        <span className="text-[10px] text-slate-400 shrink-0">Env:</span>
                         <select
                           disabled={!isEnabled}
                           value={cfg.env_filename || ''}
@@ -278,46 +312,41 @@ export default function BundleDeploymentTab({
                               [app.id]: { ...prev[app.id], env_filename: val }
                             }));
                           }}
-                          className="px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 text-[10.5px] text-amber-300 font-mono focus:outline-none focus:border-sky-500/50 cursor-pointer disabled:opacity-40 max-w-[130px]"
+                          className="w-full bg-transparent text-[10.5px] text-amber-300 font-mono focus:outline-none cursor-pointer disabled:opacity-40"
                           title="File .env backend"
                         >
-                          <option value="">(.env Server)</option>
+                          <option value="" className="bg-slate-900 text-slate-400">(.env Server Default)</option>
                           {envFiles.map((f, idx) => {
                             const fname = typeof f === 'string' ? f : (f.name || f.filename || `env-${idx}`);
                             return (
-                              <option key={fname} value={fname}>
+                              <option key={fname} value={fname} className="bg-slate-900 text-amber-300">
                                 {fname}
                               </option>
                             );
                           })}
                         </select>
-
-                        {/* Prisma Toggle Chip */}
-                        <label
-                          className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-bold cursor-pointer transition-all ${
-                            cfg.run_prisma_migrate
-                              ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-sm'
-                              : 'bg-slate-900/80 border-slate-800 text-slate-500 hover:text-slate-400'
-                          } ${!isEnabled ? 'opacity-40 pointer-events-none' : ''}`}
-                          title="Jalankan npx prisma migrate dev"
-                        >
-                          <input
-                            type="checkbox"
-                            disabled={!isEnabled}
-                            checked={Boolean(cfg.run_prisma_migrate)}
-                            onChange={(e) => {
-                              const checked = e.target.checked;
-                              setBackendConfigs(prev => ({
-                                ...prev,
-                               [app.id]: { ...prev[app.id], run_prisma_migrate: checked }
-                              }));
-                            }}
-                            className="hidden"
-                          />
-                          <Database size={10} />
-                          <span>{cfg.run_prisma_migrate ? 'Migrate' : 'No Mig'}</span>
-                        </label>
                       </div>
+
+                      {/* Prisma Migration Toggle */}
+                      <button
+                        type="button"
+                        disabled={!isEnabled}
+                        onClick={() => {
+                          setBackendConfigs(prev => ({
+                            ...prev,
+                            [app.id]: { ...prev[app.id], run_prisma_migrate: !cfg.run_prisma_migrate }
+                          }));
+                        }}
+                        className={`flex items-center justify-center gap-1.5 px-3 py-1 rounded-lg border text-[10.5px] font-bold transition-all cursor-pointer shrink-0 ${
+                          cfg.run_prisma_migrate
+                            ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300 shadow-sm shadow-emerald-500/10'
+                            : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:text-slate-300 hover:border-slate-700'
+                        } ${!isEnabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+                        title="Jalankan npx prisma migrate dev"
+                      >
+                        <Database size={12} className={cfg.run_prisma_migrate ? 'text-emerald-400' : 'text-slate-500'} />
+                        <span>{cfg.run_prisma_migrate ? 'Prisma: Migrate' : 'No Migrate'}</span>
+                      </button>
                     </div>
                   </div>
                 );
@@ -326,33 +355,39 @@ export default function BundleDeploymentTab({
           </div>
         </div>
 
-        {/* Right Column (5 cols): 2 Screen Apps + Execution Hero Card */}
-        <div className="xl:col-span-5 flex flex-col gap-4">
-          {/* Section B: 2 Frontend Screen Applications */}
-          <div className="glass-card p-4 sm:p-5 rounded-2xl border border-purple-500/20 bg-slate-900/60 backdrop-blur-md shadow-xl">
-            <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80 mb-3">
-              <div className="flex items-center gap-2">
-                <Tv size={16} className="text-purple-400" />
-                <h3 className="text-xs font-black text-white uppercase tracking-wider">
-                  B. 2 Layar Frontend (Debian .deb)
-                </h3>
+        {/* Section B: 2 Layar Frontend Screen Apps (5 cols on lg/xl screens) */}
+        <div className="lg:col-span-5 flex flex-col">
+          <div className="glass-card p-4 sm:p-5 rounded-2xl border border-purple-500/20 bg-slate-900/60 backdrop-blur-md shadow-xl flex-1 flex flex-col">
+            {/* Section Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-3.5">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-purple-500/15 text-purple-400 border border-purple-500/30">
+                  <Tv size={16} />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black text-white uppercase tracking-wider">
+                    B. 2 Layar Frontend
+                  </h3>
+                  <span className="text-[10px] text-slate-400">Debian .deb Application Packages</span>
+                </div>
               </div>
 
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-bold text-purple-300 bg-purple-500/15 px-2 py-0.5 rounded-md border border-purple-500/30">
-                  {activeFrontendCount}/2 Aktif
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono font-bold text-purple-300 bg-purple-500/15 px-2 py-0.5 rounded-full border border-purple-500/30">
+                  {activeFrontendCount} / 2 Aktif
                 </span>
                 <button
                   type="button"
                   onClick={() => setAllFrontend(activeFrontendCount < 2)}
-                  className="text-[10px] font-semibold text-slate-400 hover:text-white px-1.5 py-0.5 rounded hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="text-[10.5px] font-semibold text-slate-400 hover:text-white px-2 py-0.5 rounded-md hover:bg-slate-800 transition-colors cursor-pointer border border-transparent hover:border-slate-700"
                 >
                   {activeFrontendCount < 2 ? 'Pilih Semua' : 'Batal'}
                 </button>
               </div>
             </div>
 
-            <div className="space-y-2">
+            {/* Frontend Apps List */}
+            <div className="flex flex-col gap-2.5">
               {FRONTEND_APPS.map(app => {
                 const cfg = frontendConfigs[app.id] || { enabled: true, version: '' };
                 const isEnabled = cfg.enabled !== false;
@@ -360,89 +395,109 @@ export default function BundleDeploymentTab({
                 return (
                   <div
                     key={app.id}
-                    className={`p-2.5 rounded-xl border transition-all ${
+                    className={`rounded-xl border transition-all p-3.5 ${
                       isEnabled
-                        ? 'bg-slate-950/90 border-purple-500/30 shadow-sm'
+                        ? 'bg-slate-950/80 border-purple-500/30 shadow-md shadow-purple-950/10'
                         : 'bg-slate-950/30 border-slate-800/60 opacity-50'
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2.5">
+                    <div className="flex items-center justify-between gap-2 pb-2 mb-2 border-b border-slate-800/60">
+                      <label className="flex items-center gap-2.5 cursor-pointer select-none min-w-0">
                         <input
                           type="checkbox"
                           checked={isEnabled}
                           onChange={() => toggleFrontendAppActive(app.id)}
                           className="w-4 h-4 rounded text-purple-500 bg-slate-900 border-slate-700 cursor-pointer accent-purple-500 shrink-0"
                         />
-                        <div>
-                          <div className="font-extrabold text-xs text-white flex items-center gap-1.5">
-                            <span>{app.label}</span>
-                            <span className="text-[8.5px] font-mono text-purple-400 bg-purple-500/10 px-1 py-0.1 rounded border border-purple-500/20">
-                              {app.id}
-                            </span>
-                          </div>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className={`font-bold text-xs truncate ${isEnabled ? 'text-white' : 'text-slate-400'}`}>
+                            {app.label}
+                          </span>
+                          <span className="text-[9px] font-mono text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded border border-purple-500/20 shrink-0">
+                            {app.id}
+                          </span>
                         </div>
-                      </div>
+                      </label>
 
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-[10.5px] font-bold text-purple-300 bg-purple-950/80 px-2 py-1 rounded-lg border border-purple-500/30 truncate max-w-[130px]" title={cfg.version}>
-                          {cfg.version || '0.0.0'}
-                        </span>
-                        <span className="text-[9px] font-mono text-slate-400 bg-slate-900 px-1.5 py-1 rounded border border-slate-800 hidden sm:inline">
-                          dpkg -i
-                        </span>
-                      </div>
+                      {/* Version Pill */}
+                      <span
+                        className="font-mono text-[10.5px] font-bold text-purple-300 bg-purple-950/90 px-2 py-0.5 rounded-md border border-purple-500/30 shrink-0"
+                        title={cfg.version || '0.0.0'}
+                      >
+                        {cfg.version || '0.0.0'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[10.5px] text-slate-400 pt-0.5">
+                      <span className="flex items-center gap-1.5">
+                        <Package size={12} className="text-purple-400" />
+                        <span>Debian Package (.deb)</span>
+                      </span>
+                      <span className="text-[9.5px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+                        sudo dpkg -i
+                      </span>
                     </div>
                   </div>
                 );
               })}
             </div>
+
+            {/* Info Hint Box */}
+            <div className="mt-4 p-3 rounded-xl bg-purple-950/20 border border-purple-500/20 text-[11px] text-purple-300 flex items-start gap-2.5">
+              <Info size={15} className="shrink-0 text-purple-400 mt-0.5" />
+              <span className="leading-relaxed">
+                Frontend Screen Apps akan di-deploy menggunakan sistem Debian package (.deb) melalui MinIO Screen-Apps repository.
+              </span>
+            </div>
           </div>
+        </div>
+      </div>
 
-          {/* Section C: Summary & Deployment Action Trigger */}
-          <div className="p-5 rounded-2xl bg-gradient-to-br from-cyan-950/60 via-slate-950 to-blue-950/60 border border-cyan-500/40 shadow-2xl flex-1 flex flex-col justify-between gap-4">
+      {/* 4. Step 3: Full-Width Pipeline Execution Summary & Action Trigger Bar */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-950 via-cyan-950/40 to-slate-950 border border-cyan-500/30 shadow-2xl">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+          {/* Left: Summary Metrics */}
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 shrink-0">
+              <Sparkles size={20} />
+            </div>
             <div>
-              <div className="flex items-center gap-2.5 mb-2">
-                <div className="p-2 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shrink-0">
-                  <Sparkles size={16} />
-                </div>
-                <h4 className="font-black text-white text-xs uppercase tracking-wider">
-                  Ringkasan Pipeline Eksekusi
-                </h4>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 my-3 text-[11px]">
-                <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
-                  <span className="text-slate-400 text-[10px] block">Target POD v3:</span>
-                  <span className="font-mono font-black text-cyan-300 text-xs">
-                    {selectedServerIds.length} Unit
-                  </span>
-                </div>
-
-                <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
-                  <span className="text-slate-400 text-[10px] block">Aplikasi Terpilih:</span>
-                  <span className="font-mono font-black text-white text-xs">
-                    {totalActiveApps} / 7 Apps
-                  </span>
-                </div>
-              </div>
-
-              <div className="text-[11px] text-slate-400 bg-black/40 p-2.5 rounded-xl border border-slate-800/80 font-mono">
-                Total Tugas: <span className="text-cyan-300 font-bold">{totalTasks} Tugas Pipeline</span>
+              <h4 className="font-black text-white text-xs uppercase tracking-wider">
+                Ringkasan Pipeline Eksekusi
+              </h4>
+              <div className="flex items-center gap-2 sm:gap-3 mt-1.5 flex-wrap">
+                <span className="text-[11px] text-slate-400 bg-slate-900/90 px-2.5 py-1 rounded-lg border border-slate-800">
+                  Target POD: <strong className="text-cyan-300 font-mono">{selectedServerIds.length} Unit</strong>
+                </span>
+                <span className="text-[11px] text-slate-400 bg-slate-900/90 px-2.5 py-1 rounded-lg border border-slate-800">
+                  Aplikasi: <strong className="text-white font-mono">{totalActiveApps}/7</strong> ({activeBackendCount} BE + {activeFrontendCount} FE)
+                </span>
+                <span className="text-[11px] text-slate-400 bg-slate-900/90 px-2.5 py-1 rounded-lg border border-slate-800">
+                  Total Tugas: <strong className="text-cyan-300 font-mono">{totalTasks} Pipeline</strong>
+                </span>
               </div>
             </div>
+          </div>
 
+          {/* Right: Deploy Button */}
+          <div className="shrink-0 flex items-center">
             <button
+              type="button"
               onClick={onStartDeploy}
               disabled={isDeploying || selectedServerIds.length === 0 || totalActiveApps === 0}
-              className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-cyan-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full lg:w-auto min-w-[240px] py-3 px-5 rounded-xl bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
             >
-              <Play size={15} className="fill-white" />
-              <span>
-                {isDeploying
-                  ? 'Sedang Menjalankan Pipeline...'
-                  : `🚀 Mulai Deployment Bundle (${totalActiveApps} Aplikasi)`}
-              </span>
+              {isDeploying ? (
+                <>
+                  <RefreshCw size={16} className="animate-spin" />
+                  <span>Sedang Menjalankan Pipeline...</span>
+                </>
+              ) : (
+                <>
+                  <Play size={16} className="fill-white" />
+                  <span>Mulai Deployment ({totalActiveApps} Apps, {selectedServerIds.length} POD)</span>
+                </>
+              )}
             </button>
           </div>
         </div>

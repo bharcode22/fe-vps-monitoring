@@ -29,7 +29,28 @@ import BundleDeploymentTab from '../components/installation/BundleDeploymentTab'
 export default function InstallationPage({ onBack }) {
   const { user } = useAuth();
   // Main Tab Navigation State ('backend' | 'frontend' | 'bundles' | 'bundle_deploy' | 'matrix' | 'history' | 'artifacts')
-  const [activeTab, setActiveTab] = useState('backend');
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      const saved = localStorage.getItem('vps_monitoring_installation_tab');
+      const validTabs = ['backend', 'frontend', 'bundles', 'bundle_deploy', 'matrix', 'history', 'artifacts'];
+      if (saved && validTabs.includes(saved)) {
+        // If saved was bundle_deploy without bundle active session, fall back to bundles
+        return saved === 'bundle_deploy' ? 'bundles' : saved;
+      }
+    } catch (e) {
+      console.error('Failed to read installation tab from localStorage:', e);
+    }
+    return 'backend';
+  });
+
+  // Persist activeTab changes to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('vps_monitoring_installation_tab', activeTab);
+    } catch (e) {
+      console.error('Failed to save installation tab to localStorage:', e);
+    }
+  }, [activeTab]);
 
   // Socket.io persistent connection reference
   const socketRef = useRef(null);
