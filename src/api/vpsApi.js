@@ -1005,3 +1005,58 @@ export function getPodFileStreamUrl(serverId, filePath) {
   return `${BACKEND_URL}/api/vps/content/pods/file-stream?serverId=${encodeURIComponent(serverId)}&filePath=${encodeURIComponent(filePath)}`;
 }
 
+/**
+ * Inspect Docker disk usage (BuildKit cache, dangling images, container logs, volumes) on a single POD
+ */
+export async function inspectSinglePodDockerApi(serverId) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/storage/docker/inspect/${encodeURIComponent(serverId)}`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal menginspeksi Docker di server POD');
+  return data.data;
+}
+
+/**
+ * Inspect Docker disk usage across all POD v3 servers in parallel
+ */
+export async function inspectAllPodsDockerApi() {
+  const res = await fetch(`${BACKEND_URL}/api/vps/storage/docker/inspect-all`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal menginspeksi Docker di seluruh POD');
+  return data.data;
+}
+
+/**
+ * Execute Docker cleanup on a single POD server
+ * cleanType: 'safe' | 'deep' | 'logs' | 'all'
+ */
+export async function cleanupSinglePodDockerApi(serverId, cleanType = 'safe') {
+  const res = await fetch(`${BACKEND_URL}/api/vps/storage/docker/cleanup`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ serverId, cleanType })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal membersihkan Docker storage');
+  return data.data;
+}
+
+/**
+ * Execute Docker cleanup in batch across multiple/all POD servers
+ */
+export async function cleanupBatchPodsDockerApi(serverIds = [], cleanType = 'safe') {
+  const res = await fetch(`${BACKEND_URL}/api/vps/storage/docker/cleanup-batch`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ serverIds, cleanType })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memproses pembersihan batch Docker');
+  return data;
+}
+
+

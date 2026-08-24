@@ -22,7 +22,8 @@ import {
   ShieldCheck,
   Globe,
   FileCode,
-  Sparkles
+  Sparkles,
+  HardDrive
 } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { useLanguage } from '../context/LanguageContext';
@@ -80,10 +81,10 @@ export default function Navbar({
     }
   });
 
-  const isToolsActive = ['sync', 'sounds-comparison', 'metadata-comparison', 'rabbitmq', 'env-manager', 'content-manager', 'content'].includes(currentView);
+  const isToolsActive = ['sync', 'sounds-comparison', 'metadata-comparison', 'rabbitmq', 'env-manager', 'storage-manager', 'storage', 'content-manager', 'content'].includes(currentView);
 
   const getToolsLabel = () => {
-    if (currentView === 'content-manager' || currentView === 'content') return 'Content Manager';
+    if (currentView === 'storage-manager' || currentView === 'storage' || currentView === 'content-manager' || currentView === 'content') return 'Storage & Docker Manager';
     if (currentView === 'sync') return 'Database Sync';
     if (currentView === 'env-manager') return 'Environment Manager';
     if (currentView === 'sounds-comparison') return 'Compare Sounds';
@@ -91,6 +92,7 @@ export default function Navbar({
     if (currentView === 'rabbitmq') return 'RabbitMQ Monitor';
     return 'Lainnya / Tools';
   };
+
 
   return (
     <header className="sticky top-0 z-50 rounded-b-2xl px-3 sm:px-5 lg:px-6 py-3 mb-6 backdrop-blur-xl bg-slate-900/90 border-b border-cyan-500/20 shadow-2xl transition-all duration-300">
@@ -264,26 +266,27 @@ export default function Navbar({
                         </div>
                       </button>
 
-                      {/* Content Manager */}
+                      {/* Storage & Docker Manager */}
                       <button
                         onClick={() => {
-                          onNavigateView('content-manager');
+                          onNavigateView('storage-manager');
                           setIsToolsMenuOpen(false);
                         }}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-colors cursor-pointer text-xs font-bold ${currentView === 'content-manager' || currentView === 'content'
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-colors cursor-pointer text-xs font-bold ${['storage-manager', 'storage', 'content-manager', 'content'].includes(currentView)
                           ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'
                           : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                           }`}
                       >
-                        <Sparkles size={15} className="text-cyan-400 shrink-0" />
+                        <HardDrive size={15} className="text-cyan-400 shrink-0" />
                         <div className="flex-1">
                           <div className="flex items-center gap-1.5">
-                            <span>Content Manager</span>
-                            <span className="text-[8.5px] font-bold px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300">BETA</span>
+                            <span>Storage &amp; Docker Manager</span>
+                            <span className="text-[8.5px] font-bold px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300">1 TB</span>
                           </div>
-                          <div className="text-[10px] text-slate-400 font-normal">Audio, Strobe, Video &amp; Gambar</div>
+                          <div className="text-[10px] text-slate-400 font-normal">Sampah Build Docker &amp; Media Disk</div>
                         </div>
                       </button>
+
 
                       {/* Environment Manager & Diff */}
                       <button
@@ -659,17 +662,18 @@ export default function Navbar({
 
                   <button
                     onClick={() => {
-                      onNavigateView('content-manager');
+                      onNavigateView('storage-manager');
                       setIsMobileMenuOpen(false);
                     }}
-                    className={`col-span-2 py-2 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${currentView === 'content-manager' || currentView === 'content'
+                    className={`col-span-2 py-2 px-3 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer ${['storage-manager', 'storage', 'content-manager', 'content'].includes(currentView)
                       ? 'bg-gradient-to-r from-cyan-500/30 to-purple-500/30 text-cyan-300 border border-cyan-500/40 shadow-sm'
                       : 'text-slate-400 hover:text-white'
                       }`}
                   >
-                    <Sparkles size={15} className="text-cyan-400" />
-                    <span>Content Manager (Audio/Strobe/Video/Img)</span>
+                    <HardDrive size={15} className="text-cyan-400" />
+                    <span>Storage &amp; Docker Manager (1 TB &amp; Build Junk)</span>
                   </button>
+
 
                   <button
                     onClick={() => {

@@ -16,7 +16,7 @@ import MetadataComparisonPage from './pages/MetadataComparisonPage';
 import RabbitMqMonitorPage from './pages/RabbitMqMonitorPage';
 import InstallationPage from './pages/InstallationPage';
 import EnvManagerPage from './pages/EnvManagerPage';
-import ContentManagementPage from './pages/ContentManagementPage';
+import StorageManagerPage from './pages/StorageManagerPage';
 import DashboardPage from './pages/DashboardPage';
 import { useServers } from './hooks/useServers';
 import { useSocket } from './hooks/useSocket';
@@ -179,8 +179,8 @@ export default function App() {
       />
 
       {/* Render View: Dashboard, Server List, Installation, or Tools */}
-      {currentView === 'content-manager' || currentView === 'content' ? (
-        <ContentManagementPage onBack={() => setCurrentView('dashboard')} />
+      {currentView === 'storage-manager' || currentView === 'storage' || currentView === 'content-manager' || currentView === 'content' ? (
+        <StorageManagerPage onBack={() => setCurrentView('dashboard')} />
       ) : currentView === 'env-manager' ? (
         <EnvManagerPage onBack={() => setCurrentView('dashboard')} />
       ) : currentView === 'installation' || currentView === 'instalation' ? (
