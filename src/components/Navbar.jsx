@@ -281,7 +281,6 @@ export default function Navbar({
                         <div className="flex-1">
                           <div className="flex items-center gap-1.5">
                             <span>Storage &amp; Docker Manager</span>
-                            <span className="text-[8.5px] font-bold px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300">1 TB</span>
                           </div>
                           <div className="text-[10px] text-slate-400 font-normal">Sampah Build Docker &amp; Media Disk</div>
                         </div>

@@ -62,7 +62,11 @@ export function useServers() {
       return serverArray.map(srv => {
         const match = metricsList.find(m => String(m.id) === String(srv.id) && (m.type ? m.type === (srv.type || 'vps') : true));
         if (match && match.currentMetrics) {
-          return { ...srv, currentMetrics: match.currentMetrics };
+          return {
+            ...srv,
+            status: match.currentMetrics.status || srv.status,
+            currentMetrics: match.currentMetrics
+          };
         }
         return srv;
       });

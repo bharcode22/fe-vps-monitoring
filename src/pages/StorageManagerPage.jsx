@@ -5,6 +5,7 @@ import {
   RefreshCw,
   Cloud,
   CheckCircle2,
+  AlertTriangle,
   Trash2,
   Zap,
   Folder,
@@ -40,6 +41,7 @@ export default function StorageManagerPage({ onBack }) {
   // =========================================================================
   const [storageData, setStorageData] = useState(null);
   const [isStorageLoading, setIsStorageLoading] = useState(false);
+  const [storageError, setStorageError] = useState('');
   const [dockerInspections, setDockerInspections] = useState({}); // { [serverId]: inspectionData }
   const [isInspectingAll, setIsInspectingAll] = useState(false);
   const [inspectingSinglePodId, setInspectingSinglePodId] = useState(null);
@@ -99,6 +101,7 @@ export default function StorageManagerPage({ onBack }) {
 
   const loadStorageAndDockerData = async () => {
     setIsStorageLoading(true);
+    setStorageError('');
     try {
       const summary = await fetchPodsStorageSummaryApi('v3');
       setStorageData(summary);
@@ -106,6 +109,7 @@ export default function StorageManagerPage({ onBack }) {
       handleInspectAllDocker();
     } catch (err) {
       console.error('Error fetching storage summary:', err.message);
+      setStorageError(err.message || 'Gagal memuat status storage POD. Pastikan Anda sudah login.');
     } finally {
       setIsStorageLoading(false);
     }
@@ -410,6 +414,22 @@ export default function StorageManagerPage({ onBack }) {
           </span>
         </div>
       </div>
+
+      {/* Storage Error Alert Banner */}
+      {storageError && (
+        <div className="mb-5 p-4 rounded-2xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs flex items-center justify-between gap-3 shadow-lg animate-in fade-in duration-200">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle size={18} className="shrink-0 text-rose-400" />
+            <span className="font-semibold">{storageError}</span>
+          </div>
+          <button
+            onClick={() => loadStorageAndDockerData()}
+            className="px-3 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 font-bold rounded-xl border border-rose-500/40 cursor-pointer transition-colors"
+          >
+            Coba Lagi
+          </button>
+        </div>
+      )}
 
       {/* Success Notification Banner */}
       {successToast && (
