@@ -188,15 +188,6 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
               <Activity size={16} /> Metrik & Grafik Real-time
             </button>
 
-            {/* SSH Terminal Tab Button */}
-            <button
-              onClick={() => setIsTerminalModalOpen(true)}
-              className="px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-sm"
-              title="Buka Konsol SSH Interaktif"
-            >
-              <TerminalIcon size={16} /> SSH Terminal
-            </button>
-
             <button
               onClick={() => setViewMode('docker')}
               className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${viewMode === 'docker'
@@ -292,170 +283,170 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
           ) : viewMode === 'versions' && isAuthenticated ? (
             <InstalledVersionsTab server={server} />
           ) : (
-          <div>
-            {/* Real-time Current Metrics Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5 mb-6">
+            <div>
+              {/* Real-time Current Metrics Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5 mb-6">
 
-              {/* CPU Card */}
-              <div className="bg-sky-500/5 border border-sky-500/20 rounded-2xl p-4">
-                <span className="text-xs text-slate-400 flex items-center gap-1.5">
-                  <Cpu size={16} className="text-sky-400" /> CPU Load ({metrics.cpu_cores || metrics.cpuCores || 1} Cores)
-                </span>
-                <div className="font-mono text-2xl font-bold text-sky-400 my-2">
-                  {metrics.cpu_usage || metrics.cpuUsage || 0}%
-                </div>
-                <div className="progress-bar-bg">
-                  <div className="progress-bar-fill bg-sky-400" style={{ width: `${metrics.cpu_usage || 0}%` }}></div>
-                </div>
-              </div>
-
-              {/* RAM Card */}
-              <div className="bg-purple-500/5 border border-purple-500/20 rounded-2xl p-4">
-                <div className="flex justify-between items-center">
+                {/* CPU Card */}
+                <div className="bg-sky-500/5 border border-sky-500/20 rounded-2xl p-4">
                   <span className="text-xs text-slate-400 flex items-center gap-1.5">
-                    <HardDrive size={16} className="text-purple-400" /> RAM Memory
+                    <Cpu size={16} className="text-sky-400" /> CPU Load ({metrics.cpu_cores || metrics.cpuCores || 1} Cores)
                   </span>
-                  <span className="font-mono text-xs text-purple-400 font-semibold">
-                    {metrics.ram_usage || metrics.ramUsage || 0}%
-                  </span>
-                </div>
-                <div className="font-mono text-2xl font-bold text-purple-400 my-2">
-                  {formatMbToGb(metrics.ram_used_mb || metrics.ramUsedMb)}
-                  <span className="text-xs text-slate-400 font-normal ml-1">
-                    / {formatMbToGb(metrics.ram_total_mb || metrics.ramTotalMb)}
-                  </span>
-                </div>
-                <div className="progress-bar-bg">
-                  <div className="progress-bar-fill bg-purple-400" style={{ width: `${metrics.ram_usage || 0}%` }}></div>
-                </div>
-              </div>
-
-              {/* Disk Card */}
-              <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-slate-400 flex items-center gap-1.5">
-                    <HardDrive size={16} className="text-amber-400" /> Disk Storage
-                  </span>
-                  <span className="font-mono text-xs text-amber-400 font-semibold">
-                    {metrics.disk_usage || metrics.diskUsage || 0}%
-                  </span>
-                </div>
-                <div className="font-mono text-2xl font-bold text-amber-400 my-2">
-                  {metrics.disk_used_gb || metrics.diskUsedGb || 0} GB
-                  <span className="text-xs text-slate-400 font-normal ml-1">
-                    / {metrics.disk_total_gb || metrics.diskTotalGb || 0} GB
-                  </span>
-                </div>
-                <div className="progress-bar-bg">
-                  <div className="progress-bar-fill bg-amber-400" style={{ width: `${metrics.disk_usage || 0}%` }}></div>
-                </div>
-              </div>
-
-              {/* Bandwidth Card */}
-              <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-4">
-                <span className="text-xs text-slate-400 flex items-center gap-1.5">
-                  <Zap size={16} className="text-emerald-400" /> Bandwidth Speed
-                </span>
-                <div className="my-2 flex flex-col gap-1 font-mono text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-400 flex items-center gap-1"><ArrowDown size={14} className="text-cyan-400" /> Download:</span>
-                    <span className="text-cyan-400 font-bold">{(metrics.bandwidth_rx_speed || metrics.bandwidthRxSpeed || 0).toFixed(1)} KB/s</span>
+                  <div className="font-mono text-2xl font-bold text-sky-400 my-2">
+                    {metrics.cpu_usage || metrics.cpuUsage || 0}%
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-400 flex items-center gap-1"><ArrowUp size={14} className="text-purple-400" /> Upload:</span>
-                    <span className="text-purple-400 font-bold">{(metrics.bandwidth_tx_speed || metrics.bandwidthTxSpeed || 0).toFixed(1)} KB/s</span>
+                  <div className="progress-bar-bg">
+                    <div className="progress-bar-fill bg-sky-400" style={{ width: `${metrics.cpu_usage || 0}%` }}></div>
                   </div>
                 </div>
+
+                {/* RAM Card */}
+                <div className="bg-purple-500/5 border border-purple-500/20 rounded-2xl p-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-slate-400 flex items-center gap-1.5">
+                      <HardDrive size={16} className="text-purple-400" /> RAM Memory
+                    </span>
+                    <span className="font-mono text-xs text-purple-400 font-semibold">
+                      {metrics.ram_usage || metrics.ramUsage || 0}%
+                    </span>
+                  </div>
+                  <div className="font-mono text-2xl font-bold text-purple-400 my-2">
+                    {formatMbToGb(metrics.ram_used_mb || metrics.ramUsedMb)}
+                    <span className="text-xs text-slate-400 font-normal ml-1">
+                      / {formatMbToGb(metrics.ram_total_mb || metrics.ramTotalMb)}
+                    </span>
+                  </div>
+                  <div className="progress-bar-bg">
+                    <div className="progress-bar-fill bg-purple-400" style={{ width: `${metrics.ram_usage || 0}%` }}></div>
+                  </div>
+                </div>
+
+                {/* Disk Card */}
+                <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-slate-400 flex items-center gap-1.5">
+                      <HardDrive size={16} className="text-amber-400" /> Disk Storage
+                    </span>
+                    <span className="font-mono text-xs text-amber-400 font-semibold">
+                      {metrics.disk_usage || metrics.diskUsage || 0}%
+                    </span>
+                  </div>
+                  <div className="font-mono text-2xl font-bold text-amber-400 my-2">
+                    {metrics.disk_used_gb || metrics.diskUsedGb || 0} GB
+                    <span className="text-xs text-slate-400 font-normal ml-1">
+                      / {metrics.disk_total_gb || metrics.diskTotalGb || 0} GB
+                    </span>
+                  </div>
+                  <div className="progress-bar-bg">
+                    <div className="progress-bar-fill bg-amber-400" style={{ width: `${metrics.disk_usage || 0}%` }}></div>
+                  </div>
+                </div>
+
+                {/* Bandwidth Card */}
+                <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-4">
+                  <span className="text-xs text-slate-400 flex items-center gap-1.5">
+                    <Zap size={16} className="text-emerald-400" /> Bandwidth Speed
+                  </span>
+                  <div className="my-2 flex flex-col gap-1 font-mono text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400 flex items-center gap-1"><ArrowDown size={14} className="text-cyan-400" /> Download:</span>
+                      <span className="text-cyan-400 font-bold">{(metrics.bandwidth_rx_speed || metrics.bandwidthRxSpeed || 0).toFixed(1)} KB/s</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400 flex items-center gap-1"><ArrowUp size={14} className="text-purple-400" /> Upload:</span>
+                      <span className="text-purple-400 font-bold">{(metrics.bandwidth_tx_speed || metrics.bandwidthTxSpeed || 0).toFixed(1)} KB/s</span>
+                    </div>
+                  </div>
+                </div>
+
               </div>
 
-            </div>
+              {/* GPU Status Card (If Available) */}
+              {hasGpu && (
+                <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-4.5 mb-6">
+                  <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+                    <div className="flex items-center gap-2">
+                      <Zap size={18} className="text-emerald-400" />
+                      <h4 className="text-sm font-bold text-white">GPU Card: {metrics.gpu_name || metrics.gpuName}</h4>
+                    </div>
+                    <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-bold">
+                      Suhu: {metrics.gpu_temp || metrics.gpuTemp || 0}°C
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-slate-400">GPU Core Compute:</span>
+                        <span className="text-emerald-400 font-bold font-mono">{metrics.gpu_usage || metrics.gpuUsage || 0}%</span>
+                      </div>
+                      <div className="progress-bar-bg">
+                        <div className="progress-bar-fill bg-emerald-400" style={{ width: `${metrics.gpu_usage || 0}%` }}></div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-slate-400">VRAM Memory Usage:</span>
+                        <span className="text-emerald-400 font-bold font-mono">{metrics.gpu_memory_usage || metrics.gpuMemoryUsage || 0}%</span>
+                      </div>
+                      <div className="progress-bar-bg">
+                        <div className="progress-bar-fill bg-emerald-400" style={{ width: `${metrics.gpu_memory_usage || 0}%` }}></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-            {/* GPU Status Card (If Available) */}
-            {hasGpu && (
-              <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-4.5 mb-6">
-                <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+              {/* Interactive Real-time Recharts Component */}
+              <div className="bg-black/35 border border-slate-800 rounded-2xl p-5">
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                   <div className="flex items-center gap-2">
-                    <Zap size={18} className="text-emerald-400" />
-                    <h4 className="text-sm font-bold text-white">GPU Card: {metrics.gpu_name || metrics.gpuName}</h4>
+                    <Activity size={18} className="text-cyan-400" />
+                    <h4 className="text-sm font-bold text-white">Grafik Riwayat Performa Live (60 Poin Snapshot)</h4>
                   </div>
-                  <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-bold">
-                    Suhu: {metrics.gpu_temp || metrics.gpuTemp || 0}°C
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="text-slate-400">GPU Core Compute:</span>
-                      <span className="text-emerald-400 font-bold font-mono">{metrics.gpu_usage || metrics.gpuUsage || 0}%</span>
-                    </div>
-                    <div className="progress-bar-bg">
-                      <div className="progress-bar-fill bg-emerald-400" style={{ width: `${metrics.gpu_usage || 0}%` }}></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="text-slate-400">VRAM Memory Usage:</span>
-                      <span className="text-emerald-400 font-bold font-mono">{metrics.gpu_memory_usage || metrics.gpuMemoryUsage || 0}%</span>
-                    </div>
-                    <div className="progress-bar-bg">
-                      <div className="progress-bar-fill bg-emerald-400" style={{ width: `${metrics.gpu_memory_usage || 0}%` }}></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
 
-            {/* Interactive Real-time Recharts Component */}
-            <div className="bg-black/35 border border-slate-800 rounded-2xl p-5">
-              <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-                <div className="flex items-center gap-2">
-                  <Activity size={18} className="text-cyan-400" />
-                  <h4 className="text-sm font-bold text-white">Grafik Riwayat Performa Live (60 Poin Snapshot)</h4>
-                </div>
-
-                {/* Metric Selector Tabs */}
-                <div className="flex gap-1.5 bg-black/40 p-1 rounded-xl border border-slate-800">
-                  <button
-                    onClick={() => setActiveTab('bandwidth')}
-                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${activeTab === 'bandwidth' ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-slate-200'
-                      }`}
-                  >
-                    Bandwidth
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('cpu')}
-                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${activeTab === 'cpu' ? 'bg-sky-500/20 text-sky-400' : 'text-slate-400 hover:text-slate-200'
-                      }`}
-                  >
-                    CPU
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('ram')}
-                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${activeTab === 'ram' ? 'bg-purple-500/20 text-purple-400' : 'text-slate-400 hover:text-slate-200'
-                      }`}
-                  >
-                    RAM
-                  </button>
-                  {hasGpu && (
+                  {/* Metric Selector Tabs */}
+                  <div className="flex gap-1.5 bg-black/40 p-1 rounded-xl border border-slate-800">
                     <button
-                      onClick={() => setActiveTab('gpu')}
-                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${activeTab === 'gpu' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400 hover:text-slate-200'
+                      onClick={() => setActiveTab('bandwidth')}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${activeTab === 'bandwidth' ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-slate-200'
                         }`}
                     >
-                      GPU
+                      Bandwidth
                     </button>
-                  )}
+                    <button
+                      onClick={() => setActiveTab('cpu')}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${activeTab === 'cpu' ? 'bg-sky-500/20 text-sky-400' : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                    >
+                      CPU
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('ram')}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${activeTab === 'ram' ? 'bg-purple-500/20 text-purple-400' : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                    >
+                      RAM
+                    </button>
+                    {hasGpu && (
+                      <button
+                        onClick={() => setActiveTab('gpu')}
+                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${activeTab === 'gpu' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                      >
+                        GPU
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              <MetricsChart
-                historyData={historyData}
-                serverName={server.name}
-                activeMetric={activeTab}
-              />
+                <MetricsChart
+                  historyData={historyData}
+                  serverName={server.name}
+                  activeMetric={activeTab}
+                />
+              </div>
             </div>
-          </div>
-        )}
+          )}
         </ErrorBoundary>
       </div>
 
