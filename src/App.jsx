@@ -19,6 +19,7 @@ import EnvManagerPage from './pages/EnvManagerPage';
 import StorageManagerPage from './pages/StorageManagerPage';
 import DashboardPage from './pages/DashboardPage';
 import PodTopicDebuggerPage from './pages/PodTopicDebuggerPage';
+import MasterPodSyncMatrixPage from './pages/MasterPodSyncMatrixPage';
 import { useServers } from './hooks/useServers';
 import { useSocket } from './hooks/useSocket';
 import { fetchSettingsApi, saveSettingApi } from './api/vpsApi';
@@ -162,7 +163,7 @@ export default function App() {
     : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3'
     }`;
 
-  const isFullWidthView = isTvMode || ['pod-topic-debugger', 'pod-topics', 'storage-manager', 'storage', 'content-manager', 'content'].includes(currentView);
+  const isFullWidthView = isTvMode || ['pod-topic-debugger', 'pod-topics', 'master-pod-sync', 'master-sync', 'storage-manager', 'storage', 'content-manager', 'content'].includes(currentView);
 
   return (
     <div className={`mx-auto pb-10 transition-all duration-300 ${isFullWidthView ? 'w-full max-w-[98%] 2xl:max-w-[1920px] px-2 sm:px-4 lg:px-6' : 'max-w-7xl px-4 sm:px-6'
@@ -184,7 +185,9 @@ export default function App() {
 
       {/* Render View: Dashboard, Server List, Installation, or Tools */}
       <ErrorBoundary title="Gagal Memuat Tampilan Halaman">
-      {currentView === 'pod-topic-debugger' || currentView === 'pod-topics' ? (
+      {currentView === 'master-pod-sync' || currentView === 'master-sync' ? (
+        <MasterPodSyncMatrixPage onBack={() => setCurrentView('dashboard')} />
+      ) : currentView === 'pod-topic-debugger' || currentView === 'pod-topics' ? (
         <PodTopicDebuggerPage onBack={() => setCurrentView('dashboard')} />
       ) : currentView === 'storage-manager' || currentView === 'storage' || currentView === 'content-manager' || currentView === 'content' ? (
         <StorageManagerPage onBack={() => setCurrentView('dashboard')} />

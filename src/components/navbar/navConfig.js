@@ -52,6 +52,15 @@ export const NAV_DROPDOWN_GROUPS = [
         bgActiveClass: 'bg-amber-500/15 text-amber-300 border-amber-500/30'
       },
       {
+        id: 'master-pod-sync',
+        aliases: ['master-sync'],
+        label: 'Master POD Sync Matrix',
+        desc: 'Audit & Sync Tabel Master ke Seluruh POD V3',
+        icon: Database,
+        colorClass: 'text-cyan-400',
+        bgActiveClass: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
+      },
+      {
         id: 'pod-topic-debugger',
         aliases: ['pod-topics'],
         label: 'POD Topic Matrix',

@@ -46,11 +46,10 @@ export default function NavbarNavDropdown({
       {/* Dropdown Button */}
       <button
         onClick={onToggle}
-        className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer border ${
-          active
-            ? `${activeStyles} shadow-sm`
-            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border-transparent'
-        }`}
+        className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer border ${active
+          ? `${activeStyles} shadow-sm`
+          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border-transparent'
+          }`}
       >
         <GroupIcon size={14} className={active ? iconColor : 'text-slate-500'} />
         <span>{active ? activeLabel : group.label}</span>
@@ -88,11 +87,10 @@ export default function NavbarNavDropdown({
                     onNavigateView(item.id);
                     onClose();
                   }}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-colors cursor-pointer text-xs font-bold border ${
-                    isItemActive
-                      ? item.bgActiveClass
-                      : 'text-slate-300 hover:bg-slate-800/80 hover:text-white border-transparent'
-                  }`}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-colors cursor-pointer text-xs font-bold border ${isItemActive
+                    ? item.bgActiveClass
+                    : 'text-slate-300 hover:bg-slate-800/80 hover:text-white border-transparent'
+                    }`}
                 >
                   <ItemIcon size={15} className={`${item.colorClass} shrink-0`} />
                   <div className="flex-1 overflow-hidden">
