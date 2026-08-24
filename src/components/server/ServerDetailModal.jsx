@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Server, Box, Cpu, HardDrive, ArrowDown, ArrowUp, Zap, Clock, ShieldCheck, Edit3, Activity, FileCode, Music, Layers, Sliders, Tv, Eye, EyeOff, Package } from 'lucide-react';
+import { X, Server, Box, Cpu, HardDrive, ArrowDown, ArrowUp, Zap, Clock, ShieldCheck, Edit3, Activity, FileCode, Music, Layers, Sliders, Tv, Eye, EyeOff, Package, Terminal as TerminalIcon } from 'lucide-react';
 import MetricsChart from '../MetricsChart';
 import { fetchServerHistoryApi } from '../../api/vpsApi';
 import { formatMbToGb } from '../../utils/formatters';
@@ -12,6 +12,7 @@ import ScriptExecTab from './ScriptExecTab';
 import SoundsTab from './SoundsTab';
 import PodConfigTab from './PodConfigTab';
 import InstalledVersionsTab from './InstalledVersionsTab';
+import SshTerminalModal from './SshTerminalModal';
 
 export default function ServerDetailModal({ server, onClose, onEdit }) {
   const { isAuthenticated } = useAuth();
@@ -19,6 +20,7 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
   const [viewMode, setViewMode] = useState('metrics'); // 'metrics' | 'docker' | 'scripts' | 'sounds'
   const [activeTab, setActiveTab] = useState('bandwidth');
   const [historyData, setHistoryData] = useState([]);
+  const [isTerminalModalOpen, setIsTerminalModalOpen] = useState(false);
 
   const serverId = server?.id;
   const metrics = server?.currentMetrics || {};
@@ -143,6 +145,18 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
               <span>{isOnline ? 'ONLINE' : 'OFFLINE'}</span>
             </div>
 
+            {/* SSH Terminal Quick Launch Button (Admin Only) */}
+            {isAuthenticated && (
+              <button
+                onClick={() => setIsTerminalModalOpen(true)}
+                className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-emerald-500/20 cursor-pointer"
+                title="Buka Terminal SSH Interaktif"
+              >
+                <TerminalIcon size={16} />
+                <span>SSH Terminal</span>
+              </button>
+            )}
+
             {/* Edit Button (Admin Only) */}
             {isAuthenticated && server.is_local !== 1 && (
               <button
@@ -172,6 +186,15 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
                 }`}
             >
               <Activity size={16} /> Metrik & Grafik Real-time
+            </button>
+
+            {/* SSH Terminal Tab Button */}
+            <button
+              onClick={() => setIsTerminalModalOpen(true)}
+              className="px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-sm"
+              title="Buka Konsol SSH Interaktif"
+            >
+              <TerminalIcon size={16} /> SSH Terminal
             </button>
 
             <button
@@ -435,6 +458,15 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
         )}
         </ErrorBoundary>
       </div>
+
+      {/* Interactive Web SSH Terminal Modal */}
+      {isTerminalModalOpen && (
+        <SshTerminalModal
+          isOpen={isTerminalModalOpen}
+          onClose={() => setIsTerminalModalOpen(false)}
+          server={server}
+        />
+      )}
     </div>
   );
 }
