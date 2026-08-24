@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Server, Box, Cpu, HardDrive, ArrowDown, ArrowUp, Zap, Clock, ShieldCheck, Edit3, Activity, FileCode, Music, Layers, Sliders, Tv, Eye, EyeOff, Package, Terminal as TerminalIcon } from 'lucide-react';
+import { X, Server, Box, Cpu, HardDrive, ArrowDown, ArrowUp, Zap, Clock, ShieldCheck, Edit3, Activity, FileCode, Music, Layers, Sliders, Tv, Eye, EyeOff, Package, Terminal as TerminalIcon, Radio } from 'lucide-react';
 import MetricsChart from '../MetricsChart';
 import { fetchServerHistoryApi } from '../../api/vpsApi';
 import { formatMbToGb } from '../../utils/formatters';
@@ -13,6 +13,7 @@ import SoundsTab from './SoundsTab';
 import PodConfigTab from './PodConfigTab';
 import InstalledVersionsTab from './InstalledVersionsTab';
 import SshTerminalModal from './SshTerminalModal';
+import PodTopicDiagnosticsTab from './PodTopicDiagnosticsTab';
 
 export default function ServerDetailModal({ server, onClose, onEdit }) {
   const { isAuthenticated } = useAuth();
@@ -263,6 +264,18 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
                 <Package size={16} /> Versi Aplikasi
               </button>
             )}
+
+            {isPod && (
+              <button
+                onClick={() => setViewMode('pod-topics')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${viewMode === 'pod-topics'
+                  ? 'bg-gradient-to-r from-teal-400 to-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                  : 'bg-white/5 text-slate-400 hover:text-slate-200'
+                  }`}
+              >
+                <Radio size={16} /> Topic DB (regenesis)
+              </button>
+            )}
           </div>
         )}
 
@@ -282,6 +295,8 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
             <PodConfigTab serverId={server.id} />
           ) : viewMode === 'versions' && isAuthenticated ? (
             <InstalledVersionsTab server={server} />
+          ) : viewMode === 'pod-topics' && isAuthenticated ? (
+            <PodTopicDiagnosticsTab serverId={server.id} />
           ) : (
             <div>
               {/* Real-time Current Metrics Grid */}
