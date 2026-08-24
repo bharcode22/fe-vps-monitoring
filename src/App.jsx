@@ -22,6 +22,7 @@ import { useServers } from './hooks/useServers';
 import { useSocket } from './hooks/useSocket';
 import { fetchSettingsApi, saveSettingApi } from './api/vpsApi';
 import { useAuth } from './context/AuthContext';
+import ErrorBoundary from './components/common/ErrorBoundary';
 import { Server, Database, HardDrive, Cpu, ShieldCheck } from 'lucide-react';
 
 export default function App() {
@@ -179,6 +180,7 @@ export default function App() {
       />
 
       {/* Render View: Dashboard, Server List, Installation, or Tools */}
+      <ErrorBoundary title="Gagal Memuat Tampilan Halaman">
       {currentView === 'storage-manager' || currentView === 'storage' || currentView === 'content-manager' || currentView === 'content' ? (
         <StorageManagerPage onBack={() => setCurrentView('dashboard')} />
       ) : currentView === 'env-manager' ? (
@@ -423,6 +425,7 @@ export default function App() {
           </main>
         </>
       )}
+      </ErrorBoundary>
 
       {/* Global Footer displayed on all pages */}
       <Footer />

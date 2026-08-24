@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, RefreshCw, Search, CheckCircle2, XCircle, AlertCircle, Layers, Play, Square, ExternalLink, Eye, EyeOff } from 'lucide-react';
-import { fetchDockerContainersApi, restartDockerContainerApi } from '../../api/vpsApi';
+import { fetchDockerContainersApi, restartDockerContainerApi, fetchScreenAppsApi, restartScreenAppApi } from '../../api/vpsApi';
 
 const TARGET_APPS = [
   { key: 'mobile-api', label: 'mobile-api', isGui: false },
@@ -39,7 +39,7 @@ export default function PodV3DockerMatrix({ vpsServers, onOpenServerDetail }) {
     return true;
   });
 
-  // Fetch Docker containers for all Pod V3 servers
+  // Fetch Docker containers & Screen Apps for all Pod V3 servers
   const fetchAllPodStatuses = async () => {
     if (podV3Servers.length === 0) return;
     setIsLoadingAll(true);
@@ -50,10 +50,17 @@ export default function PodV3DockerMatrix({ vpsServers, onOpenServerDetail }) {
       podV3Servers.map(async (server) => {
         newMap[server.id] = { ...(newMap[server.id] || {}), loading: true, error: null };
         try {
-          const containers = await fetchDockerContainersApi(server.id);
+          const [dockerContainers, screenApps] = await Promise.all([
+            fetchDockerContainersApi(server.id).catch(() => []),
+            fetchScreenAppsApi(server.id).catch(() => [])
+          ]);
+          const combined = [
+            ...(Array.isArray(dockerContainers) ? dockerContainers : []),
+            ...(Array.isArray(screenApps) ? screenApps : [])
+          ];
           newMap[server.id] = {
             server,
-            containers: Array.isArray(containers) ? containers : [],
+            containers: combined,
             loading: false,
             error: null,
             lastChecked: new Date().toLocaleTimeString()
@@ -63,7 +70,7 @@ export default function PodV3DockerMatrix({ vpsServers, onOpenServerDetail }) {
             server,
             containers: [],
             loading: false,
-            error: err.message || 'Gagal koneksi Docker SSH',
+            error: err.message || 'Gagal koneksi SSH',
             lastChecked: new Date().toLocaleTimeString()
           };
         }
@@ -78,19 +85,31 @@ export default function PodV3DockerMatrix({ vpsServers, onOpenServerDetail }) {
     fetchAllPodStatuses();
   }, [vpsServers?.length]);
 
-  // Restart a specific container on a pod
+  // Restart a specific container or screen app on a pod
   const handleRestartContainer = async (serverId, containerName) => {
     const key = `${serverId}-${containerName}`;
     setRestartingMap(prev => ({ ...prev, [key]: true }));
     try {
-      await restartDockerContainerApi(serverId, containerName);
+      const isGuiApp = containerName === 'small-screen' || containerName === 'big-screen';
+      if (isGuiApp) {
+        await restartScreenAppApi(serverId, containerName);
+      } else {
+        await restartDockerContainerApi(serverId, containerName);
+      }
       // Refresh status for this single server
-      const updatedContainers = await fetchDockerContainersApi(serverId);
+      const [updatedDocker, updatedScreen] = await Promise.all([
+        fetchDockerContainersApi(serverId).catch(() => []),
+        fetchScreenAppsApi(serverId).catch(() => [])
+      ]);
+      const combined = [
+        ...(Array.isArray(updatedDocker) ? updatedDocker : []),
+        ...(Array.isArray(updatedScreen) ? updatedScreen : [])
+      ];
       setPodStatusMap(prev => ({
         ...prev,
         [serverId]: {
           ...prev[serverId],
-          containers: updatedContainers,
+          containers: combined,
           lastChecked: new Date().toLocaleTimeString()
         }
       }));

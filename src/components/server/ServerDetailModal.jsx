@@ -4,6 +4,7 @@ import MetricsChart from '../MetricsChart';
 import { fetchServerHistoryApi } from '../../api/vpsApi';
 import { formatMbToGb } from '../../utils/formatters';
 import { useAuth } from '../../context/AuthContext';
+import ErrorBoundary from '../common/ErrorBoundary';
 import DockerContainerTab from './DockerContainerTab';
 import ScreenAppsTab from './ScreenAppsTab';
 import Pm2AppTab from './Pm2AppTab';
@@ -24,9 +25,11 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
 
   // Load 60 history points on mount & append live WebSocket metrics
   useEffect(() => {
+    let isMounted = true;
     if (!serverId) return;
     fetchServerHistoryApi(serverId)
       .then(data => {
+        if (!isMounted) return;
         const formatted = (data || []).map(item => ({
           cpu_usage: item.cpu_usage || 0,
           ram_usage: item.ram_usage || 0,
@@ -41,7 +44,13 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
         }));
         setHistoryData(formatted);
       })
-      .catch(err => console.error(`Error loading history for server ${serverId}:`, err));
+      .catch(err => {
+        if (isMounted) console.error(`Error loading history for server ${serverId}:`, err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [serverId]);
 
   useEffect(() => {
@@ -175,15 +184,17 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
               <Box size={16} /> Docker Apps
             </button>
 
-            <button
-              onClick={() => setViewMode('screen')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${viewMode === 'screen'
-                ? 'bg-gradient-to-r from-indigo-400 to-purple-500 text-slate-950 shadow-md shadow-indigo-500/20'
-                : 'bg-white/5 text-slate-400 hover:text-slate-200'
-                }`}
-            >
-              <Tv size={16} /> Screen Apps
-            </button>
+            {isPod && (
+              <button
+                onClick={() => setViewMode('screen')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${viewMode === 'screen'
+                  ? 'bg-gradient-to-r from-indigo-400 to-purple-500 text-slate-950 shadow-md shadow-indigo-500/20'
+                  : 'bg-white/5 text-slate-400 hover:text-slate-200'
+                  }`}
+              >
+                <Tv size={16} /> Screen Apps
+              </button>
+            )}
 
             <button
               onClick={() => setViewMode('pm2')}
@@ -241,22 +252,23 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
           </div>
         )}
 
-        {/* Dynamic Content View */}
-        {viewMode === 'docker' && isAuthenticated ? (
-          <DockerContainerTab serverId={server.id} />
-        ) : viewMode === 'screen' && isAuthenticated ? (
-          <ScreenAppsTab serverId={server.id} />
-        ) : viewMode === 'pm2' && isAuthenticated ? (
-          <Pm2AppTab serverId={server.id} />
-        ) : viewMode === 'scripts' && isAuthenticated ? (
-          <ScriptExecTab serverId={server.id} />
-        ) : viewMode === 'sounds' && isAuthenticated ? (
-          <SoundsTab serverId={server.id} />
-        ) : viewMode === 'pod-config' && isAuthenticated ? (
-          <PodConfigTab serverId={server.id} />
-        ) : viewMode === 'versions' && isAuthenticated ? (
-          <InstalledVersionsTab server={server} />
-        ) : (
+        {/* Dynamic Content View with Error Boundary Protection */}
+        <ErrorBoundary title="Gagal Memuat Tab Detail Server">
+          {viewMode === 'docker' && isAuthenticated ? (
+            <DockerContainerTab serverId={server.id} />
+          ) : viewMode === 'screen' && isAuthenticated ? (
+            <ScreenAppsTab serverId={server.id} />
+          ) : viewMode === 'pm2' && isAuthenticated ? (
+            <Pm2AppTab serverId={server.id} />
+          ) : viewMode === 'scripts' && isAuthenticated ? (
+            <ScriptExecTab serverId={server.id} />
+          ) : viewMode === 'sounds' && isAuthenticated ? (
+            <SoundsTab serverId={server.id} />
+          ) : viewMode === 'pod-config' && isAuthenticated ? (
+            <PodConfigTab serverId={server.id} />
+          ) : viewMode === 'versions' && isAuthenticated ? (
+            <InstalledVersionsTab server={server} />
+          ) : (
           <div>
             {/* Real-time Current Metrics Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5 mb-6">
@@ -421,6 +433,7 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
             </div>
           </div>
         )}
+        </ErrorBoundary>
       </div>
     </div>
   );

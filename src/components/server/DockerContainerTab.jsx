@@ -79,7 +79,10 @@ export default function DockerContainerTab({ serverId }) {
     setErrorMsg('');
     try {
       const data = await fetchDockerContainersApi(serverId);
-      setContainers(data);
+      const pureContainers = (Array.isArray(data) ? data : []).filter(
+        c => !c.isSystemApp && !c.id?.startsWith('sys-')
+      );
+      setContainers(pureContainers);
     } catch (err) {
       setErrorMsg(err.message || 'Gagal memuat daftar container Docker.');
     } finally {

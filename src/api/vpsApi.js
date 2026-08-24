@@ -12,6 +12,33 @@ function getAuthHeaders() {
 }
 
 /**
+ * Safe fetch wrapper that handles HTML error pages, non-JSON responses, and timeouts cleanly
+ */
+export async function safeFetchJson(url, options = {}) {
+  const defaultHeaders = getAuthHeaders();
+  const mergedHeaders = {
+    ...defaultHeaders,
+    ...(options.headers || {})
+  };
+
+  const res = await fetch(url, {
+    ...options,
+    headers: mergedHeaders
+  });
+
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    const text = await res.text();
+    if (!res.ok) {
+      throw new Error(`Server Error (${res.status}): ${text.substring(0, 120) || res.statusText}`);
+    }
+    throw new Error('Respon server tidak berformat JSON.');
+  }
+
+  return await res.json();
+}
+
+/**
  * Fetch registered servers with optional category filter & search query
  */
 export async function fetchServersApi(searchQuery = '', filterType = 'all') {
@@ -24,8 +51,7 @@ export async function fetchServersApi(searchQuery = '', filterType = 'all') {
   const param = searchQuery.trim() ? `?q=${encodeURIComponent(searchQuery.trim())}` : '';
   const url = `${BACKEND_URL}${endpoint}${param}`;
 
-  const res = await fetch(url, { headers: getAuthHeaders() });
-  const data = await res.json();
+  const data = await safeFetchJson(url);
   if (!data.success) throw new Error(data.error || 'Gagal mengambil data layanan');
   return data.data;
 }
@@ -34,8 +60,7 @@ export async function fetchServersApi(searchQuery = '', filterType = 'all') {
  * Fetch historical metrics for a specific server
  */
 export async function fetchServerHistoryApi(serverId) {
-  const res = await fetch(`${BACKEND_URL}/api/vps/${serverId}/history`, { headers: getAuthHeaders() });
-  const data = await res.json();
+  const data = await safeFetchJson(`${BACKEND_URL}/api/vps/${serverId}/history`);
   if (!data.success) throw new Error(data.error || 'Gagal mengambil riwayat statistik');
   return data.data;
 }
@@ -166,10 +191,7 @@ export async function updateUserStatusApi(userId, status, role) {
  * Fetch all Docker containers for a specific server (Admin only)
  */
 export async function fetchDockerContainersApi(serverId) {
-  const res = await fetch(`${BACKEND_URL}/api/vps/${serverId}/docker`, {
-    headers: getAuthHeaders()
-  });
-  const data = await res.json();
+  const data = await safeFetchJson(`${BACKEND_URL}/api/vps/${serverId}/docker`);
   if (!data.success) throw new Error(data.error || 'Gagal mengambil daftar container Docker');
   return data.data;
 }
@@ -178,12 +200,10 @@ export async function fetchDockerContainersApi(serverId) {
  * Restart a Docker container (Admin only)
  */
 export async function restartDockerContainerApi(serverId, containerName) {
-  const res = await fetch(`${BACKEND_URL}/api/vps/${serverId}/docker/restart`, {
+  const data = await safeFetchJson(`${BACKEND_URL}/api/vps/${serverId}/docker/restart`, {
     method: 'POST',
-    headers: getAuthHeaders(),
     body: JSON.stringify({ containerName })
   });
-  const data = await res.json();
   if (!data.success) throw new Error(data.error || 'Gagal merestart container');
   return data;
 }
@@ -192,25 +212,64 @@ export async function restartDockerContainerApi(serverId, containerName) {
  * Stop a Docker container (Admin only)
  */
 export async function stopDockerContainerApi(serverId, containerName) {
-  const res = await fetch(`${BACKEND_URL}/api/vps/${serverId}/docker/stop`, {
+  const data = await safeFetchJson(`${BACKEND_URL}/api/vps/${serverId}/docker/stop`, {
     method: 'POST',
-    headers: getAuthHeaders(),
     body: JSON.stringify({ containerName })
   });
-  const data = await res.json();
   if (!data.success) throw new Error(data.error || 'Gagal menghentikan (stop) container');
   return data;
 }
 
 /**
- * Fetch logs for a Docker container or System GUI App (Admin only)
+ * Fetch logs for a Docker container (Admin only)
  */
 export async function fetchDockerLogsApi(serverId, containerName) {
-  const res = await fetch(`${BACKEND_URL}/api/vps/${serverId}/docker/${encodeURIComponent(containerName)}/logs`, {
-    headers: getAuthHeaders()
-  });
-  const data = await res.json();
+  const data = await safeFetchJson(`${BACKEND_URL}/api/vps/${serverId}/docker/${encodeURIComponent(containerName)}/logs`);
   if (!data.success) throw new Error(data.error || 'Gagal mengambil log container');
+  if (typeof data.data === 'string') return data.data;
+  if (data.data && typeof data.data.logs === 'string') return data.data.logs;
+  return typeof data.data === 'object' ? JSON.stringify(data.data, null, 2) : String(data.data || '');
+}
+
+/**
+ * Fetch Screen Apps (small-screen & big-screen Native GUI) status (Admin only)
+ */
+export async function fetchScreenAppsApi(serverId) {
+  const data = await safeFetchJson(`${BACKEND_URL}/api/vps/${serverId}/screen-apps`);
+  if (!data.success) throw new Error(data.error || 'Gagal mengambil status Screen Apps');
+  return data.data;
+}
+
+/**
+ * Restart Screen App (small-screen / big-screen) (Admin only)
+ */
+export async function restartScreenAppApi(serverId, appName) {
+  const data = await safeFetchJson(`${BACKEND_URL}/api/vps/${serverId}/screen-apps/restart`, {
+    method: 'POST',
+    body: JSON.stringify({ appName })
+  });
+  if (!data.success) throw new Error(data.error || `Gagal merestart aplikasi ${appName}`);
+  return data;
+}
+
+/**
+ * Stop Screen App (small-screen / big-screen) (Admin only)
+ */
+export async function stopScreenAppApi(serverId, appName) {
+  const data = await safeFetchJson(`${BACKEND_URL}/api/vps/${serverId}/screen-apps/stop`, {
+    method: 'POST',
+    body: JSON.stringify({ appName })
+  });
+  if (!data.success) throw new Error(data.error || `Gagal menghentikan (stop) aplikasi ${appName}`);
+  return data;
+}
+
+/**
+ * Fetch logs for Screen App (small-screen / big-screen) (Admin only)
+ */
+export async function fetchScreenAppLogsApi(serverId, appName) {
+  const data = await safeFetchJson(`${BACKEND_URL}/api/vps/${serverId}/screen-apps/${encodeURIComponent(appName)}/logs`);
+  if (!data.success) throw new Error(data.error || `Gagal mengambil log aplikasi ${appName}`);
   if (typeof data.data === 'string') return data.data;
   if (data.data && typeof data.data.logs === 'string') return data.data.logs;
   return typeof data.data === 'object' ? JSON.stringify(data.data, null, 2) : String(data.data || '');
