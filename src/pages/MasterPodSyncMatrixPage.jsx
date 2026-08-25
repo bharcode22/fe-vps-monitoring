@@ -67,7 +67,8 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
     serverId: null,
     tableName: '',
     pkColumn: 'id',
-    pkValue: null
+    pkValue: null,
+    pkValues: []
   });
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -118,26 +119,24 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
   const handleOpenTableDetail = async (tableName) => {
     setSelectedTableName(tableName);
     setViewMode('detail');
+    setMatrixData(null);
     setIsComparing(true);
     setError('');
-    setMatrixData(null);
 
     try {
       const data = await fetchMasterTableMatrixApi(selectedMasterId, tableName);
       setMatrixData(data);
       if (data?.pods?.length > 0) {
-        // Default to first online pod or first pod
-        const firstOnline = data.pods.find(p => p.isOnline);
-        setActivePodId(firstOnline ? firstOnline.id : data.pods[0].id);
+        setActivePodId(data.pods[0].id);
       }
     } catch (err) {
-      setError(err.message || `Gagal memuat data komparasi tabel '${tableName}'.`);
+      setError(err.message || 'Gagal membandingkan tabel across PODs.');
     } finally {
       setIsComparing(false);
     }
   };
 
-  // Reload current matrix comparison
+  // 4. Refresh Current Matrix
   const handleRefreshCurrentMatrix = async () => {
     if (!selectedMasterId || !selectedTableName) return;
     setIsComparing(true);
@@ -146,25 +145,19 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
       const data = await fetchMasterTableMatrixApi(selectedMasterId, selectedTableName);
       setMatrixData(data);
     } catch (err) {
-      setError(err.message || 'Gagal memuat ulang data matriks.');
+      setError(err.message || 'Gagal memuat ulang matriks.');
     } finally {
       setIsComparing(false);
     }
   };
 
-  // 4. Trigger Sync Modals
+  // 5. Bulk Sync Modal Handlers
   const triggerBulkSync = () => {
-    if (!matrixData) return;
-    const mismatchOnlineIds = matrixData.pods
+    const mismatchIds = (matrixData?.pods || [])
       .filter(p => p.isOnline && p.status !== 'SYNCED')
       .map(p => p.id);
 
-    if (mismatchOnlineIds.length === 0) {
-      const allOnlineIds = matrixData.pods.filter(p => p.isOnline).map(p => p.id);
-      setTargetPodIds(allOnlineIds);
-    } else {
-      setTargetPodIds(mismatchOnlineIds);
-    }
+    setTargetPodIds(mismatchIds);
     setSyncModalOpen(true);
   };
 
@@ -173,17 +166,16 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
     setSyncModalOpen(true);
   };
 
-  // 5. Execute Sync
   const handlePerformSync = async () => {
     if (!selectedMasterId || !selectedTableName || targetPodIds.length === 0) {
-      setError('Pilih minimal satu target POD online.');
+      setError('Parameter sinkronisasi belum lengkap.');
       return;
     }
 
     setIsSyncing(true);
     setError('');
     try {
-      const res = await performMasterSyncApi({
+      const result = await performMasterSyncApi({
         masterId: Number(selectedMasterId),
         tableName: selectedTableName,
         targetPodIds,
@@ -193,68 +185,144 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
       });
 
       setSuccessMsg(
-        `Sukses! ${dryRun ? 'Simulasi' : 'Sinkronisasi'} tabel '${selectedTableName}' berhasil dijalankan ke ${res.successfulTargets} target POD.`
+        dryRun
+          ? `Simulasi selesai: Berhasil simulasi ke ${result.successfulTargets || 0} POD.`
+          : `Sinkronisasi Live Berhasil! ${result.successfulTargets || 0} POD berhasil diperbarui.`
       );
+
       setSyncModalOpen(false);
       await handleRefreshCurrentMatrix();
       setTimeout(() => setSuccessMsg(''), 6000);
     } catch (err) {
-      setError(err.message || 'Gagal melakukan sinkronisasi ke POD.');
+      setError(err.message || 'Gagal mengeksekusi sinkronisasi.');
     } finally {
       setIsSyncing(false);
     }
   };
 
-  // 6. Delete Row Handlers
-  const handlePromptDeleteMasterRow = ({ pkColumn, pkValue }) => {
+  // 6. Delete Row Handlers (Single & Bulk with Cascade)
+  const handlePromptDeleteMasterRow = ({ pkColumn, pkValue, pkValues }) => {
     const master = masterDatabases.find(d => String(d.id) === String(selectedMasterId));
+    const values = Array.isArray(pkValues) && pkValues.length > 0 ? pkValues : (pkValue !== undefined ? [pkValue] : []);
     setDeleteModal({
       isOpen: true,
       targetType: 'master',
       targetName: master ? master.name : 'Master DB',
+      serverHost: master ? `${master.host}:${master.port || 5432}` : '',
       serverId: null,
       tableName: selectedTableName,
-      pkColumn: pkColumn || 'id',
-      pkValue
+      pkColumn: pkColumn || matrixData?.master?.pkColumn || 'id',
+      pkValue: values[0],
+      pkValues: values
     });
   };
 
-  const handlePromptDeletePodRow = ({ serverId, serverName, pkColumn, pkValue }) => {
+  const handlePromptDeletePodRow = ({ serverId, serverName, pkColumn, pkValue, pkValues }) => {
+    const podObj = (matrixData?.pods || []).find(p => p.id === serverId);
+    const values = Array.isArray(pkValues) && pkValues.length > 0 ? pkValues : (pkValue !== undefined ? [pkValue] : []);
     setDeleteModal({
       isOpen: true,
       targetType: 'pod',
-      targetName: serverName || `POD #${serverId}`,
+      targetName: podObj?.name || serverName || `POD #${serverId}`,
+      serverHost: podObj?.host || podObj?.ip_address || '',
       serverId,
       tableName: selectedTableName,
       pkColumn: pkColumn || 'id',
-      pkValue
+      pkValue: values[0],
+      pkValues: values
     });
   };
 
-  const handleExecuteDelete = async () => {
+  const handleExecuteDelete = async ({ cascade = true, pkValues } = {}) => {
     setIsDeleting(true);
     setError('');
+    const valuesToDelete = (Array.isArray(pkValues) && pkValues.length > 0) ? pkValues : deleteModal.pkValues;
+    const keysSet = new Set(valuesToDelete.map(String));
+
     try {
       if (deleteModal.targetType === 'master') {
-        await deleteMasterRowApi({
+        const res = await deleteMasterRowApi({
           masterId: Number(selectedMasterId),
           tableName: deleteModal.tableName,
           pkColumn: deleteModal.pkColumn,
-          pkValue: deleteModal.pkValue
+          pkValues: valuesToDelete,
+          cascade
         });
-        setSuccessMsg(`Baris (${deleteModal.pkColumn} = ${deleteModal.pkValue}) berhasil dihapus dari Master Database.`);
+        setSuccessMsg(`Sukses! ${res.deletedCount || valuesToDelete.length} baris data berhasil di-Hard Delete dari Master Database${cascade && res.cascadeCount > 0 ? ` (+${res.cascadeCount} data relasi)` : ''}.`);
+
+        // 🚀 Optimistic Instant State Update (No full matrix reload!)
+        setMatrixData(prev => {
+          if (!prev) return prev;
+          const updatedDataMatrix = (prev.dataMatrix || []).filter(item => {
+            const pkVal = item.sampleData?.[deleteModal.pkColumn] !== undefined ? item.sampleData[deleteModal.pkColumn] : item.rowKey;
+            const key = String(pkVal);
+            if (keysSet.has(key)) {
+              if (!item.presentCount || item.presentCount === 0) return false;
+              item.inMaster = false;
+              item.isPodOnly = true;
+              return true;
+            }
+            return true;
+          });
+
+          return {
+            ...prev,
+            master: {
+              ...prev.master,
+              rowCount: Math.max(0, (prev.master?.rowCount || 0) - (res.deletedCount || valuesToDelete.length))
+            },
+            dataMatrix: updatedDataMatrix
+          };
+        });
       } else {
-        await deletePodRowApi({
+        const res = await deletePodRowApi({
           serverId: Number(deleteModal.serverId),
           tableName: deleteModal.tableName,
           pkColumn: deleteModal.pkColumn,
-          pkValue: deleteModal.pkValue
+          pkValues: valuesToDelete,
+          cascade
         });
-        setSuccessMsg(`Baris (${deleteModal.pkColumn} = ${deleteModal.pkValue}) berhasil dihapus dari ${deleteModal.targetName}.`);
+        setSuccessMsg(`Sukses! ${res.deletedCount || valuesToDelete.length} baris data berhasil di-Hard Delete dari ${deleteModal.targetName}${cascade && res.cascadeCount > 0 ? ` (+${res.cascadeCount} data relasi)` : ''}.`);
+
+        // 🚀 Optimistic Instant State Update (No full matrix reload!)
+        setMatrixData(prev => {
+          if (!prev) return prev;
+          const targetServerId = Number(deleteModal.serverId);
+
+          const updatedDataMatrix = (prev.dataMatrix || []).filter(item => {
+            const pkVal = item.sampleData?.[deleteModal.pkColumn] !== undefined ? item.sampleData[deleteModal.pkColumn] : item.rowKey;
+            const key = String(pkVal);
+            if (keysSet.has(key)) {
+              if (item.isPodOnly && (item.originPodId === targetServerId || item.presentCount <= 1)) {
+                return false;
+              }
+              if (item.presence && item.presence[targetServerId]) {
+                item.presence[targetServerId] = { isOnline: true, present: false };
+                item.presentCount = Math.max(0, item.presentCount - 1);
+              }
+            }
+            return true;
+          });
+
+          const updatedPods = (prev.pods || []).map(p => {
+            if (p.id === targetServerId) {
+              return {
+                ...p,
+                rowCount: Math.max(0, (p.rowCount || 0) - (res.deletedCount || valuesToDelete.length))
+              };
+            }
+            return p;
+          });
+
+          return {
+            ...prev,
+            pods: updatedPods,
+            dataMatrix: updatedDataMatrix
+          };
+        });
       }
 
       setDeleteModal(prev => ({ ...prev, isOpen: false }));
-      await handleRefreshCurrentMatrix();
       setTimeout(() => setSuccessMsg(''), 6000);
     } catch (err) {
       setError(err.message || 'Gagal menghapus baris data.');
@@ -322,6 +390,43 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
       setTimeout(() => setSuccessMsg(''), 6000);
     } catch (err) {
       setError(err.message || `Gagal menyinkronkan baris ke ${serverName}: ${err.message}`);
+    }
+  };
+
+  // D. Pull all data from POD to Master (POD ➔ Master)
+  const handleSyncPodToMaster = async (pod) => {
+    setError('');
+    try {
+      const res = await syncPodToMasterApi({
+        masterId: Number(selectedMasterId),
+        serverId: Number(pod.id),
+        tableName: selectedTableName,
+        dryRun: false
+      });
+      setSuccessMsg(`Sukses! ${res.rowsProcessed || 0} baris dari ${pod.name} berhasil ditarik dan disinkronkan ke Master Database.`);
+      await handleRefreshCurrentMatrix();
+      setTimeout(() => setSuccessMsg(''), 6000);
+    } catch (err) {
+      setError(err.message || `Gagal menarik data dari ${pod.name}: ${err.message}`);
+    }
+  };
+
+  // E. Pull 1 single row from POD to Master (POD ➔ Master)
+  const handleSyncSinglePodRowToMaster = async ({ serverId, serverName, pkColumn, pkValue }) => {
+    setError('');
+    try {
+      await syncSinglePodRowApi({
+        masterId: Number(selectedMasterId),
+        serverId: Number(serverId),
+        tableName: selectedTableName,
+        pkColumn: pkColumn || 'id',
+        pkValue
+      });
+      setSuccessMsg(`Sukses! 1 baris (${pkColumn} = ${pkValue}) dari ${serverName} berhasil ditarik ke Master DB.`);
+      await handleRefreshCurrentMatrix();
+      setTimeout(() => setSuccessMsg(''), 6000);
+    } catch (err) {
+      setError(err.message || `Gagal menarik baris dari ${serverName}: ${err.message}`);
     }
   };
 
@@ -434,9 +539,13 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
             onQuickSyncPod={triggerSinglePodSync}
             onBulkSync={triggerBulkSync}
             onDeleteMasterRow={handlePromptDeleteMasterRow}
+            onDeleteMultipleRows={handlePromptDeleteMasterRow}
             onDeletePodRow={handlePromptDeletePodRow}
+            onDeleteMultiplePodRows={handlePromptDeletePodRow}
             onSyncSingleRow={handlePromptSyncSingleRowMaster}
             onSyncSingleRowToPod={handleQuickSyncSingleRowToSpecificPod}
+            onSyncPodToMaster={handleSyncPodToMaster}
+            onSyncSinglePodRowToMaster={handleSyncSinglePodRowToMaster}
           />
         )
       )}
@@ -479,16 +588,18 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
         />
       )}
 
-      {/* MANUAL DELETE CONFIRMATION MODAL */}
+      {/* MANUAL / BULK DELETE CONFIRMATION MODAL */}
       {deleteModal.isOpen && (
         <DeleteRowConfirmationModal
           isOpen={deleteModal.isOpen}
           onClose={() => setDeleteModal(prev => ({ ...prev, isOpen: false }))}
           targetType={deleteModal.targetType}
           targetName={deleteModal.targetName}
+          serverHost={deleteModal.serverHost}
           tableName={deleteModal.tableName}
           pkColumn={deleteModal.pkColumn}
           pkValue={deleteModal.pkValue}
+          pkValues={deleteModal.pkValues}
           isDeleting={isDeleting}
           onConfirmDelete={handleExecuteDelete}
         />

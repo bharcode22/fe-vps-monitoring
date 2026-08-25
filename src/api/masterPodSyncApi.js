@@ -102,3 +102,25 @@ export async function syncSingleMasterRowApi(payload) {
   });
   return res.data;
 }
+
+/**
+ * Pull all / filtered data from a target POD to Master Database (POD ➔ Master)
+ */
+export async function syncPodToMasterApi(payload) {
+  const res = await safeFetchJson(`${BASE_URL}/pod-to-master`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  return res.data;
+}
+
+/**
+ * Sync 1 single row from target POD to Master Database (POD ➔ Master)
+ */
+export async function syncSinglePodRowApi(payload) {
+  const res = await safeFetchJson(`${BASE_URL}/sync-single-pod-row`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  return res.data;
+}
