@@ -60,6 +60,14 @@ export async function fetchMasterTableMatrixApi(masterId, tableName) {
 }
 
 /**
+ * Fetch Fleet-Wide Discrepancy & Health Audit across all 95 Tables and all PODs
+ */
+export async function fetchFleetAuditApi(masterId) {
+  const res = await safeFetchJson(`${BASE_URL}/fleet-audit?masterId=${masterId}`);
+  return res.data;
+}
+
+/**
  * Execute Sync from Master to selected PODs (Dry-Run or Live)
  */
 export async function performMasterSyncApi(payload) {

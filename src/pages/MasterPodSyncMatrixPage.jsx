@@ -6,12 +6,15 @@ import {
   CheckCircle2,
   Table,
   Layers,
-  Database
+  Database,
+  Activity,
+  Sparkles
 } from 'lucide-react';
 import {
   fetchMasterDatabasesApi,
   fetchMasterTablesApi,
   fetchMasterTableMatrixApi,
+  fetchFleetAuditApi,
   performMasterSyncApi,
   deleteMasterRowApi,
   deletePodRowApi,
@@ -20,6 +23,7 @@ import {
   syncSinglePodRowApi
 } from '../api/masterPodSyncApi';
 import MasterTablesCatalogView from '../components/masterPodSync/MasterTablesCatalogView';
+import FleetSyncAuditView from '../components/masterPodSync/FleetSyncAuditView';
 import TableDetailWorkspaceView from '../components/masterPodSync/TableDetailWorkspaceView';
 import MasterPodSyncModal from '../components/masterPodSync/MasterPodSyncModal';
 import MasterPodSkeleton from '../components/masterPodSync/MasterPodSkeleton';
@@ -28,7 +32,7 @@ import SingleRowSyncModal from '../components/masterPodSync/SingleRowSyncModal';
 import SyncProgressReportModal from '../components/masterPodSync/SyncProgressReportModal';
 
 export default function MasterPodSyncMatrixPage({ onBack }) {
-  // View mode: 'catalog' (Level 1: Tables Grid) | 'detail' (Level 2: Detail Workspace)
+  // View mode: 'catalog' (Level 1: Tables Grid) | 'audit' (Level 1B: Fleet Audit) | 'detail' (Level 2: Detail Workspace)
   const [viewMode, setViewMode] = useState('catalog');
 
   // Master Databases & Tables State
@@ -37,6 +41,10 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
   const [tables, setTables] = useState([]);
   const [selectedTableName, setSelectedTableName] = useState('');
   const [isLoadingTables, setIsLoadingTables] = useState(false);
+
+  // Fleet Audit State
+  const [auditData, setAuditData] = useState(null);
+  const [isLoadingAudit, setIsLoadingAudit] = useState(false);
 
   // Active POD for Level 2 inspection
   const [activePodId, setActivePodId] = useState(null);
@@ -126,11 +134,29 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
     }
   };
 
+  // 2B. Fetch Fleet Audit Data across all 95 tables & all PODs
+  const loadFleetAudit = async (masterId) => {
+    if (!masterId) return;
+    setIsLoadingAudit(true);
+    setError('');
+    try {
+      const data = await fetchFleetAuditApi(masterId);
+      setAuditData(data);
+    } catch (err) {
+      setError(err.message || 'Gagal memindai disparitas armada.');
+    } finally {
+      setIsLoadingAudit(false);
+    }
+  };
+
   useEffect(() => {
     if (selectedMasterId) {
       loadMasterTables(selectedMasterId);
+      if (viewMode === 'audit') {
+        loadFleetAudit(selectedMasterId);
+      }
     }
-  }, [selectedMasterId]);
+  }, [selectedMasterId, viewMode]);
 
   // 3. Open Detail Workspace for a specific Table
   const handleOpenTableDetail = async (tableName) => {
@@ -895,6 +921,8 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
             onClick={() => {
               if (viewMode === 'detail') {
                 setViewMode('catalog');
+              } else if (viewMode === 'audit') {
+                setViewMode('catalog');
               } else {
                 onBack();
               }
@@ -910,7 +938,11 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
                 Master Multi-POD Sync Matrix
               </h1>
               <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30">
-                {viewMode === 'catalog' ? 'Katalog Master' : `Tabel: ${selectedTableName}`}
+                {viewMode === 'catalog'
+                  ? 'Katalog Master'
+                  : viewMode === 'audit'
+                    ? '🔍 Audit Disparitas 95 Tabel'
+                    : `Tabel: ${selectedTableName}`}
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
@@ -919,8 +951,43 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
           </div>
         </div>
 
-        {/* Global Action: Back / Refresh */}
-        <div className="flex items-center gap-3">
+        {/* Global Action: Mode Switcher / Refresh */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {/* View Mode Switcher (Catalog vs Fleet Audit) */}
+          {viewMode !== 'detail' && (
+            <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 shadow-inner">
+              <button
+                onClick={() => setViewMode('catalog')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${viewMode === 'catalog'
+                  ? 'bg-purple-500/25 text-purple-300 border border-purple-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+                  }`}
+              >
+                <Table size={13} />
+                <span>Katalog ({tables.length})</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setViewMode('audit');
+                  if (!auditData) loadFleetAudit(selectedMasterId);
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${viewMode === 'audit'
+                  ? 'bg-cyan-500/25 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+                  }`}
+              >
+                <Activity size={13} className="text-cyan-400" />
+                <span>Audit Disparitas Armada</span>
+                {auditData?.summary?.discrepantTables > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full bg-amber-500/30 text-amber-300 text-[10px] font-mono">
+                    {auditData.summary.discrepantTables}
+                  </span>
+                )}
+              </button>
+            </div>
+          )}
+
           {viewMode === 'detail' && (
             <button
               onClick={() => setViewMode('catalog')}
@@ -934,12 +1001,13 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
           <button
             onClick={() => {
               if (viewMode === 'detail') handleRefreshCurrentMatrix();
+              else if (viewMode === 'audit') loadFleetAudit(selectedMasterId);
               else loadMasterTables(selectedMasterId);
             }}
-            disabled={isLoadingTables || isComparing}
+            disabled={isLoadingTables || isComparing || isLoadingAudit}
             className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors border border-slate-700 cursor-pointer shadow-sm disabled:opacity-50"
           >
-            <RefreshCw size={14} className={isLoadingTables || isComparing ? 'animate-spin' : ''} />
+            <RefreshCw size={14} className={isLoadingTables || isComparing || isLoadingAudit ? 'animate-spin' : ''} />
             <span>Muat Ulang</span>
           </button>
         </div>
@@ -965,7 +1033,7 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
         </div>
       )}
 
-      {/* VIEW LEVEL 1: MASTER TABLES CATALOG */}
+      {/* VIEW LEVEL 1A: MASTER TABLES CATALOG */}
       {viewMode === 'catalog' && (
         <MasterTablesCatalogView
           masterDatabases={masterDatabases}
@@ -975,6 +1043,21 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
           isLoadingTables={isLoadingTables}
           onRefreshTables={() => loadMasterTables(selectedMasterId)}
           onSelectTableForDetail={handleOpenTableDetail}
+          onOpenFleetAudit={() => {
+            setViewMode('audit');
+            if (!auditData) loadFleetAudit(selectedMasterId);
+          }}
+        />
+      )}
+
+      {/* VIEW LEVEL 1B: FLEET SYNC AUDIT & DISCREPANCY ANALYZER */}
+      {viewMode === 'audit' && (
+        <FleetSyncAuditView
+          masterInfo={masterDatabases.find(d => String(d.id) === String(selectedMasterId))}
+          auditData={auditData}
+          isLoading={isLoadingAudit}
+          onRefreshAudit={() => loadFleetAudit(selectedMasterId)}
+          onOpenTableWorkspace={handleOpenTableDetail}
         />
       )}
 

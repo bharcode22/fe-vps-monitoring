@@ -6,17 +6,18 @@ import {
   RefreshCw,
   Layers,
   ChevronRight,
+  LayoutGrid,
+  Network,
+  Activity,
   Sparkles,
-  CheckCircle2,
   HardDrive,
   Link,
   ShieldCheck,
   GitFork,
-  SlidersHorizontal,
-  LayoutGrid,
-  Network
+  SlidersHorizontal
 } from 'lucide-react';
 import DatabaseSchemaGraphView from './DatabaseSchemaGraphView';
+import { MasterCatalogSkeleton } from './MasterPodSkeleton';
 
 export default function MasterTablesCatalogView({
   masterDatabases = [],
@@ -25,7 +26,8 @@ export default function MasterTablesCatalogView({
   tables = [],
   isLoadingTables,
   onRefreshTables,
-  onSelectTableForDetail
+  onSelectTableForDetail,
+  onOpenFleetAudit
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [relationFilter, setRelationFilter] = useState('all'); // 'all' | 'standalone' | 'parent' | 'child'
@@ -89,6 +91,18 @@ export default function MasterTablesCatalogView({
 
           {/* Master DB Selector, Mode Switcher & Refresh */}
           <div className="flex items-center justify-start sm:justify-end gap-2.5 w-full lg:w-auto flex-wrap lg:ml-auto shrink-0">
+            {/* Fleet Audit Discrepancy Button */}
+            {onOpenFleetAudit && (
+              <button
+                onClick={onOpenFleetAudit}
+                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer hover:scale-105"
+                title="Buka Analisis Disparitas & Audit Selisih Seluruh 95 Tabel di Semua POD"
+              >
+                <Activity size={13} className="text-amber-400" />
+                <span>🔍 Audit Disparitas 95 Tabel</span>
+              </button>
+            )}
+
             {/* View Mode Switcher: Cards vs Graph */}
             <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 shadow-inner">
               <button
@@ -205,17 +219,7 @@ export default function MasterTablesCatalogView({
       ) : (
         /* Cards Grid View */
         isLoadingTables ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
-              <div
-                key={n}
-                className="p-5 rounded-3xl bg-slate-900/40 border border-slate-800 animate-pulse h-44 flex flex-col justify-between"
-              >
-                <div className="h-4 w-32 bg-slate-800 rounded"></div>
-                <div className="h-3 w-20 bg-slate-800/60 rounded"></div>
-              </div>
-            ))}
-          </div>
+          <MasterCatalogSkeleton />
         ) : filteredTables.length === 0 ? (
           <div className="p-12 text-center bg-slate-900/60 border border-slate-800 rounded-3xl text-slate-500 text-xs flex flex-col items-center gap-2">
             <Table size={32} className="text-slate-600" />
