@@ -16,7 +16,8 @@ import {
   CheckSquare,
   Square,
   MinusSquare,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 
 export default function PodDataViewer({
@@ -29,13 +30,15 @@ export default function PodDataViewer({
   onDeletePodRow,
   onDeleteMultiplePodRows,
   onSyncSingleRowToPod,
-  onSyncSinglePodRowToMaster
+  onSyncSinglePodRowToMaster,
+  onQuickSyncSingleRow
 }) {
   const [activeSubTab, setActiveSubTab] = useState('data'); // 'data' | 'columns'
   const [filterMissingOnly, setFilterMissingOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedKey, setCopiedKey] = useState(null);
   const [selectedKeys, setSelectedKeys] = useState(new Set());
+  const [isPullingToMaster, setIsPullingToMaster] = useState(false);
 
   const pkColumn = masterInfo?.pkColumn || 'id';
 
@@ -211,12 +214,29 @@ export default function PodDataViewer({
           {/* Pull POD ➔ Master Button */}
           {onSyncPodToMaster && (
             <button
-              onClick={() => onSyncPodToMaster(pod)}
-              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-purple-500/20 transition-all cursor-pointer hover:scale-105"
+              disabled={isPullingToMaster}
+              onClick={async () => {
+                setIsPullingToMaster(true);
+                try {
+                  await onSyncPodToMaster(pod);
+                } finally {
+                  setIsPullingToMaster(false);
+                }
+              }}
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-purple-500/20 transition-all cursor-pointer hover:scale-105 disabled:opacity-50"
               title={`Tarik seluruh baris dari ${pod.name} dan simpan/gabungkan ke Master Database`}
             >
-              <UploadCloud size={14} />
-              <span>Tarik {pod.name} ➔ Master</span>
+              {isPullingToMaster ? (
+                <>
+                  <Loader2 size={14} className="animate-spin text-white" />
+                  <span>Menarik Data Pod {pod.name} ➔ Master...</span>
+                </>
+              ) : (
+                <>
+                  <UploadCloud size={14} />
+                  <span>{pod.name} ➔ Master</span>
+                </>
+              )}
             </button>
           )}
 
@@ -227,7 +247,7 @@ export default function PodDataViewer({
             title={`Kirim seluruh baris dari Master Database ke ${pod.name}`}
           >
             <DownloadCloud size={14} />
-            <span>Kirim Master ➔ {pod.name}</span>
+            <span>Master ➔ {pod.name}</span>
           </button>
         </div>
       </div>

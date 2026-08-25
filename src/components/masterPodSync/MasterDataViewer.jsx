@@ -32,7 +32,8 @@ export default function MasterDataViewer({
   onDeletePodRow,
   onDeleteMultiplePodRows,
   onSyncSingleRow,
-  onSyncSinglePodRowToMaster
+  onSyncSinglePodRowToMaster,
+  onBulkSyncPodRowsToMaster
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isTableExpanded, setIsTableExpanded] = useState(false);
@@ -366,28 +367,33 @@ export default function MasterDataViewer({
 
               <div className="flex items-center gap-2 flex-wrap">
                 {/* Pull/Upload to Master for POD-only selected rows */}
-                {allSelectedArePodOnly && onSyncSinglePodRowToMaster && (
+                {allSelectedArePodOnly && (onBulkSyncPodRowsToMaster || onSyncSinglePodRowToMaster) && (
                   <button
                     disabled={isBulkUploading}
                     onClick={async () => {
-                      setIsBulkUploading(true);
-                      try {
-                        for (const r of selectedRowsList) {
-                          const pkVal = r[pkColumn] !== undefined ? r[pkColumn] : r.__rowKey;
-                          const sId = r.__podIds?.[0] || r.__originPodId || targetPodIds[0];
-                          const sIds = r.__podIds || (r.__originPodId ? [r.__originPodId] : targetPodIds);
-                          const sName = r.__podSources?.join(', ') || r.__originPodName || targetPodNames;
-                          await onSyncSinglePodRowToMaster({
-                            serverId: sId,
-                            serverIds: sIds,
-                            serverName: sName,
-                            pkColumn,
-                            pkValue: pkVal
-                          }).catch(() => { });
-                        }
-                      } finally {
-                        setIsBulkUploading(false);
+                      if (onBulkSyncPodRowsToMaster) {
+                        await onBulkSyncPodRowsToMaster(selectedRowsList, pkColumn);
                         clearSelection();
+                      } else {
+                        setIsBulkUploading(true);
+                        try {
+                          for (const r of selectedRowsList) {
+                            const pkVal = r[pkColumn] !== undefined ? r[pkColumn] : r.__rowKey;
+                            const sId = r.__podIds?.[0] || r.__originPodId || targetPodIds[0];
+                            const sIds = r.__podIds || (r.__originPodId ? [r.__originPodId] : targetPodIds);
+                            const sName = r.__podSources?.join(', ') || r.__originPodName || targetPodNames;
+                            await onSyncSinglePodRowToMaster({
+                              serverId: sId,
+                              serverIds: sIds,
+                              serverName: sName,
+                              pkColumn,
+                              pkValue: pkVal
+                            }).catch(() => { });
+                          }
+                        } finally {
+                          setIsBulkUploading(false);
+                          clearSelection();
+                        }
                       }
                     }}
                     className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-purple-600/30 transition-all cursor-pointer hover:scale-105 disabled:opacity-50"

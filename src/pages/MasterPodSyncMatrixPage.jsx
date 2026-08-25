@@ -25,6 +25,7 @@ import MasterPodSyncModal from '../components/masterPodSync/MasterPodSyncModal';
 import MasterPodSkeleton from '../components/masterPodSync/MasterPodSkeleton';
 import DeleteRowConfirmationModal from '../components/masterPodSync/DeleteRowConfirmationModal';
 import SingleRowSyncModal from '../components/masterPodSync/SingleRowSyncModal';
+import SyncProgressReportModal from '../components/masterPodSync/SyncProgressReportModal';
 
 export default function MasterPodSyncMatrixPage({ onBack }) {
   // View mode: 'catalog' (Level 1: Tables Grid) | 'detail' (Level 2: Detail Workspace)
@@ -50,6 +51,20 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
   const [dryRun, setDryRun] = useState(false);
   const [syncColumns, setSyncColumns] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // Progress & Result Breakdown Modal State
+  const [progressModal, setProgressModal] = useState({
+    isOpen: false,
+    direction: 'master_to_pod',
+    isProcessing: false,
+    title: '',
+    tableName: '',
+    sourceName: '',
+    targetName: '',
+    progressPercent: 0,
+    currentStatusText: '',
+    report: null
+  });
 
   // Single Row Sync Modal State
   const [singleRowSyncModal, setSingleRowSyncModal] = useState({
@@ -174,8 +189,25 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
       return;
     }
 
+    const masterObj = masterDatabases.find(d => String(d.id) === String(selectedMasterId));
+    setSyncModalOpen(false);
     setIsSyncing(true);
     setError('');
+
+    // Open Live Progress Modal
+    setProgressModal({
+      isOpen: true,
+      direction: 'master_to_pod',
+      isProcessing: true,
+      title: dryRun ? 'Simulasi Sinkronisasi: Master ➔ POD' : 'Sinkronisasi Live: Master ➔ POD',
+      tableName: selectedTableName,
+      sourceName: masterObj?.name || 'Master DB',
+      targetName: `${targetPodIds.length} Unit POD`,
+      progressPercent: 30,
+      currentStatusText: `Menghubungkan ke ${targetPodIds.length} server target...`,
+      report: null
+    });
+
     try {
       const result = await performMasterSyncApi({
         masterId: Number(selectedMasterId),
@@ -186,11 +218,7 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
         syncData: true
       });
 
-      setSuccessMsg(
-        dryRun
-          ? `Simulasi selesai: Berhasil simulasi ke ${result.successfulTargets || 0} POD.`
-          : `Sinkronisasi Live Berhasil! ${result.successfulTargets || 0} POD berhasil diperbarui.`
-      );
+      const totalSynced = result.results?.reduce((acc, r) => acc + (r.rowsSynced || 0), 0) || 0;
 
       // 🚀 Optimistic Instant UI Update (Zero reload, no delay!)
       if (!dryRun) {
@@ -267,10 +295,42 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
         });
       }
 
-      setSyncModalOpen(false);
+      // Update Finished Report Modal
+      setProgressModal(prev => ({
+        ...prev,
+        isProcessing: false,
+        progressPercent: 100,
+        currentStatusText: 'Sinkronisasi Selesai!',
+        report: {
+          ...result,
+          totalRowsSynced: totalSynced
+        }
+      }));
+
+      setSuccessMsg(
+        dryRun
+          ? `Simulasi selesai: Berhasil simulasi ke ${result.successfulTargets || 0} POD.`
+          : `Sinkronisasi Live Berhasil! ${result.successfulTargets || 0} POD berhasil diperbarui (${totalSynced} baris data disinkronkan).`
+      );
       setTimeout(() => setSuccessMsg(''), 6000);
     } catch (err) {
       setError(err.message || 'Gagal mengeksekusi sinkronisasi.');
+      setProgressModal(prev => ({
+        ...prev,
+        isProcessing: false,
+        progressPercent: 100,
+        currentStatusText: 'Gagal Sinkronisasi',
+        report: {
+          success: false,
+          failedTargets: targetPodIds.length,
+          successfulTargets: 0,
+          totalRowsSynced: 0,
+          results: targetPodIds.map(id => {
+            const pod = (matrixData?.pods || []).find(p => p.id === id);
+            return { serverId: id, serverName: pod?.name || `POD #${id}`, success: false, error: err.message };
+          })
+        }
+      }));
     } finally {
       setIsSyncing(false);
     }
@@ -452,7 +512,50 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
 
       setSuccessMsg(`Sukses! Baris (${singleRowSyncModal.pkColumn} = ${singleRowSyncModal.pkValue}) berhasil disinkronkan ke ${res.successfulTargets} unit POD.`);
       setSingleRowSyncModal(prev => ({ ...prev, isOpen: false }));
-      await handleRefreshCurrentMatrix();
+
+      // 🚀 Optimistic Instant State Update (No full matrix reload!)
+      setMatrixData(prev => {
+        if (!prev) return prev;
+        const targetSet = new Set(singleRowSyncModal.targetPodIds.map(Number));
+        const strKey = String(singleRowSyncModal.pkValue);
+
+        const updatedDataMatrix = (prev.dataMatrix || []).map(item => {
+          const pkVal = item.sampleData?.[singleRowSyncModal.pkColumn] !== undefined ? item.sampleData[singleRowSyncModal.pkColumn] : item.rowKey;
+          if (String(pkVal) === strKey) {
+            const updatedPresence = { ...(item.presence || {}) };
+            let count = item.presentCount || 0;
+            for (const pId of targetSet) {
+              if (!updatedPresence[pId] || !updatedPresence[pId].present) {
+                updatedPresence[pId] = { isOnline: true, present: true };
+                count++;
+              }
+            }
+            return {
+              ...item,
+              presence: updatedPresence,
+              presentCount: Math.min(count, prev.pods?.length || count)
+            };
+          }
+          return item;
+        });
+
+        const updatedPods = (prev.pods || []).map(p => {
+          if (targetSet.has(Number(p.id))) {
+            return {
+              ...p,
+              rowCount: (p.rowCount || 0) + 1
+            };
+          }
+          return p;
+        });
+
+        return {
+          ...prev,
+          pods: updatedPods,
+          dataMatrix: updatedDataMatrix
+        };
+      });
+
       setTimeout(() => setSuccessMsg(''), 6000);
     } catch (err) {
       setError(err.message || 'Gagal menyinkronkan 1 baris data ke POD.');
@@ -474,7 +577,48 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
       });
 
       setSuccessMsg(`Sukses! 1 baris data (${pkColumn} = ${pkValue}) berhasil disinkronkan ke ${serverName || 'POD'}.`);
-      await handleRefreshCurrentMatrix();
+
+      // 🚀 Optimistic Instant State Update (No full matrix reload!)
+      setMatrixData(prev => {
+        if (!prev) return prev;
+        const targetId = Number(serverId);
+        const strKey = String(pkValue);
+
+        const updatedDataMatrix = (prev.dataMatrix || []).map(item => {
+          const pkVal = item.sampleData?.[pkColumn || 'id'] !== undefined ? item.sampleData[pkColumn || 'id'] : item.rowKey;
+          if (String(pkVal) === strKey) {
+            const updatedPresence = { ...(item.presence || {}) };
+            let count = item.presentCount || 0;
+            if (!updatedPresence[targetId] || !updatedPresence[targetId].present) {
+              updatedPresence[targetId] = { isOnline: true, present: true };
+              count++;
+            }
+            return {
+              ...item,
+              presence: updatedPresence,
+              presentCount: Math.min(count, prev.pods?.length || count)
+            };
+          }
+          return item;
+        });
+
+        const updatedPods = (prev.pods || []).map(p => {
+          if (Number(p.id) === targetId) {
+            return {
+              ...p,
+              rowCount: (p.rowCount || 0) + 1
+            };
+          }
+          return p;
+        });
+
+        return {
+          ...prev,
+          pods: updatedPods,
+          dataMatrix: updatedDataMatrix
+        };
+      });
+
       setTimeout(() => setSuccessMsg(''), 6000);
     } catch (err) {
       setError(err.message || `Gagal menyinkronkan baris ke ${serverName}: ${err.message}`);
@@ -484,6 +628,22 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
   // D. Pull all data from POD to Master (POD ➔ Master)
   const handleSyncPodToMaster = async (pod) => {
     setError('');
+    const masterObj = masterDatabases.find(d => String(d.id) === String(selectedMasterId));
+
+    // Open Live Progress Modal
+    setProgressModal({
+      isOpen: true,
+      direction: 'pod_to_master',
+      isProcessing: true,
+      title: `Penarikan Data: ${pod.name} ➔ Master DB`,
+      tableName: selectedTableName,
+      sourceName: pod.name,
+      targetName: masterObj?.name || 'Master DB',
+      progressPercent: 35,
+      currentStatusText: `Menghubungkan & mengambil seluruh data dari ${pod.name}...`,
+      report: null
+    });
+
     try {
       const res = await syncPodToMasterApi({
         masterId: Number(selectedMasterId),
@@ -491,11 +651,68 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
         tableName: selectedTableName,
         dryRun: false
       });
+
+      // 🚀 Optimistic Instant State Update (Zero reload, instant update!)
+      setMatrixData(prev => {
+        if (!prev) return prev;
+        const targetPodId = Number(pod.id);
+
+        let addedToMasterCount = 0;
+        const updatedDataMatrix = (prev.dataMatrix || []).map(item => {
+          if (item.presence?.[targetPodId]?.present) {
+            if (!item.inMaster) {
+              addedToMasterCount++;
+            }
+            return {
+              ...item,
+              inMaster: true,
+              isPodOnly: false
+            };
+          }
+          return item;
+        });
+
+        return {
+          ...prev,
+          master: {
+            ...prev.master,
+            rowCount: (prev.master?.rowCount || 0) + addedToMasterCount
+          },
+          dataMatrix: updatedDataMatrix
+        };
+      });
+
+      // Update Finished Report Modal
+      setProgressModal(prev => ({
+        ...prev,
+        isProcessing: false,
+        progressPercent: 100,
+        currentStatusText: 'Data Berhasil Disinkronkan ke Master DB!',
+        report: {
+          ...res,
+          success: true,
+          totalRowsProcessed: res.rowsProcessed || 0
+        }
+      }));
+
       setSuccessMsg(`Sukses! ${res.rowsProcessed || 0} baris dari ${pod.name} berhasil ditarik dan disinkronkan ke Master Database.`);
-      await handleRefreshCurrentMatrix();
       setTimeout(() => setSuccessMsg(''), 6000);
+      return res;
     } catch (err) {
       setError(err.message || `Gagal menarik data dari ${pod.name}: ${err.message}`);
+      setProgressModal(prev => ({
+        ...prev,
+        isProcessing: false,
+        progressPercent: 100,
+        currentStatusText: 'Gagal Menarik Data',
+        report: {
+          success: false,
+          serverName: pod.name,
+          error: err.message,
+          totalRowsProcessed: 0
+        }
+      }));
+      throw err;
     }
   };
 
@@ -550,6 +767,123 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
       setError(err.message || `Gagal mengupload baris dari ${serverName || 'POD'}: ${err.message}`);
       throw err;
     }
+  };
+
+  // F. Bulk Upload Multiple Selected Rows from POD to Master (POD ➔ Master)
+  const handleBulkSyncPodRowsToMaster = async (selectedRowsList, pkColumn) => {
+    if (!Array.isArray(selectedRowsList) || selectedRowsList.length === 0) return;
+    setError('');
+
+    const masterObj = masterDatabases.find(d => String(d.id) === String(selectedMasterId));
+    const totalCount = selectedRowsList.length;
+
+    // Open Live Progress Modal
+    setProgressModal({
+      isOpen: true,
+      direction: 'pod_to_master',
+      isProcessing: true,
+      title: `Upload ${totalCount} Baris Data: POD ➔ Master`,
+      tableName: selectedTableName,
+      sourceName: `${totalCount} Baris Terpilih`,
+      targetName: masterObj?.name || 'Master DB',
+      progressPercent: 5,
+      currentStatusText: `Menyiapkan proses upload ${totalCount} baris data ke Master DB...`,
+      report: null
+    });
+
+    const results = [];
+    let successCount = 0;
+    let failCount = 0;
+    const syncedKeys = [];
+
+    for (let i = 0; i < totalCount; i++) {
+      const r = selectedRowsList[i];
+      const pkVal = r[pkColumn] !== undefined ? r[pkColumn] : r.__rowKey;
+      const sId = r.__podIds?.[0] || r.__originPodId;
+      const sIds = r.__podIds || (r.__originPodId ? [r.__originPodId] : (matrixData?.pods || []).map(p => Number(p.id)));
+      const sName = r.__podSources?.join(', ') || r.__originPodName || 'POD';
+
+      const pct = Math.round(((i + 1) / totalCount) * 100);
+      setProgressModal(prev => ({
+        ...prev,
+        progressPercent: pct,
+        currentStatusText: `[${i + 1}/${totalCount}] Mengupload ID: ${pkVal} dari ${sName}...`
+      }));
+
+      try {
+        await syncSinglePodRowApi({
+          masterId: Number(selectedMasterId),
+          serverId: sId || sIds[0],
+          serverIds: sIds,
+          tableName: selectedTableName,
+          pkColumn: pkColumn || 'id',
+          pkValue: pkVal
+        });
+        successCount++;
+        syncedKeys.push(String(pkVal));
+        results.push({
+          serverName: `${sName} (ID: ${pkVal})`,
+          success: true,
+          rowsSynced: 1,
+          logs: [`Baris ${pkVal} berhasil di-upload dari ${sName} ke Master DB.`]
+        });
+      } catch (err) {
+        failCount++;
+        results.push({
+          serverName: `${sName} (ID: ${pkVal})`,
+          success: false,
+          rowsSynced: 0,
+          error: err.message,
+          logs: [`Gagal mengupload baris ${pkVal}: ${err.message}`]
+        });
+      }
+    }
+
+    // 🚀 Optimistic Instant UI Update (Zero reload, no delay!)
+    if (syncedKeys.length > 0) {
+      const syncedSet = new Set(syncedKeys);
+      setMatrixData(prev => {
+        if (!prev) return prev;
+        const updatedDataMatrix = (prev.dataMatrix || []).map(item => {
+          const pkVal = item.sampleData?.[pkColumn || 'id'] !== undefined ? item.sampleData[pkColumn || 'id'] : item.rowKey;
+          if (syncedSet.has(String(pkVal))) {
+            return {
+              ...item,
+              inMaster: true,
+              isPodOnly: false
+            };
+          }
+          return item;
+        });
+
+        return {
+          ...prev,
+          master: {
+            ...prev.master,
+            rowCount: (prev.master?.rowCount || 0) + successCount
+          },
+          dataMatrix: updatedDataMatrix
+        };
+      });
+    }
+
+    // Update Finished Report Modal
+    setProgressModal(prev => ({
+      ...prev,
+      isProcessing: false,
+      progressPercent: 100,
+      currentStatusText: `Selesai! ${successCount} baris berhasil di-upload${failCount > 0 ? `, ${failCount} gagal` : ''}.`,
+      report: {
+        success: failCount === 0,
+        totalRowsProcessed: totalCount,
+        successfulTargets: successCount,
+        failedTargets: failCount,
+        results
+      }
+    }));
+
+    setSuccessMsg(`Sukses! ${successCount} baris data berhasil di-upload ke Master DB${failCount > 0 ? ` (${failCount} gagal)` : ''}.`);
+    setTimeout(() => setSuccessMsg(''), 6000);
   };
 
   return (
@@ -668,6 +1002,7 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
             onSyncSingleRowToPod={handleQuickSyncSingleRowToSpecificPod}
             onSyncPodToMaster={handleSyncPodToMaster}
             onSyncSinglePodRowToMaster={handleSyncSinglePodRowToMaster}
+            onBulkSyncPodRowsToMaster={handleBulkSyncPodRowsToMaster}
           />
         )
       )}
@@ -724,6 +1059,23 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
           pkValues={deleteModal.pkValues}
           isDeleting={isDeleting}
           onConfirmDelete={handleExecuteDelete}
+        />
+      )}
+
+      {/* SYNC PROGRESS & RESULT BREAKDOWN MODAL */}
+      {progressModal.isOpen && (
+        <SyncProgressReportModal
+          isOpen={progressModal.isOpen}
+          onClose={() => setProgressModal(prev => ({ ...prev, isOpen: false }))}
+          direction={progressModal.direction}
+          isProcessing={progressModal.isProcessing}
+          title={progressModal.title}
+          tableName={progressModal.tableName}
+          sourceName={progressModal.sourceName}
+          targetName={progressModal.targetName}
+          progressPercent={progressModal.progressPercent}
+          currentStatusText={progressModal.currentStatusText}
+          report={progressModal.report}
         />
       )}
     </div>

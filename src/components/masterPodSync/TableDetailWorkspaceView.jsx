@@ -40,7 +40,8 @@ export default function TableDetailWorkspaceView({
   onDeleteMultiplePodRows,
   onSyncSingleRow,
   onSyncSingleRowToPod,
-  onSyncSinglePodRowToMaster
+  onSyncSinglePodRowToMaster,
+  onBulkSyncPodRowsToMaster
 }) {
   const [viewMode, setViewMode] = useState('per_pod'); // 'per_pod' | 'matrix_overview'
   const [matrixSubTab, setMatrixSubTab] = useState('data'); // 'data' | 'columns'
@@ -58,13 +59,9 @@ export default function TableDetailWorkspaceView({
       <div className="glass-card p-5 sm:p-6 rounded-3xl border border-purple-500/40 bg-slate-900/70 shadow-2xl backdrop-blur-xl">
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-4 mb-4 border-b border-slate-800">
           <div className="flex items-center gap-3">
-            <button
-              onClick={onBackToCatalog}
-              className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
-            >
-              <ArrowLeft size={15} />
-              <span>Katalog Tabel</span>
-            </button>
+            <div className="p-3 bg-gradient-to-br from-cyan-500/20 via-purple-500/20 to-pink-500/20 border border-cyan-500/40 rounded-2xl text-cyan-400">
+              <Database size={24} />
+            </div>
             <div>
               <h2 className="text-lg sm:text-xl font-black text-white flex items-center gap-2.5 flex-wrap">
                 <span>Detail Pengelolaan Tabel: <strong className="text-cyan-400 font-mono">public.{tableName}</strong></span>
@@ -178,6 +175,7 @@ export default function TableDetailWorkspaceView({
         onDeleteMultiplePodRows={onDeleteMultiplePodRows}
         onSyncSingleRow={onSyncSingleRow}
         onSyncSinglePodRowToMaster={onSyncSinglePodRowToMaster}
+        onBulkSyncPodRowsToMaster={onBulkSyncPodRowsToMaster}
       />
 
       {/* 3. SECTION 2: Data di Masing-Masing POD */}
