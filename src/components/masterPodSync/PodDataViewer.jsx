@@ -74,6 +74,7 @@ export default function PodDataViewer({
     });
   }, [dataMatrix, pod, filterMissingOnly, searchQuery]);
 
+
   // Missing count in this POD
   const missingCountInThisPod = useMemo(() => {
     return dataMatrix.filter(item => !item.presence?.[pod?.id]?.present).length;
@@ -217,31 +218,6 @@ export default function PodDataViewer({
 
         {/* Action Buttons: Push Master ➔ POD & Pull POD ➔ Master */}
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Direct 100-Batch Upload Button for POD ➔ Master */}
-          {onBulkSyncPodRowsToMaster && (
-            <button
-              disabled={isPullingToMaster}
-              onClick={async () => {
-                const presentRows = filteredData.filter(item => item.presence?.[pod?.id]?.present).map(item => ({
-                  ...item.sampleData,
-                  __rowKey: item.rowKey,
-                  __originPodId: pod.id,
-                  __originPodName: pod.name,
-                  __podIds: [pod.id],
-                  __podSources: [pod.name]
-                }));
-                const chunk100 = presentRows.slice(0, 100);
-                if (chunk100.length > 0) {
-                  await onBulkSyncPodRowsToMaster(chunk100, pkColumn);
-                }
-              }}
-              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-indigo-500/20 transition-all cursor-pointer hover:scale-105 disabled:opacity-50"
-              title={`Upload 100 baris data pertama dari ${pod.name} ke Master Database secara aman`}
-            >
-              <Zap size={14} className="fill-amber-400 text-amber-400" />
-              <span>Upload 100 Baris ke Master</span>
-            </button>
-          )}
 
           {/* Pull POD ➔ Master Button */}
           {onSyncPodToMaster && (
@@ -266,7 +242,7 @@ export default function PodDataViewer({
               ) : (
                 <>
                   <UploadCloud size={14} />
-                  <span>Semua {pod.name} ➔ Master</span>
+                  <span>{pod.name} ➔ Master</span>
                 </>
               )}
             </button>
@@ -348,44 +324,7 @@ export default function PodDataViewer({
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Upload 100 Baris Button in Selected Rows Floating Bar */}
-            {onBulkSyncPodRowsToMaster && (
-              <button
-                disabled={isPullingToMaster}
-                onClick={async () => {
-                  const selectedItems = filteredData.filter(item => {
-                    const pkVal = item.sampleData?.[pkColumn] !== undefined ? String(item.sampleData[pkColumn]) : item.rowKey;
-                    return selectedKeys.has(pkVal);
-                  }).map(item => ({
-                    ...item.sampleData,
-                    __rowKey: item.rowKey,
-                    __originPodId: pod.id,
-                    __originPodName: pod.name,
-                    __podIds: [pod.id],
-                    __podSources: [pod.name]
-                  }));
-                  const chunk100 = selectedItems.slice(0, 100);
-                  if (chunk100.length > 0) {
-                    await onBulkSyncPodRowsToMaster(chunk100, pkColumn);
-                    setSelectedKeys(prev => {
-                      const next = new Set(prev);
-                      chunk100.forEach(r => {
-                        const pkVal = r[pkColumn] !== undefined ? String(r[pkColumn]) : String(r.__rowKey);
-                        next.delete(pkVal);
-                      });
-                      return next;
-                    });
-                  }
-                }}
-                className="px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-indigo-600/30 transition-all cursor-pointer hover:scale-105 disabled:opacity-50"
-                title={`Upload 100 baris terpilih dari ${pod.name} ke Master Database secara aman`}
-              >
-                <Zap size={13} className="fill-amber-400 text-amber-400" />
-                <span>Upload 100 Baris ke Master</span>
-              </button>
-            )}
-
-            {/* Upload All Selected Rows Button */}
+            {/* Upload Selected Rows Button */}
             {onBulkSyncPodRowsToMaster && (
               <button
                 disabled={isPullingToMaster}
@@ -409,7 +348,7 @@ export default function PodDataViewer({
                 className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-purple-600/30 transition-all cursor-pointer hover:scale-105 disabled:opacity-50"
               >
                 <ArrowUpCircle size={13} />
-                <span>Upload Semua ({selectedKeys.size})</span>
+                <span>Upload ke Master ({selectedKeys.size})</span>
               </button>
             )}
 

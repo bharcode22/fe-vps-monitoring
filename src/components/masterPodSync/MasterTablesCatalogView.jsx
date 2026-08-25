@@ -8,7 +8,6 @@ import {
   ChevronRight,
   LayoutGrid,
   Network,
-  Activity,
   Sparkles,
   HardDrive,
   Link,
@@ -26,8 +25,7 @@ export default function MasterTablesCatalogView({
   tables = [],
   isLoadingTables,
   onRefreshTables,
-  onSelectTableForDetail,
-  onOpenFleetAudit
+  onSelectTableForDetail
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [relationFilter, setRelationFilter] = useState('all'); // 'all' | 'standalone' | 'parent' | 'child'
@@ -91,18 +89,6 @@ export default function MasterTablesCatalogView({
 
           {/* Master DB Selector, Mode Switcher & Refresh */}
           <div className="flex items-center justify-start sm:justify-end gap-2.5 w-full lg:w-auto flex-wrap lg:ml-auto shrink-0">
-            {/* Fleet Audit Discrepancy Button */}
-            {onOpenFleetAudit && (
-              <button
-                onClick={onOpenFleetAudit}
-                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer hover:scale-105"
-                title="Buka Analisis Disparitas & Audit Selisih Seluruh 95 Tabel di Semua POD"
-              >
-                <Activity size={13} className="text-amber-400" />
-                <span>🔍 Audit Disparitas 95 Tabel</span>
-              </button>
-            )}
-
             {/* View Mode Switcher: Cards vs Graph */}
             <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 shadow-inner">
               <button

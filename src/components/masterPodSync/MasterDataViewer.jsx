@@ -72,17 +72,6 @@ export default function MasterDataViewer({
   const podOnlyRowsCount = useMemo(() => combinedRows.filter(r => r.__isPodOnly).length, [combinedRows]);
   const podOnlyRows = useMemo(() => combinedRows.filter(r => r.__isPodOnly), [combinedRows]);
 
-  // Breakdown of POD-only rows by source POD
-  const podBreakdown = useMemo(() => {
-    const map = new Map();
-    combinedRows.filter(r => r.__isPodOnly).forEach(r => {
-      const srcList = r.__podSources && r.__podSources.length > 0 ? r.__podSources : [r.__originPodName || 'POD'];
-      srcList.forEach(src => {
-        map.set(src, (map.get(src) || 0) + 1);
-      });
-    });
-    return Array.from(map.entries()).map(([name, count]) => ({ name, count }));
-  }, [combinedRows]);
 
   // Filter rows by search and source filter
   const filteredRows = useMemo(() => {
@@ -321,28 +310,28 @@ export default function MasterDataViewer({
                       >
                         <Sparkles size={12} className="text-purple-400" />
                         <span>Belum di Master ({podOnlyRowsCount})</span>
-                        {podBreakdown.length > 0 && (
-                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-900/60 text-purple-300 border border-purple-500/30 font-mono">
-                            {podBreakdown.map(b => `${b.name}: ${b.count}`).join(', ')}
-                          </span>
-                        )}
                       </button>
 
-                      {/* Direct One-Click 100-Row Upload Button (Always Available in Toolbar) */}
-                      <button
-                        disabled={isBulkUploading}
-                        onClick={async () => {
-                          const chunk100 = podOnlyRows.slice(0, 100);
-                          if (onBulkSyncPodRowsToMaster) {
-                            await onBulkSyncPodRowsToMaster(chunk100, pkColumn);
-                          }
-                        }}
-                        className="px-2.5 py-1 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white rounded-lg text-[11px] font-bold flex items-center gap-1 shadow-md shadow-indigo-600/30 transition-all cursor-pointer hover:scale-105 disabled:opacity-50"
-                        title={`Upload 100 baris pertama dari total ${podOnlyRowsCount} data POD yang belum ada di Master`}
-                      >
-                        <Zap size={12} className="fill-amber-400 text-amber-400" />
-                        <span>Upload 100 Baris</span>
-                      </button>
+                      {/* Select 100 Rows Button (Checkbox selection before upload) */}
+                      {podOnlyRowsCount > 0 && (
+                        <button
+                          onClick={() => {
+                            setRowSourceFilter('pod_only');
+                            const chunk100 = podOnlyRows.slice(0, 100);
+                            const next = new Set();
+                            chunk100.forEach(r => {
+                              const key = r[pkColumn] !== undefined ? String(r[pkColumn]) : r.__rowKey;
+                              next.add(key);
+                            });
+                            setSelectedKeys(next);
+                          }}
+                          className="px-3 py-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-purple-600/30 transition-all cursor-pointer hover:scale-105"
+                          title="Centang otomatis 100 baris data POD yang belum ada di Master"
+                        >
+                          <CheckSquare size={13} className="text-amber-300" />
+                          <span>Pilih 100 Baris Belum di Master ({Math.min(100, podOnlyRowsCount)})</span>
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -390,111 +379,48 @@ export default function MasterDataViewer({
               <div className="flex items-center gap-2 flex-wrap">
                 {/* Pull/Upload to Master for POD-only selected rows */}
                 {allSelectedArePodOnly && (onBulkSyncPodRowsToMaster || onSyncSinglePodRowToMaster) && (
-                  <>
-                    {/* Button to Upload 100 Rows Chunk (Always Visible in Floating Bar) */}
-                    <button
-                      disabled={isBulkUploading}
-                      onClick={async () => {
-                        const chunk100 = selectedRowsList.slice(0, 100);
-                        if (onBulkSyncPodRowsToMaster) {
-                          await onBulkSyncPodRowsToMaster(chunk100, pkColumn);
-                          setSelectedKeys(prev => {
-                            const next = new Set(prev);
-                            chunk100.forEach(r => {
-                              const pkVal = r[pkColumn] !== undefined ? String(r[pkColumn]) : String(r.__rowKey);
-                              next.delete(pkVal);
-                            });
-                            return next;
-                          });
-                        } else {
-                          setIsBulkUploading(true);
-                          try {
-                            for (const r of chunk100) {
-                              const pkVal = r[pkColumn] !== undefined ? r[pkColumn] : r.__rowKey;
-                              const sId = r.__podIds?.[0] || r.__originPodId || targetPodIds[0];
-                              const sIds = r.__podIds || (r.__originPodId ? [r.__originPodId] : targetPodIds);
-                              const sName = r.__podSources?.join(', ') || r.__originPodName || targetPodNames;
-                              await onSyncSinglePodRowToMaster({
-                                serverId: sId,
-                                serverIds: sIds,
-                                serverName: sName,
-                                pkColumn,
-                                pkValue: pkVal
-                              }).catch(() => { });
-                            }
-                          } finally {
-                            setIsBulkUploading(false);
-                            setSelectedKeys(prev => {
-                              const next = new Set(prev);
-                              chunk100.forEach(r => {
-                                const pkVal = r[pkColumn] !== undefined ? String(r[pkColumn]) : String(r.__rowKey);
-                                next.delete(pkVal);
-                              });
-                              return next;
-                            });
+                  <button
+                    disabled={isBulkUploading}
+                    onClick={async () => {
+                      if (onBulkSyncPodRowsToMaster) {
+                        await onBulkSyncPodRowsToMaster(selectedRowsList, pkColumn);
+                        clearSelection();
+                      } else {
+                        setIsBulkUploading(true);
+                        try {
+                          for (const r of selectedRowsList) {
+                            const pkVal = r[pkColumn] !== undefined ? r[pkColumn] : r.__rowKey;
+                            const sId = r.__podIds?.[0] || r.__originPodId || targetPodIds[0];
+                            const sIds = r.__podIds || (r.__originPodId ? [r.__originPodId] : targetPodIds);
+                            const sName = r.__podSources?.join(', ') || r.__originPodName || targetPodNames;
+                            await onSyncSinglePodRowToMaster({
+                              serverId: sId,
+                              serverIds: sIds,
+                              serverName: sName,
+                              pkColumn,
+                              pkValue: pkVal
+                            }).catch(() => { });
                           }
-                        }
-                      }}
-                      className="px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-indigo-600/30 transition-all cursor-pointer hover:scale-105 disabled:opacity-50"
-                      title="Upload 100 baris pertama dari data terpilih ke Master DB agar beban server tetap ringan dan stabil"
-                    >
-                      {isBulkUploading ? (
-                        <>
-                          <Loader2 size={13} className="animate-spin text-white" />
-                          <span>Mengupload 100 Data...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Zap size={13} className="fill-amber-400 text-amber-400" />
-                          <span>Upload 100 Baris</span>
-                        </>
-                      )}
-                    </button>
-
-                    {/* Button to Upload All Selected Rows */}
-                    <button
-                      disabled={isBulkUploading}
-                      onClick={async () => {
-                        if (onBulkSyncPodRowsToMaster) {
-                          await onBulkSyncPodRowsToMaster(selectedRowsList, pkColumn);
+                        } finally {
+                          setIsBulkUploading(false);
                           clearSelection();
-                        } else {
-                          setIsBulkUploading(true);
-                          try {
-                            for (const r of selectedRowsList) {
-                              const pkVal = r[pkColumn] !== undefined ? r[pkColumn] : r.__rowKey;
-                              const sId = r.__podIds?.[0] || r.__originPodId || targetPodIds[0];
-                              const sIds = r.__podIds || (r.__originPodId ? [r.__originPodId] : targetPodIds);
-                              const sName = r.__podSources?.join(', ') || r.__originPodName || targetPodNames;
-                              await onSyncSinglePodRowToMaster({
-                                serverId: sId,
-                                serverIds: sIds,
-                                serverName: sName,
-                                pkColumn,
-                                pkValue: pkVal
-                              }).catch(() => { });
-                            }
-                          } finally {
-                            setIsBulkUploading(false);
-                            clearSelection();
-                          }
                         }
-                      }}
-                      className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-purple-600/30 transition-all cursor-pointer hover:scale-105 disabled:opacity-50"
-                    >
-                      {isBulkUploading ? (
-                        <>
-                          <Loader2 size={13} className="animate-spin text-white" />
-                          <span>Mengupload ({selectedKeys.size})...</span>
-                        </>
-                      ) : (
-                        <>
-                          <ArrowUpCircle size={13} />
-                          <span>Upload Semua ({selectedKeys.size})</span>
-                        </>
-                      )}
-                    </button>
-                  </>
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-purple-600/30 transition-all cursor-pointer hover:scale-105 disabled:opacity-50"
+                  >
+                    {isBulkUploading ? (
+                      <>
+                        <Loader2 size={13} className="animate-spin text-white" />
+                        <span>Mengupload ({selectedKeys.size})...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ArrowUpCircle size={13} />
+                        <span>Upload ke Master ({selectedKeys.size})</span>
+                      </>
+                    )}
+                  </button>
                 )}
 
                 <button

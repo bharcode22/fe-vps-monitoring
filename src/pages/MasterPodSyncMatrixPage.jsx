@@ -743,7 +743,7 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
   };
 
   // E. Pull 1 single row from POD to Master (POD ➔ Master)
-  const handleSyncSinglePodRowToMaster = async ({ serverId, serverIds, serverName, pkColumn, pkValue }) => {
+  const handleSyncSinglePodRowToMaster = async ({ serverId, serverIds, serverName, pkColumn, pkValue, rowData }) => {
     setError('');
     const targetIds = Array.isArray(serverIds) && serverIds.length > 0
       ? serverIds.map(Number)
@@ -756,7 +756,8 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
         serverIds: targetIds,
         tableName: selectedTableName,
         pkColumn: pkColumn || 'id',
-        pkValue
+        pkValue,
+        rowData
       });
 
       setSuccessMsg(`Sukses! Baris (${pkColumn || 'id'} = ${pkValue}) dari ${serverName || res?.serverName || 'POD'} berhasil di-upload ke Master DB.`);
@@ -766,8 +767,22 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
         if (!prev) return prev;
         const strKey = String(pkValue);
         const updatedDataMatrix = (prev.dataMatrix || []).map(item => {
-          const pkVal = item.sampleData?.[pkColumn || 'id'] !== undefined ? item.sampleData[pkColumn || 'id'] : item.rowKey;
-          if (String(pkVal) === strKey) {
+          const itemKey = String(item.rowKey || '');
+          const samplePk = item.sampleData && pkColumn && item.sampleData[pkColumn] !== undefined ? String(item.sampleData[pkColumn]) : '';
+          const sampleId = item.sampleData && item.sampleData.id !== undefined ? String(item.sampleData.id) : '';
+          const sampleKey = item.sampleData && item.sampleData.key !== undefined ? String(item.sampleData.key) : '';
+          const sampleTopic = item.sampleData && item.sampleData.topic !== undefined ? String(item.sampleData.topic) : '';
+          const sampleCode = item.sampleData && item.sampleData.code !== undefined ? String(item.sampleData.code) : '';
+
+          const isMatch =
+            itemKey === strKey ||
+            samplePk === strKey ||
+            sampleId === strKey ||
+            sampleKey === strKey ||
+            sampleTopic === strKey ||
+            sampleCode === strKey;
+
+          if (isMatch) {
             return {
               ...item,
               inMaster: true,
@@ -777,17 +792,24 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
           return item;
         });
 
+        const remainingPodOnly = updatedDataMatrix.filter(d => !d.inMaster).length;
+
         return {
           ...prev,
           master: {
             ...prev.master,
             rowCount: (prev.master?.rowCount || 0) + 1
           },
-          dataMatrix: updatedDataMatrix
+          dataMatrix: updatedDataMatrix,
+          summary: {
+            ...prev.summary,
+            podOnlyRowsCount: remainingPodOnly
+          }
         };
       });
 
       setTimeout(() => setSuccessMsg(''), 6000);
+
       return res;
     } catch (err) {
       setError(err.message || `Gagal mengupload baris dari ${serverName || 'POD'}: ${err.message}`);
@@ -843,10 +865,18 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
           serverIds: sIds,
           tableName: selectedTableName,
           pkColumn: pkColumn || 'id',
-          pkValue: pkVal
+          pkValue: pkVal,
+          rowData: r
         });
         successCount++;
-        syncedKeys.push(String(pkVal));
+        if (pkVal !== undefined) syncedKeys.push(String(pkVal));
+        if (r.__rowKey !== undefined) syncedKeys.push(String(r.__rowKey));
+        if (pkColumn && r[pkColumn] !== undefined) syncedKeys.push(String(r[pkColumn]));
+        if (r.id !== undefined) syncedKeys.push(String(r.id));
+        if (r.key !== undefined) syncedKeys.push(String(r.key));
+        if (r.topic !== undefined) syncedKeys.push(String(r.topic));
+        if (r.code !== undefined) syncedKeys.push(String(r.code));
+
         results.push({
           serverName: `${sName} (ID: ${pkVal})`,
           success: true,
@@ -867,12 +897,26 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
 
     // 🚀 Optimistic Instant UI Update (Zero reload, no delay!)
     if (syncedKeys.length > 0) {
-      const syncedSet = new Set(syncedKeys);
+      const syncedSet = new Set(syncedKeys.map(String));
       setMatrixData(prev => {
         if (!prev) return prev;
         const updatedDataMatrix = (prev.dataMatrix || []).map(item => {
-          const pkVal = item.sampleData?.[pkColumn || 'id'] !== undefined ? item.sampleData[pkColumn || 'id'] : item.rowKey;
-          if (syncedSet.has(String(pkVal))) {
+          const itemKey = String(item.rowKey || '');
+          const samplePk = item.sampleData && pkColumn && item.sampleData[pkColumn] !== undefined ? String(item.sampleData[pkColumn]) : '';
+          const sampleId = item.sampleData && item.sampleData.id !== undefined ? String(item.sampleData.id) : '';
+          const sampleKey = item.sampleData && item.sampleData.key !== undefined ? String(item.sampleData.key) : '';
+          const sampleTopic = item.sampleData && item.sampleData.topic !== undefined ? String(item.sampleData.topic) : '';
+          const sampleCode = item.sampleData && item.sampleData.code !== undefined ? String(item.sampleData.code) : '';
+
+          const isMatch =
+            (itemKey && syncedSet.has(itemKey)) ||
+            (samplePk && syncedSet.has(samplePk)) ||
+            (sampleId && syncedSet.has(sampleId)) ||
+            (sampleKey && syncedSet.has(sampleKey)) ||
+            (sampleTopic && syncedSet.has(sampleTopic)) ||
+            (sampleCode && syncedSet.has(sampleCode));
+
+          if (isMatch) {
             return {
               ...item,
               inMaster: true,
@@ -882,13 +926,19 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
           return item;
         });
 
+        const remainingPodOnly = updatedDataMatrix.filter(d => !d.inMaster).length;
+
         return {
           ...prev,
           master: {
             ...prev.master,
             rowCount: (prev.master?.rowCount || 0) + successCount
           },
-          dataMatrix: updatedDataMatrix
+          dataMatrix: updatedDataMatrix,
+          summary: {
+            ...prev.summary,
+            podOnlyRowsCount: remainingPodOnly
+          }
         };
       });
     }
@@ -1043,10 +1093,6 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
           isLoadingTables={isLoadingTables}
           onRefreshTables={() => loadMasterTables(selectedMasterId)}
           onSelectTableForDetail={handleOpenTableDetail}
-          onOpenFleetAudit={() => {
-            setViewMode('audit');
-            if (!auditData) loadFleetAudit(selectedMasterId);
-          }}
         />
       )}
 
