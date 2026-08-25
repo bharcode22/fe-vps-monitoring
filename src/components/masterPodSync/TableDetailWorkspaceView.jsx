@@ -204,6 +204,7 @@ export default function TableDetailWorkspaceView({
             onDeleteMultiplePodRows={onDeleteMultiplePodRows}
             onSyncSingleRowToPod={onSyncSingleRowToPod}
             onSyncSinglePodRowToMaster={onSyncSinglePodRowToMaster}
+            onBulkSyncPodRowsToMaster={onBulkSyncPodRowsToMaster}
           />
         </div>
       ) : (

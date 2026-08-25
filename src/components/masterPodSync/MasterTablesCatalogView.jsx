@@ -29,7 +29,20 @@ export default function MasterTablesCatalogView({
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [relationFilter, setRelationFilter] = useState('all'); // 'all' | 'standalone' | 'parent' | 'child'
-  const [displayMode, setDisplayMode] = useState('cards'); // 'cards' | 'graph'
+  const [displayMode, setDisplayMode] = useState(() => {
+    try {
+      return localStorage.getItem('masterPodSync_displayMode') || 'cards';
+    } catch (e) {
+      return 'cards';
+    }
+  });
+
+  const handleSetDisplayMode = (mode) => {
+    setDisplayMode(mode);
+    try {
+      localStorage.setItem('masterPodSync_displayMode', mode);
+    } catch (e) { }
+  };
 
   // Filter tables by search query and relation type
   const filteredTables = useMemo(() => {
@@ -63,28 +76,27 @@ export default function MasterTablesCatalogView({
     <div className="flex flex-col gap-6 animate-in fade-in duration-200">
       {/* 1. Header Toolbar: Master DB Selector, Display Mode, Search Bar & Relation Filter */}
       <div className="glass-card p-5 sm:p-6 rounded-3xl border border-cyan-500/30 bg-slate-900/70 shadow-2xl backdrop-blur-xl">
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-          <div>
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+          <div className="flex-1 min-w-0 max-w-2xl">
             <h2 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
-              <Database size={18} className="text-cyan-400" />
+              <Database size={18} className="text-cyan-400 shrink-0" />
               <span>Katalog Tabel Master ({tables.length} Tabel Terdaftar)</span>
             </h2>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-slate-400 mt-1 leading-relaxed">
               Pilih tabel dari database master di bawah untuk membuka workspace komparasi data, atau aktifkan <strong className="text-purple-300">Diagram Garis Relasi (ER Graph)</strong> untuk melihat hubungan Foreign Key secara visual.
             </p>
           </div>
 
           {/* Master DB Selector, Mode Switcher & Refresh */}
-          <div className="flex items-center gap-2.5 w-full sm:w-auto flex-wrap">
+          <div className="flex items-center justify-start sm:justify-end gap-2.5 w-full lg:w-auto flex-wrap lg:ml-auto shrink-0">
             {/* View Mode Switcher: Cards vs Graph */}
-            <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+            <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 shadow-inner">
               <button
-                onClick={() => setDisplayMode('cards')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  displayMode === 'cards'
-                    ? 'bg-cyan-500/25 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
+                onClick={() => handleSetDisplayMode('cards')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${displayMode === 'cards'
+                  ? 'bg-cyan-500/25 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+                  }`}
                 title="Tampilan Katalog Kartu"
               >
                 <LayoutGrid size={13} />
@@ -92,12 +104,11 @@ export default function MasterTablesCatalogView({
               </button>
 
               <button
-                onClick={() => setDisplayMode('graph')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  displayMode === 'graph'
-                    ? 'bg-purple-500/25 text-purple-300 border border-purple-500/40 shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
+                onClick={() => handleSetDisplayMode('graph')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${displayMode === 'graph'
+                  ? 'bg-purple-500/25 text-purple-300 border border-purple-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+                  }`}
                 title="Tampilan Diagram Garis Relasi ER"
               >
                 <Network size={13} className="text-purple-400" />
@@ -106,7 +117,7 @@ export default function MasterTablesCatalogView({
             </div>
 
             {/* Master DB Selector */}
-            <div className="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-cyan-500/30">
+            <div className="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-cyan-500/30 shadow-inner">
               <span className="text-[11px] font-bold text-cyan-400 uppercase">Master:</span>
               <select
                 value={selectedMasterId || ''}
@@ -124,7 +135,7 @@ export default function MasterTablesCatalogView({
             <button
               onClick={onRefreshTables}
               disabled={isLoadingTables}
-              className="p-2 bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded-xl border border-slate-700 cursor-pointer transition-colors disabled:opacity-50"
+              className="p-2 bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded-xl border border-slate-700 cursor-pointer transition-colors disabled:opacity-50 shadow-md hover:scale-105"
               title="Muat Ulang Tabel Master"
             >
               <RefreshCw size={15} className={isLoadingTables ? 'animate-spin' : ''} />
@@ -170,11 +181,10 @@ export default function MasterTablesCatalogView({
                   <button
                     key={filter.id}
                     onClick={() => setRelationFilter(filter.id)}
-                    className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border ${
-                      isSelected
-                        ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 shadow-sm'
-                        : 'bg-slate-950/80 text-slate-400 border-slate-800 hover:text-slate-200 hover:bg-slate-900'
-                    }`}
+                    className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border ${isSelected
+                      ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 shadow-sm'
+                      : 'bg-slate-950/80 text-slate-400 border-slate-800 hover:text-slate-200 hover:bg-slate-900'
+                      }`}
                   >
                     <span>{filter.label}</span>
                   </button>

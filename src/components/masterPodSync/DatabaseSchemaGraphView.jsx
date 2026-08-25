@@ -40,11 +40,69 @@ export default function DatabaseSchemaGraphView({
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedClusterIndex, setSelectedClusterIndex] = useState('all'); // 'all' | number
-  const [selectedFocusTable, setSelectedFocusTable] = useState('all'); // 'all' | tableName
 
-  // Store user-dragged custom positions so nodes NEVER reset unexpectedly
-  const savedPositionsRef = useRef({});
+  const [selectedClusterIndex, setSelectedClusterIndex] = useState(() => {
+    try {
+      return localStorage.getItem(`masterPodSync_selectedClusterIndex_${masterInfo?.id || 'default'}`) || 'all';
+    } catch (e) {
+      return 'all';
+    }
+  });
+
+  const [selectedFocusTable, setSelectedFocusTable] = useState(() => {
+    try {
+      return localStorage.getItem(`masterPodSync_selectedFocusTable_${masterInfo?.id || 'default'}`) || 'all';
+    } catch (e) {
+      return 'all';
+    }
+  });
+
+  const handleSetFocusTable = useCallback((tableName) => {
+    setSelectedFocusTable(tableName);
+    try {
+      localStorage.setItem(`masterPodSync_selectedFocusTable_${masterInfo?.id || 'default'}`, tableName);
+      if (tableName !== 'all') {
+        setSelectedClusterIndex('all');
+        localStorage.setItem(`masterPodSync_selectedClusterIndex_${masterInfo?.id || 'default'}`, 'all');
+      }
+    } catch (e) { }
+  }, [masterInfo?.id]);
+
+  const handleSetClusterIndex = useCallback((clusterIdx) => {
+    setSelectedClusterIndex(clusterIdx);
+    try {
+      localStorage.setItem(`masterPodSync_selectedClusterIndex_${masterInfo?.id || 'default'}`, String(clusterIdx));
+      if (clusterIdx !== 'all') {
+        setSelectedFocusTable('all');
+        localStorage.setItem(`masterPodSync_selectedFocusTable_${masterInfo?.id || 'default'}`, 'all');
+      }
+    } catch (e) { }
+  }, [masterInfo?.id]);
+
+  // Helper to load persisted positions from localStorage
+  const getStoredPositions = useCallback(() => {
+    try {
+      const saved = localStorage.getItem(`masterPodSync_schemaGraphPositions_${masterInfo?.id || 'default'}`);
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  }, [masterInfo?.id]);
+
+  // Store user-dragged custom positions so nodes NEVER reset unexpectedly across navigation & reloads
+  const savedPositionsRef = useRef(getStoredPositions());
+
+  // Reload saved positions, focus table & cluster whenever master DB changes
+  useEffect(() => {
+    savedPositionsRef.current = getStoredPositions();
+    try {
+      const savedFocus = localStorage.getItem(`masterPodSync_selectedFocusTable_${masterInfo?.id || 'default'}`) || 'all';
+      setSelectedFocusTable(savedFocus);
+      const savedCluster = localStorage.getItem(`masterPodSync_selectedClusterIndex_${masterInfo?.id || 'default'}`) || 'all';
+      setSelectedClusterIndex(savedCluster);
+    } catch (e) { }
+  }, [masterInfo?.id, getStoredPositions]);
+
   const reactFlowInstanceRef = useRef(null);
   const graphContainerRef = useRef(null);
 
@@ -55,13 +113,13 @@ export default function DatabaseSchemaGraphView({
 
     if (!document.fullscreenElement && !document.webkitFullscreenElement) {
       if (elem.requestFullscreen) {
-        elem.requestFullscreen().catch(() => {});
+        elem.requestFullscreen().catch(() => { });
       } else if (elem.webkitRequestFullscreen) {
         elem.webkitRequestFullscreen();
       }
     } else {
       if (document.exitFullscreen) {
-        document.exitFullscreen().catch(() => {});
+        document.exitFullscreen().catch(() => { });
       } else if (document.webkitExitFullscreen) {
         document.webkitExitFullscreen();
       }
@@ -159,6 +217,9 @@ export default function DatabaseSchemaGraphView({
 
     if (forceResetPositions) {
       savedPositionsRef.current = {};
+      try {
+        localStorage.removeItem(`masterPodSync_schemaGraphPositions_${masterInfo?.id || 'default'}`);
+      } catch (e) { }
     }
 
     // Determine active tables based on Cluster / Focus / Search
@@ -207,10 +268,10 @@ export default function DatabaseSchemaGraphView({
       else row2.push(t);
     });
 
-    const NODE_WIDTH = 265;
-    const NODE_HEIGHT = 130;
-    const HORIZONTAL_GAP = 55;
-    const VERTICAL_GAP = 120; // Generous height for downward arrows
+    const NODE_WIDTH = 340;
+    const NODE_HEIGHT = 140;
+    const HORIZONTAL_GAP = 60;
+    const VERTICAL_GAP = 130; // Generous height for downward arrows
 
     const newNodes = [];
     const newEdges = [];
@@ -239,7 +300,12 @@ export default function DatabaseSchemaGraphView({
             children: tbl.children || [],
             relationType: tbl.relationType,
             isSelected: isSelectedTarget,
-            onSelectTable: onSelectTableForDetail
+            onSelectTable: (targetTableName) => {
+              handleSetFocusTable(targetTableName);
+              if (onSelectTableForDetail) {
+                onSelectTableForDetail(targetTableName);
+              }
+            }
           }
         });
       });
@@ -316,13 +382,23 @@ export default function DatabaseSchemaGraphView({
     return () => clearTimeout(timer);
   }, [isFullscreen, selectedClusterIndex, selectedFocusTable]);
 
-  // Capture Dragged Positions so they NEVER reset
+  // Capture Dragged Positions so they NEVER reset across navigation & reloads
   const handleNodeDragStop = useCallback((event, node) => {
     savedPositionsRef.current[node.id] = { x: node.position.x, y: node.position.y };
-  }, []);
+    try {
+      localStorage.setItem(
+        `masterPodSync_schemaGraphPositions_${masterInfo?.id || 'default'}`,
+        JSON.stringify(savedPositionsRef.current)
+      );
+    } catch (e) { }
+  }, [masterInfo?.id]);
 
   // Button to reset / auto-align layout
   const handleAutoAlign = () => {
+    savedPositionsRef.current = {};
+    try {
+      localStorage.removeItem(`masterPodSync_schemaGraphPositions_${masterInfo?.id || 'default'}`);
+    } catch (e) { }
     const { initialNodes, initialEdges } = buildGraphElements(true);
     setNodes(initialNodes);
     setEdges(initialEdges);
@@ -341,11 +417,10 @@ export default function DatabaseSchemaGraphView({
   return (
     <div
       ref={graphContainerRef}
-      className={`relative flex flex-col bg-slate-950 shadow-2xl backdrop-blur-xl overflow-hidden transition-all duration-300 ${
-        isFullscreen
+      className={`relative flex flex-col bg-slate-950 shadow-2xl backdrop-blur-xl overflow-hidden transition-all duration-300 ${isFullscreen
           ? 'fixed inset-0 z-[99999] w-screen h-screen rounded-none border-none'
           : 'h-[80vh] min-h-[720px] w-full rounded-3xl border border-cyan-500/40'
-      }`}
+        }`}
     >
       {/* Top Controls Toolbar */}
       <div className="bg-slate-900/95 border-b border-slate-800 px-5 py-3.5 flex flex-wrap items-center justify-between gap-3 z-10 shrink-0">
@@ -389,15 +464,12 @@ export default function DatabaseSchemaGraphView({
         {/* Filters & Actions */}
         <div className="flex items-center gap-2.5 flex-wrap">
           {/* Cluster Selector Dropdown */}
-          <div className="flex items-center gap-1.5 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 text-xs">
+          <div className="flex items-center gap-1.5 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 text-xs shadow-inner">
             <Layers size={13} className="text-purple-400" />
             <span className="text-slate-400 font-bold text-[11px]">Klaster:</span>
             <select
               value={selectedClusterIndex}
-              onChange={(e) => {
-                setSelectedClusterIndex(e.target.value);
-                setSelectedFocusTable('all');
-              }}
+              onChange={(e) => handleSetClusterIndex(e.target.value)}
               className="bg-transparent text-purple-300 font-mono text-xs outline-none cursor-pointer max-w-[180px]"
             >
               <option value="all" className="bg-slate-900 text-white">Semua Klaster ({relationClusters.length} Grup)</option>
@@ -410,15 +482,12 @@ export default function DatabaseSchemaGraphView({
           </div>
 
           {/* Focus Table Selector */}
-          <div className="flex items-center gap-1.5 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 text-xs">
+          <div className="flex items-center gap-1.5 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 text-xs shadow-inner">
             <Eye size={13} className="text-cyan-400" />
             <span className="text-slate-400 font-bold text-[11px]">Fokus:</span>
             <select
               value={selectedFocusTable}
-              onChange={(e) => {
-                setSelectedFocusTable(e.target.value);
-                if (e.target.value !== 'all') setSelectedClusterIndex('all');
-              }}
+              onChange={(e) => handleSetFocusTable(e.target.value)}
               className="bg-transparent text-white font-mono text-xs outline-none cursor-pointer max-w-[150px]"
             >
               <option value="all" className="bg-slate-900 text-white">Pilih Tabel Fokus...</option>
@@ -428,6 +497,15 @@ export default function DatabaseSchemaGraphView({
                 </option>
               ))}
             </select>
+            {selectedFocusTable !== 'all' && (
+              <button
+                onClick={() => handleSetFocusTable('all')}
+                className="text-slate-400 hover:text-rose-400 text-xs px-1 cursor-pointer font-bold transition-colors"
+                title="Hapus fokus (Tampilkan semua)"
+              >
+                ✕
+              </button>
+            )}
           </div>
 
           {/* Search Box */}
@@ -455,11 +533,10 @@ export default function DatabaseSchemaGraphView({
           {/* Fullscreen Toggle (Native HTML5 Fullscreen API) */}
           <button
             onClick={toggleBrowserFullscreen}
-            className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm ${
-              isFullscreen
+            className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm ${isFullscreen
                 ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 hover:bg-rose-500/30'
                 : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 hover:bg-cyan-500/30'
-            }`}
+              }`}
             title={isFullscreen ? 'Keluar Fullscreen (ESC)' : 'Buka Layar Penuh Browser'}
           >
             {isFullscreen ? (

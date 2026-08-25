@@ -42,6 +42,9 @@ export default function MasterDataViewer({
   const [rowSourceFilter, setRowSourceFilter] = useState('all'); // 'all' | 'master_only' | 'pod_only'
   const [selectedKeys, setSelectedKeys] = useState(new Set());
   const [uploadingRowKey, setUploadingRowKey] = useState(null);
+  const [syncingMasterRowKey, setSyncingMasterRowKey] = useState(null);
+  const [deletingPodRowKey, setDeletingPodRowKey] = useState(null);
+  const [deletingMasterRowKey, setDeletingMasterRowKey] = useState(null);
   const [isBulkUploading, setIsBulkUploading] = useState(false);
 
   const pkColumn = masterInfo?.pkColumn || columns.find(c => c.isPk)?.columnName || columns[0]?.columnName || 'id';
@@ -67,6 +70,7 @@ export default function MasterDataViewer({
 
   const masterRowsCount = useMemo(() => combinedRows.filter(r => r.__inMaster).length, [combinedRows]);
   const podOnlyRowsCount = useMemo(() => combinedRows.filter(r => r.__isPodOnly).length, [combinedRows]);
+  const podOnlyRows = useMemo(() => combinedRows.filter(r => r.__isPodOnly), [combinedRows]);
 
   // Breakdown of POD-only rows by source POD
   const podBreakdown = useMemo(() => {
@@ -307,21 +311,39 @@ export default function MasterDataViewer({
                     Ada di Master ({masterRowsCount})
                   </button>
                   {podOnlyRowsCount > 0 && (
-                    <button
-                      onClick={() => setRowSourceFilter('pod_only')}
-                      className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${rowSourceFilter === 'pod_only'
-                        ? 'bg-purple-500/30 text-purple-200 border border-purple-500/50 shadow-sm'
-                        : 'text-purple-300 hover:text-white'
-                        }`}
-                    >
-                      <Sparkles size={12} className="text-purple-400" />
-                      <span>Belum di Master ({podOnlyRowsCount})</span>
-                      {podBreakdown.length > 0 && (
-                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-900/60 text-purple-300 border border-purple-500/30 font-mono">
-                          {podBreakdown.map(b => `${b.name}: ${b.count}`).join(', ')}
-                        </span>
-                      )}
-                    </button>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <button
+                        onClick={() => setRowSourceFilter('pod_only')}
+                        className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${rowSourceFilter === 'pod_only'
+                          ? 'bg-purple-500/30 text-purple-200 border border-purple-500/50 shadow-sm'
+                          : 'text-purple-300 hover:text-white'
+                          }`}
+                      >
+                        <Sparkles size={12} className="text-purple-400" />
+                        <span>Belum di Master ({podOnlyRowsCount})</span>
+                        {podBreakdown.length > 0 && (
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-900/60 text-purple-300 border border-purple-500/30 font-mono">
+                            {podBreakdown.map(b => `${b.name}: ${b.count}`).join(', ')}
+                          </span>
+                        )}
+                      </button>
+
+                      {/* Direct One-Click 100-Row Upload Button (Always Available in Toolbar) */}
+                      <button
+                        disabled={isBulkUploading}
+                        onClick={async () => {
+                          const chunk100 = podOnlyRows.slice(0, 100);
+                          if (onBulkSyncPodRowsToMaster) {
+                            await onBulkSyncPodRowsToMaster(chunk100, pkColumn);
+                          }
+                        }}
+                        className="px-2.5 py-1 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white rounded-lg text-[11px] font-bold flex items-center gap-1 shadow-md shadow-indigo-600/30 transition-all cursor-pointer hover:scale-105 disabled:opacity-50"
+                        title={`Upload 100 baris pertama dari total ${podOnlyRowsCount} data POD yang belum ada di Master`}
+                      >
+                        <Zap size={12} className="fill-amber-400 text-amber-400" />
+                        <span>Upload 100 Baris</span>
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
@@ -368,48 +390,111 @@ export default function MasterDataViewer({
               <div className="flex items-center gap-2 flex-wrap">
                 {/* Pull/Upload to Master for POD-only selected rows */}
                 {allSelectedArePodOnly && (onBulkSyncPodRowsToMaster || onSyncSinglePodRowToMaster) && (
-                  <button
-                    disabled={isBulkUploading}
-                    onClick={async () => {
-                      if (onBulkSyncPodRowsToMaster) {
-                        await onBulkSyncPodRowsToMaster(selectedRowsList, pkColumn);
-                        clearSelection();
-                      } else {
-                        setIsBulkUploading(true);
-                        try {
-                          for (const r of selectedRowsList) {
-                            const pkVal = r[pkColumn] !== undefined ? r[pkColumn] : r.__rowKey;
-                            const sId = r.__podIds?.[0] || r.__originPodId || targetPodIds[0];
-                            const sIds = r.__podIds || (r.__originPodId ? [r.__originPodId] : targetPodIds);
-                            const sName = r.__podSources?.join(', ') || r.__originPodName || targetPodNames;
-                            await onSyncSinglePodRowToMaster({
-                              serverId: sId,
-                              serverIds: sIds,
-                              serverName: sName,
-                              pkColumn,
-                              pkValue: pkVal
-                            }).catch(() => { });
+                  <>
+                    {/* Button to Upload 100 Rows Chunk (Always Visible in Floating Bar) */}
+                    <button
+                      disabled={isBulkUploading}
+                      onClick={async () => {
+                        const chunk100 = selectedRowsList.slice(0, 100);
+                        if (onBulkSyncPodRowsToMaster) {
+                          await onBulkSyncPodRowsToMaster(chunk100, pkColumn);
+                          setSelectedKeys(prev => {
+                            const next = new Set(prev);
+                            chunk100.forEach(r => {
+                              const pkVal = r[pkColumn] !== undefined ? String(r[pkColumn]) : String(r.__rowKey);
+                              next.delete(pkVal);
+                            });
+                            return next;
+                          });
+                        } else {
+                          setIsBulkUploading(true);
+                          try {
+                            for (const r of chunk100) {
+                              const pkVal = r[pkColumn] !== undefined ? r[pkColumn] : r.__rowKey;
+                              const sId = r.__podIds?.[0] || r.__originPodId || targetPodIds[0];
+                              const sIds = r.__podIds || (r.__originPodId ? [r.__originPodId] : targetPodIds);
+                              const sName = r.__podSources?.join(', ') || r.__originPodName || targetPodNames;
+                              await onSyncSinglePodRowToMaster({
+                                serverId: sId,
+                                serverIds: sIds,
+                                serverName: sName,
+                                pkColumn,
+                                pkValue: pkVal
+                              }).catch(() => { });
+                            }
+                          } finally {
+                            setIsBulkUploading(false);
+                            setSelectedKeys(prev => {
+                              const next = new Set(prev);
+                              chunk100.forEach(r => {
+                                const pkVal = r[pkColumn] !== undefined ? String(r[pkColumn]) : String(r.__rowKey);
+                                next.delete(pkVal);
+                              });
+                              return next;
+                            });
                           }
-                        } finally {
-                          setIsBulkUploading(false);
-                          clearSelection();
                         }
-                      }
-                    }}
-                    className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-purple-600/30 transition-all cursor-pointer hover:scale-105 disabled:opacity-50"
-                  >
-                    {isBulkUploading ? (
-                      <>
-                        <Loader2 size={13} className="animate-spin text-white" />
-                        <span>Mengupload ({selectedKeys.size})...</span>
-                      </>
-                    ) : (
-                      <>
-                        <ArrowUpCircle size={13} />
-                        <span>Upload Terpilih ke Master ({selectedKeys.size})</span>
-                      </>
-                    )}
-                  </button>
+                      }}
+                      className="px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-indigo-600/30 transition-all cursor-pointer hover:scale-105 disabled:opacity-50"
+                      title="Upload 100 baris pertama dari data terpilih ke Master DB agar beban server tetap ringan dan stabil"
+                    >
+                      {isBulkUploading ? (
+                        <>
+                          <Loader2 size={13} className="animate-spin text-white" />
+                          <span>Mengupload 100 Data...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Zap size={13} className="fill-amber-400 text-amber-400" />
+                          <span>Upload 100 Baris</span>
+                        </>
+                      )}
+                    </button>
+
+                    {/* Button to Upload All Selected Rows */}
+                    <button
+                      disabled={isBulkUploading}
+                      onClick={async () => {
+                        if (onBulkSyncPodRowsToMaster) {
+                          await onBulkSyncPodRowsToMaster(selectedRowsList, pkColumn);
+                          clearSelection();
+                        } else {
+                          setIsBulkUploading(true);
+                          try {
+                            for (const r of selectedRowsList) {
+                              const pkVal = r[pkColumn] !== undefined ? r[pkColumn] : r.__rowKey;
+                              const sId = r.__podIds?.[0] || r.__originPodId || targetPodIds[0];
+                              const sIds = r.__podIds || (r.__originPodId ? [r.__originPodId] : targetPodIds);
+                              const sName = r.__podSources?.join(', ') || r.__originPodName || targetPodNames;
+                              await onSyncSinglePodRowToMaster({
+                                serverId: sId,
+                                serverIds: sIds,
+                                serverName: sName,
+                                pkColumn,
+                                pkValue: pkVal
+                              }).catch(() => { });
+                            }
+                          } finally {
+                            setIsBulkUploading(false);
+                            clearSelection();
+                          }
+                        }
+                      }}
+                      className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-purple-600/30 transition-all cursor-pointer hover:scale-105 disabled:opacity-50"
+                    >
+                      {isBulkUploading ? (
+                        <>
+                          <Loader2 size={13} className="animate-spin text-white" />
+                          <span>Mengupload ({selectedKeys.size})...</span>
+                        </>
+                      ) : (
+                        <>
+                          <ArrowUpCircle size={13} />
+                          <span>Upload Semua ({selectedKeys.size})</span>
+                        </>
+                      )}
+                    </button>
+                  </>
                 )}
 
                 <button
@@ -552,65 +637,95 @@ export default function MasterDataViewer({
 
                                   {/* Button to Delete this row from PODs */}
                                   <button
-                                    onClick={(e) => {
+                                    disabled={deletingPodRowKey === rowKeyStr}
+                                    onClick={async (e) => {
                                       e.stopPropagation();
+                                      setDeletingPodRowKey(rowKeyStr);
                                       const sId = row.__podIds?.[0] || row.__originPodId;
                                       const sIds = row.__podIds || (row.__originPodId ? [row.__originPodId] : []);
                                       const sName = row.__podSources?.join(', ') || row.__originPodName;
-                                      if (onDeleteMultiplePodRows && sIds.length > 1) {
-                                        onDeleteMultiplePodRows({
-                                          serverId: sId,
-                                          serverIds: sIds,
-                                          serverName: sName,
-                                          pkColumn,
-                                          pkValues: [pkVal]
-                                        });
-                                      } else if (onDeletePodRow) {
-                                        onDeletePodRow({
-                                          serverId: sId,
-                                          serverIds: sIds,
-                                          serverName: sName,
-                                          pkColumn,
-                                          pkValue: pkVal,
-                                          pkValues: [pkVal]
-                                        });
+                                      try {
+                                        if (onDeleteMultiplePodRows && sIds.length > 1) {
+                                          await onDeleteMultiplePodRows({
+                                            serverId: sId,
+                                            serverIds: sIds,
+                                            serverName: sName,
+                                            pkColumn,
+                                            pkValues: [pkVal]
+                                          });
+                                        } else if (onDeletePodRow) {
+                                          await onDeletePodRow({
+                                            serverId: sId,
+                                            serverIds: sIds,
+                                            serverName: sName,
+                                            pkColumn,
+                                            pkValue: pkVal,
+                                            pkValues: [pkVal]
+                                          });
+                                        }
+                                      } finally {
+                                        setDeletingPodRowKey(null);
                                       }
                                     }}
-                                    className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/15 transition-colors cursor-pointer"
+                                    className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/15 transition-colors cursor-pointer disabled:opacity-50"
                                     title={`Hapus permanen baris data ini dari ${podSources.join(', ')}`}
                                   >
-                                    <Trash2 size={13} />
+                                    {deletingPodRowKey === rowKeyStr ? (
+                                      <Loader2 size={13} className="animate-spin text-red-400" />
+                                    ) : (
+                                      <Trash2 size={13} />
+                                    )}
                                   </button>
                                 </div>
                               ) : (
                                 <>
                                   {/* Button to Push Master row into POD */}
                                   <button
-                                    onClick={(e) => {
+                                    disabled={syncingMasterRowKey === rowKeyStr}
+                                    onClick={async (e) => {
                                       e.stopPropagation();
-                                      onSyncSingleRow && onSyncSingleRow({
-                                        pkColumn,
-                                        pkValue: pkVal,
-                                        rowData: row
-                                      });
+                                      setSyncingMasterRowKey(rowKeyStr);
+                                      try {
+                                        onSyncSingleRow && await onSyncSingleRow({
+                                          pkColumn,
+                                          pkValue: pkVal,
+                                          rowData: row
+                                        });
+                                      } finally {
+                                        setSyncingMasterRowKey(null);
+                                      }
                                     }}
-                                    className="p-1.5 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-amber-500/20 transition-colors cursor-pointer"
+                                    className="p-1.5 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-amber-500/20 transition-colors cursor-pointer disabled:opacity-50"
                                     title="Kirim / Sinkronkan baris ini ke POD"
                                   >
-                                    <Zap size={13} className="fill-amber-400" />
+                                    {syncingMasterRowKey === rowKeyStr ? (
+                                      <Loader2 size={13} className="animate-spin text-amber-400" />
+                                    ) : (
+                                      <Zap size={13} className="fill-amber-400" />
+                                    )}
                                   </button>
                                   <button
-                                    onClick={(e) => {
+                                    disabled={deletingMasterRowKey === rowKeyStr}
+                                    onClick={async (e) => {
                                       e.stopPropagation();
-                                      onDeleteRow && onDeleteRow({
-                                        pkColumn,
-                                        pkValue: pkVal
-                                      });
+                                      setDeletingMasterRowKey(rowKeyStr);
+                                      try {
+                                        onDeleteRow && await onDeleteRow({
+                                          pkColumn,
+                                          pkValue: pkVal
+                                        });
+                                      } finally {
+                                        setDeletingMasterRowKey(null);
+                                      }
                                     }}
-                                    className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/15 transition-colors cursor-pointer"
+                                    className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/15 transition-colors cursor-pointer disabled:opacity-50"
                                     title="Hapus baris ini dari Database Master dan seluruh POD (Cascade)"
                                   >
-                                    <Trash2 size={13} />
+                                    {deletingMasterRowKey === rowKeyStr ? (
+                                      <Loader2 size={13} className="animate-spin text-red-400" />
+                                    ) : (
+                                      <Trash2 size={13} />
+                                    )}
                                   </button>
                                 </>
                               )}

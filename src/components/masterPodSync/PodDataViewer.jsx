@@ -31,6 +31,7 @@ export default function PodDataViewer({
   onDeleteMultiplePodRows,
   onSyncSingleRowToPod,
   onSyncSinglePodRowToMaster,
+  onBulkSyncPodRowsToMaster,
   onQuickSyncSingleRow
 }) {
   const [activeSubTab, setActiveSubTab] = useState('data'); // 'data' | 'columns'
@@ -39,6 +40,10 @@ export default function PodDataViewer({
   const [copiedKey, setCopiedKey] = useState(null);
   const [selectedKeys, setSelectedKeys] = useState(new Set());
   const [isPullingToMaster, setIsPullingToMaster] = useState(false);
+  const [syncingRowKey, setSyncingRowKey] = useState(null);
+  const [deletingRowKey, setDeletingRowKey] = useState(null);
+  const [downloadingRowKey, setDownloadingRowKey] = useState(null);
+  const [justUploadedKeys, setJustUploadedKeys] = useState(new Set());
 
   const pkColumn = masterInfo?.pkColumn || 'id';
 
@@ -94,9 +99,10 @@ export default function PodDataViewer({
     });
   }, [filteredData, pkColumn]);
 
-  // Reset selectedKeys when pod or table changes
+  // Reset selectedKeys and justUploadedKeys when pod or table changes
   React.useEffect(() => {
     setSelectedKeys(new Set());
+    setJustUploadedKeys(new Set());
   }, [pod?.id, masterInfo?.tableName]);
 
   // Selection handlers
@@ -211,6 +217,32 @@ export default function PodDataViewer({
 
         {/* Action Buttons: Push Master ➔ POD & Pull POD ➔ Master */}
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Direct 100-Batch Upload Button for POD ➔ Master */}
+          {onBulkSyncPodRowsToMaster && (
+            <button
+              disabled={isPullingToMaster}
+              onClick={async () => {
+                const presentRows = filteredData.filter(item => item.presence?.[pod?.id]?.present).map(item => ({
+                  ...item.sampleData,
+                  __rowKey: item.rowKey,
+                  __originPodId: pod.id,
+                  __originPodName: pod.name,
+                  __podIds: [pod.id],
+                  __podSources: [pod.name]
+                }));
+                const chunk100 = presentRows.slice(0, 100);
+                if (chunk100.length > 0) {
+                  await onBulkSyncPodRowsToMaster(chunk100, pkColumn);
+                }
+              }}
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-indigo-500/20 transition-all cursor-pointer hover:scale-105 disabled:opacity-50"
+              title={`Upload 100 baris data pertama dari ${pod.name} ke Master Database secara aman`}
+            >
+              <Zap size={14} className="fill-amber-400 text-amber-400" />
+              <span>Upload 100 Baris ke Master</span>
+            </button>
+          )}
+
           {/* Pull POD ➔ Master Button */}
           {onSyncPodToMaster && (
             <button
@@ -234,7 +266,7 @@ export default function PodDataViewer({
               ) : (
                 <>
                   <UploadCloud size={14} />
-                  <span>{pod.name} ➔ Master</span>
+                  <span>Semua {pod.name} ➔ Master</span>
                 </>
               )}
             </button>
@@ -307,21 +339,86 @@ export default function PodDataViewer({
 
       {/* Floating Bulk Action Bar in POD Viewer */}
       {activeSubTab === 'data' && selectedKeys.size > 0 && (
-        <div className="p-3 bg-gradient-to-r from-slate-900 to-slate-950 border border-red-500/40 rounded-2xl flex items-center justify-between gap-3 shadow-2xl animate-in slide-in-from-top-2 duration-200">
+        <div className="p-3 bg-gradient-to-r from-slate-900 to-slate-950 border border-purple-500/40 rounded-2xl flex items-center justify-between gap-3 shadow-2xl animate-in slide-in-from-top-2 duration-200">
           <div className="flex items-center gap-2 text-xs">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+            <span className="w-2.5 h-2.5 rounded-full bg-purple-500 animate-ping" />
             <span className="font-bold text-white">
-              <strong className="text-red-400 font-mono text-sm">{selectedKeys.size}</strong> baris di {pod.name} dipilih
+              <strong className="text-purple-400 font-mono text-sm">{selectedKeys.size}</strong> baris di {pod.name} dipilih
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Upload 100 Baris Button in Selected Rows Floating Bar */}
+            {onBulkSyncPodRowsToMaster && (
+              <button
+                disabled={isPullingToMaster}
+                onClick={async () => {
+                  const selectedItems = filteredData.filter(item => {
+                    const pkVal = item.sampleData?.[pkColumn] !== undefined ? String(item.sampleData[pkColumn]) : item.rowKey;
+                    return selectedKeys.has(pkVal);
+                  }).map(item => ({
+                    ...item.sampleData,
+                    __rowKey: item.rowKey,
+                    __originPodId: pod.id,
+                    __originPodName: pod.name,
+                    __podIds: [pod.id],
+                    __podSources: [pod.name]
+                  }));
+                  const chunk100 = selectedItems.slice(0, 100);
+                  if (chunk100.length > 0) {
+                    await onBulkSyncPodRowsToMaster(chunk100, pkColumn);
+                    setSelectedKeys(prev => {
+                      const next = new Set(prev);
+                      chunk100.forEach(r => {
+                        const pkVal = r[pkColumn] !== undefined ? String(r[pkColumn]) : String(r.__rowKey);
+                        next.delete(pkVal);
+                      });
+                      return next;
+                    });
+                  }
+                }}
+                className="px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-indigo-600/30 transition-all cursor-pointer hover:scale-105 disabled:opacity-50"
+                title={`Upload 100 baris terpilih dari ${pod.name} ke Master Database secara aman`}
+              >
+                <Zap size={13} className="fill-amber-400 text-amber-400" />
+                <span>Upload 100 Baris ke Master</span>
+              </button>
+            )}
+
+            {/* Upload All Selected Rows Button */}
+            {onBulkSyncPodRowsToMaster && (
+              <button
+                disabled={isPullingToMaster}
+                onClick={async () => {
+                  const selectedItems = filteredData.filter(item => {
+                    const pkVal = item.sampleData?.[pkColumn] !== undefined ? String(item.sampleData[pkColumn]) : item.rowKey;
+                    return selectedKeys.has(pkVal);
+                  }).map(item => ({
+                    ...item.sampleData,
+                    __rowKey: item.rowKey,
+                    __originPodId: pod.id,
+                    __originPodName: pod.name,
+                    __podIds: [pod.id],
+                    __podSources: [pod.name]
+                  }));
+                  if (selectedItems.length > 0) {
+                    await onBulkSyncPodRowsToMaster(selectedItems, pkColumn);
+                    clearSelection();
+                  }
+                }}
+                className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-purple-600/30 transition-all cursor-pointer hover:scale-105 disabled:opacity-50"
+              >
+                <ArrowUpCircle size={13} />
+                <span>Upload Semua ({selectedKeys.size})</span>
+              </button>
+            )}
+
             <button
               onClick={handleBulkDeletePod}
               className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-red-600/30 transition-all cursor-pointer hover:scale-105"
             >
               <Trash2 size={13} />
-              <span>Hard Delete Terpilih di {pod.name} ({selectedKeys.size})</span>
+              <span>Hard Delete ({selectedKeys.size})</span>
             </button>
 
             <button
@@ -357,7 +454,7 @@ export default function PodDataViewer({
                     )}
                   </button>
                 </th>
-                <th className="p-3 font-semibold text-center w-24">Aksi</th>
+                <th className="p-3 font-semibold text-center w-28 whitespace-nowrap">Aksi</th>
                 <th className="p-3 font-bold">Key / ID Baris</th>
                 <th className="p-3 font-semibold text-center w-36">Status di {pod.name}</th>
                 <th className="p-3 font-bold">Nilai Data Preview</th>
@@ -403,49 +500,82 @@ export default function PodDataViewer({
                         </button>
                       </td>
 
-                      {/* Action column (Pull to Master, Sync to Pod, Delete in Pod) */}
-                      <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-center gap-1">
+                      {/* Action column (Upload to Master & Delete in POD) */}
+                      <td className="p-3 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-center gap-1.5">
                           {isPresent ? (
                             <>
-                              {/* Pull this row to Master */}
-                              {onSyncSinglePodRowToMaster && (
+                              {/* Upload / Tarik baris ini ke Master */}
+                              {onSyncSinglePodRowToMaster && !justUploadedKeys.has(rowKeyStr) && (
                                 <button
-                                  onClick={(e) => {
+                                  disabled={syncingRowKey === rowKeyStr}
+                                  onClick={async (e) => {
                                     e.stopPropagation();
-                                    onSyncSinglePodRowToMaster({
+                                    setSyncingRowKey(rowKeyStr);
+                                    try {
+                                      await onSyncSinglePodRowToMaster({
+                                        serverId: pod.id,
+                                        serverName: pod.name,
+                                        pkColumn,
+                                        pkValue: pkVal
+                                      });
+                                      setJustUploadedKeys(prev => new Set(prev).add(rowKeyStr));
+                                    } finally {
+                                      setSyncingRowKey(null);
+                                    }
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer hover:scale-105 disabled:opacity-50"
+                                  title={`Upload / Tarik 1 baris ini dari ${pod.name} ke Master Database`}
+                                >
+                                  {syncingRowKey === rowKeyStr ? (
+                                    <>
+                                      <Loader2 size={12} className="animate-spin text-white" />
+                                      <span>Uploading...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <ArrowUpCircle size={12} />
+                                      <span>Upload</span>
+                                    </>
+                                  )}
+                                </button>
+                              )}
+                              {justUploadedKeys.has(rowKeyStr) && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
+                                  <CheckCircle2 size={11} className="text-emerald-400" />
+                                  <span>Terupload</span>
+                                </span>
+                              )}
+
+                              {/* Hapus baris di POD */}
+                              <button
+                                disabled={deletingRowKey === rowKeyStr}
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  setDeletingRowKey(rowKeyStr);
+                                  try {
+                                    onDeletePodRow && await onDeletePodRow({
                                       serverId: pod.id,
                                       serverName: pod.name,
                                       pkColumn,
                                       pkValue: pkVal
                                     });
-                                  }}
-                                  className="p-1 rounded-lg text-purple-400 hover:text-white hover:bg-purple-500/20 transition-all cursor-pointer hover:scale-110"
-                                  title={`Tarik 1 baris ini dari ${pod.name} ke Master Database`}
-                                >
-                                  <ArrowUpCircle size={14} />
-                                </button>
-                              )}
-
-                              {/* Delete row in POD */}
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onDeletePodRow && onDeletePodRow({
-                                    serverId: pod.id,
-                                    serverName: pod.name,
-                                    pkColumn,
-                                    pkValue: pkVal
-                                  });
+                                  } finally {
+                                    setDeletingRowKey(null);
+                                  }
                                 }}
-                                className="p-1 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/15 transition-colors cursor-pointer"
-                                title={`Hard delete baris ini dari database ${pod.name} (Cascade)`}
+                                className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/15 transition-colors cursor-pointer disabled:opacity-50"
+                                title={`Hapus permanen baris data ini dari database ${pod.name}`}
                               >
-                                <Trash2 size={13} />
+                                {deletingRowKey === rowKeyStr ? (
+                                  <Loader2 size={13} className="animate-spin text-red-400" />
+                                ) : (
+                                  <Trash2 size={13} />
+                                )}
                               </button>
                             </>
                           ) : (
-                            <span className="text-slate-600">-</span>
+                            <span className="text-slate-600 text-xs">-</span>
                           )}
                         </div>
                       </td>
@@ -467,24 +597,42 @@ export default function PodDataViewer({
                       </td>
 
                       {/* Status */}
-                      <td className="p-3 text-center">
+                      <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                         {isPresent ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold font-sans">
                             <CheckCircle2 size={12} /> Ada di {pod.name}
                           </span>
                         ) : (
                           <button
-                            onClick={() => onSyncSingleRowToPod && onSyncSingleRowToPod({
-                              serverId: pod.id,
-                              serverName: pod.name,
-                              pkColumn,
-                              pkValue: pkVal
-                            })}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/20 hover:bg-amber-500/30 text-red-300 hover:text-amber-300 border border-red-500/30 hover:border-amber-500/40 text-[10px] font-bold font-sans transition-all cursor-pointer hover:scale-105"
-                            title={`Klik untuk mengirim 1 baris ini dari Master ke ${pod.name}`}
+                            disabled={downloadingRowKey === rowKeyStr}
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              setDownloadingRowKey(rowKeyStr);
+                              try {
+                                onSyncSingleRowToPod && await onSyncSingleRowToPod({
+                                  serverId: pod.id,
+                                  serverName: pod.name,
+                                  pkColumn,
+                                  pkValue: pkVal
+                                });
+                              } finally {
+                                setDownloadingRowKey(null);
+                              }
+                            }}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/20 hover:bg-amber-500/30 text-red-300 hover:text-amber-300 border border-red-500/30 hover:border-amber-500/40 text-[10px] font-bold font-sans transition-all cursor-pointer hover:scale-105 disabled:opacity-50"
+                            title={`Klik untuk mengunduh 1 baris ini dari Master ke ${pod.name}`}
                           >
-                            <Zap size={11} className="fill-amber-400 text-amber-400" />
-                            <span>Upload</span>
+                            {downloadingRowKey === rowKeyStr ? (
+                              <>
+                                <Loader2 size={11} className="animate-spin text-amber-400" />
+                                <span>Mengunduh...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Zap size={11} className="fill-amber-400 text-amber-400" />
+                                <span>Download</span>
+                              </>
+                            )}
                           </button>
                         )}
                       </td>
