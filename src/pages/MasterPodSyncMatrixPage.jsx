@@ -335,7 +335,7 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
 
       setSuccessMsg(
         dryRun
-          ? `Simulasi selesai: Berhasil simulasi ke ${result.successfulTargets || 0} POD.`
+          ? `Simulasi selesai: Berhasil disimulasikan ke ${targetPodIds.length} target POD.`
           : `Sinkronisasi Live Berhasil! ${result.successfulTargets || 0} POD berhasil diperbarui (${totalSynced} baris data disinkronkan).`
       );
       setTimeout(() => setSuccessMsg(''), 6000);
@@ -978,7 +978,7 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
                   }`}
               >
                 <Activity size={13} className="text-cyan-400" />
-                <span>Audit Disparitas Armada</span>
+                <span>Audit Tabel</span>
                 {auditData?.summary?.discrepantTables > 0 && (
                   <span className="px-1.5 py-0.2 rounded-full bg-amber-500/30 text-amber-300 text-[10px] font-mono">
                     {auditData.summary.discrepantTables}
@@ -1090,12 +1090,14 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
         )
       )}
 
-      {/* SYNC CONFIRMATION MODAL (BULK / TABLE) */}
+      {/* SYNC CONFIRMATION MODAL (BULK / RELATIONAL TABLE SYNC) */}
       {syncModalOpen && (
         <MasterPodSyncModal
           isOpen={syncModalOpen}
           onClose={() => setSyncModalOpen(false)}
-          masterInfo={matrixData?.master}
+          masterId={selectedMasterId}
+          tableName={selectedTableName}
+          masterInfo={matrixData?.master || masterDatabases.find(d => String(d.id) === String(selectedMasterId))}
           targetPodIds={targetPodIds}
           setTargetPodIds={setTargetPodIds}
           pods={matrixData?.pods || []}

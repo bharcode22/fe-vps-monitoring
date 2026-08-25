@@ -68,10 +68,29 @@ export async function fetchFleetAuditApi(masterId) {
 }
 
 /**
+ * Fetch Dynamic Relational FK Tree for a selected table (Parents & Children)
+ */
+export async function fetchTableRelationsApi(masterId, tableName) {
+  const res = await safeFetchJson(`${BASE_URL}/relations?masterId=${masterId}&table=${encodeURIComponent(tableName)}`);
+  return res.data;
+}
+
+/**
  * Execute Sync from Master to selected PODs (Dry-Run or Live)
  */
 export async function performMasterSyncApi(payload) {
   const res = await safeFetchJson(`${BASE_URL}/sync`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  return res.data;
+}
+
+/**
+ * Execute Dynamic Relational Sync (Multi-Table Ordered FK Sync)
+ */
+export async function performRelationalSyncApi(payload) {
+  const res = await safeFetchJson(`${BASE_URL}/sync-relational`, {
     method: 'POST',
     body: JSON.stringify(payload)
   });

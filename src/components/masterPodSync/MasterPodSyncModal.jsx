@@ -1,10 +1,11 @@
 import React from 'react';
-import { Zap, AlertTriangle, ShieldCheck, Loader2 } from 'lucide-react';
+import { Zap, AlertTriangle, ShieldCheck, Loader2, Database } from 'lucide-react';
 
 export default function MasterPodSyncModal({
   isOpen,
   onClose,
   masterInfo,
+  tableName,
   targetPodIds,
   setTargetPodIds,
   pods = [],
@@ -17,24 +18,29 @@ export default function MasterPodSyncModal({
 }) {
   if (!isOpen) return null;
 
+  const currentTableName = tableName || masterInfo?.tableName;
+
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-950 border border-cyan-500/30 rounded-3xl p-6 max-w-lg w-full shadow-2xl flex flex-col gap-4">
-        <h3 className="text-base font-bold text-white flex items-center gap-2">
-          <Zap size={18} className="text-amber-400 fill-amber-400" />
-          Konfirmasi Sinkronisasi: Master To POD
-        </h3>
+      <div className="bg-slate-950 border border-cyan-500/30 rounded-3xl p-6 max-w-lg w-full shadow-2xl flex flex-col gap-4 font-sans text-xs">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+          <h3 className="text-base font-bold text-white flex items-center gap-2">
+            <Zap size={18} className="text-amber-400 fill-amber-400" />
+            <span>Konfirmasi Sinkronisasi: Master ➔ POD</span>
+          </h3>
+        </div>
 
         <p className="text-xs text-slate-400">
-          Sistem akan menyinkronkan tabel <strong className="text-cyan-300 font-mono">public.{masterInfo?.tableName}</strong> ({masterInfo?.rowCount || 0} baris) dari Database Master <strong className="text-purple-300">{masterInfo?.name}</strong> ke target POD V3 yang dipilih.
+          Sistem akan menyinkronkan data tabel <strong className="text-cyan-300 font-mono">public.{currentTableName}</strong> ({masterInfo?.rowCount?.toLocaleString() || 0} baris) dari Database Master <strong className="text-purple-300">{masterInfo?.name || 'Master DB'}</strong> ke target POD V3 yang dipilih.
         </p>
 
         {/* Options: Dry Run & Sync Columns */}
-        <div className="flex flex-col gap-2.5 bg-slate-900/60 p-3 rounded-2xl border border-slate-800 text-xs">
+        <div className="flex flex-col gap-2.5 bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800 text-xs">
           <label className="flex items-center justify-between cursor-pointer">
             <div>
               <span className="font-bold text-white block">Mode Simulasi (Dry-Run)</span>
-              <span className="text-[11px] text-slate-400 block">Uji coba tanpa menulis data nyata ke target</span>
+              <span className="text-[11px] text-slate-400 block">Uji coba tanpa menulis data nyata ke database target</span>
             </div>
             <input
               type="checkbox"
@@ -99,7 +105,7 @@ export default function MasterPodSyncModal({
                       }}
                       className="rounded border-slate-700 text-cyan-500 focus:ring-0 disabled:opacity-40"
                     />
-                    <span>{p.name} {isOffline ? '(OFFLINE)' : `(${p.rowCount} baris)`}</span>
+                    <span>{p.name} {isOffline ? '(OFFLINE)' : `(${p.rowCount?.toLocaleString() || 0} baris)`}</span>
                   </div>
                   <span className={`text-[10px] font-mono font-bold ${p.status === 'SYNCED' ? 'text-emerald-400' : isOffline ? 'text-slate-600' : 'text-amber-400'
                     }`}>
@@ -130,9 +136,9 @@ export default function MasterPodSyncModal({
           <button
             onClick={onPerformSync}
             disabled={isSyncing || targetPodIds.length === 0}
-            className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all ${dryRun
-              ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950'
-              : 'bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950'
+            className={`px-5 py-2.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all ${dryRun
+              ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 shadow-lg shadow-cyan-500/20'
+              : 'bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 shadow-lg shadow-amber-500/20'
               }`}
           >
             {isSyncing ? (

@@ -95,7 +95,7 @@ export default function TableDetailWorkspaceView({
                 className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-amber-500/25 transition-all cursor-pointer hover:scale-105"
               >
                 <Zap size={14} className="fill-slate-950" />
-                <span>Kirim Master ke Semua POD ({matrixData.summary.mismatchPods})</span>
+                <span>Kirim ke POD Selisih ({matrixData.summary.mismatchPods})</span>
               </button>
             )}
 
