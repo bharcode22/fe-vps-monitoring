@@ -238,22 +238,20 @@ export default function MasterDataViewer({
               <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
                 <button
                   onClick={() => setActiveTab('rows')}
-                  className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-                    activeTab === 'rows'
+                  className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${activeTab === 'rows'
                       ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
                       : 'text-slate-400 hover:text-white'
-                  }`}
+                    }`}
                 >
                   Data Baris ({combinedRows.length})
                 </button>
 
                 <button
                   onClick={() => setActiveTab('columns')}
-                  className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-                    activeTab === 'columns'
+                  className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${activeTab === 'columns'
                       ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
                       : 'text-slate-400 hover:text-white'
-                  }`}
+                    }`}
                 >
                   Skema Kolom DDL ({columns.length})
                 </button>
@@ -264,32 +262,29 @@ export default function MasterDataViewer({
                 <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
                   <button
                     onClick={() => setRowSourceFilter('all')}
-                    className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
-                      rowSourceFilter === 'all'
+                    className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${rowSourceFilter === 'all'
                         ? 'bg-slate-800 text-white'
                         : 'text-slate-400 hover:text-slate-200'
-                    }`}
+                      }`}
                   >
                     Semua ({combinedRows.length})
                   </button>
                   <button
                     onClick={() => setRowSourceFilter('master_only')}
-                    className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
-                      rowSourceFilter === 'master_only'
+                    className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${rowSourceFilter === 'master_only'
                         ? 'bg-cyan-500/25 text-cyan-300 border border-cyan-500/40'
                         : 'text-slate-400 hover:text-cyan-300'
-                    }`}
+                      }`}
                   >
                     Ada di Master ({masterRowsCount})
                   </button>
                   {podOnlyRowsCount > 0 && (
                     <button
                       onClick={() => setRowSourceFilter('pod_only')}
-                      className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                        rowSourceFilter === 'pod_only'
+                      className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1 ${rowSourceFilter === 'pod_only'
                           ? 'bg-purple-500/30 text-purple-200 border border-purple-500/50 shadow-sm'
                           : 'text-purple-300 hover:text-white'
-                      }`}
+                        }`}
                     >
                       <Sparkles size={12} className="text-purple-400" />
                       <span>Belum di Master ({podOnlyRowsCount})</span>
@@ -315,9 +310,8 @@ export default function MasterDataViewer({
 
           {/* Floating Bulk Action Bar for Selected Rows */}
           {activeTab === 'rows' && selectedKeys.size > 0 && (
-            <div className={`p-3 bg-gradient-to-r from-slate-900 to-slate-950 border rounded-2xl flex items-center justify-between gap-3 shadow-2xl animate-in slide-in-from-top-2 duration-200 ${
-              allSelectedArePodOnly ? 'border-purple-500/50' : 'border-red-500/40'
-            }`}>
+            <div className={`p-3 bg-gradient-to-r from-slate-900 to-slate-950 border rounded-2xl flex items-center justify-between gap-3 shadow-2xl animate-in slide-in-from-top-2 duration-200 ${allSelectedArePodOnly ? 'border-purple-500/50' : 'border-red-500/40'
+              }`}>
               <div className="flex items-center gap-2 text-xs">
                 <span className={`w-2.5 h-2.5 rounded-full animate-ping ${allSelectedArePodOnly ? 'bg-purple-500' : 'bg-red-500'}`} />
                 <span className="font-bold text-white">
@@ -418,13 +412,12 @@ export default function MasterDataViewer({
                       return (
                         <tr
                           key={idx}
-                          className={`hover:bg-white/[0.02] transition-colors ${
-                            isSelected
+                          className={`hover:bg-white/[0.02] transition-colors ${isSelected
                               ? 'bg-cyan-500/10 border-l-2 border-cyan-400'
                               : isPodOnly
-                              ? 'bg-purple-950/20 border-l-2 border-purple-500'
-                              : ''
-                          }`}
+                                ? 'bg-purple-950/20 border-l-2 border-purple-500'
+                                : ''
+                            }`}
                         >
                           {/* Row Checkbox */}
                           <td className="p-2.5 text-center">
