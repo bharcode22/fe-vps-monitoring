@@ -69,3 +69,36 @@ export async function performMasterSyncApi(payload) {
   });
   return res.data;
 }
+
+/**
+ * Delete a specific row in Master Database
+ */
+export async function deleteMasterRowApi(payload) {
+  const res = await safeFetchJson(`${BASE_URL}/master-row`, {
+    method: 'DELETE',
+    body: JSON.stringify(payload)
+  });
+  return res.data;
+}
+
+/**
+ * Delete a specific row in a target POD Database
+ */
+export async function deletePodRowApi(payload) {
+  const res = await safeFetchJson(`${BASE_URL}/pod-row`, {
+    method: 'DELETE',
+    body: JSON.stringify(payload)
+  });
+  return res.data;
+}
+
+/**
+ * Sync 1 single row from Master Database to Selected PODs
+ */
+export async function syncSingleMasterRowApi(payload) {
+  const res = await safeFetchJson(`${BASE_URL}/sync-single-row`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  return res.data;
+}

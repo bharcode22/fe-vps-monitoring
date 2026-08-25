@@ -12,36 +12,64 @@ import {
   fetchMasterDatabasesApi,
   fetchMasterTablesApi,
   fetchMasterTableMatrixApi,
-  performMasterSyncApi
+  performMasterSyncApi,
+  deleteMasterRowApi,
+  deletePodRowApi,
+  syncSingleMasterRowApi
 } from '../api/masterPodSyncApi';
-import MasterSelectorBar from '../components/masterPodSync/MasterSelectorBar';
-import MasterPodMatrixSummaryCards from '../components/masterPodSync/MasterPodMatrixSummaryCards';
-import MasterPodColumnMatrix from '../components/masterPodSync/MasterPodColumnMatrix';
-import MasterPodDataMatrix from '../components/masterPodSync/MasterPodDataMatrix';
-import MasterPodDiffModal from '../components/masterPodSync/MasterPodDiffModal';
+import MasterTablesCatalogView from '../components/masterPodSync/MasterTablesCatalogView';
+import TableDetailWorkspaceView from '../components/masterPodSync/TableDetailWorkspaceView';
 import MasterPodSyncModal from '../components/masterPodSync/MasterPodSyncModal';
 import MasterPodSkeleton from '../components/masterPodSync/MasterPodSkeleton';
+import DeleteRowConfirmationModal from '../components/masterPodSync/DeleteRowConfirmationModal';
+import SingleRowSyncModal from '../components/masterPodSync/SingleRowSyncModal';
 
 export default function MasterPodSyncMatrixPage({ onBack }) {
+  // View mode: 'catalog' (Level 1: Tables Grid) | 'detail' (Level 2: Detail Workspace)
+  const [viewMode, setViewMode] = useState('catalog');
+
   // Master Databases & Tables State
   const [masterDatabases, setMasterDatabases] = useState([]);
   const [selectedMasterId, setSelectedMasterId] = useState('');
   const [tables, setTables] = useState([]);
-  const [selectedTable, setSelectedTable] = useState('');
+  const [selectedTableName, setSelectedTableName] = useState('');
   const [isLoadingTables, setIsLoadingTables] = useState(false);
 
-  // Matrix State
+  // Active POD for Level 2 inspection
+  const [activePodId, setActivePodId] = useState(null);
+
+  // Matrix Comparison State
   const [matrixData, setMatrixData] = useState(null);
   const [isComparing, setIsComparing] = useState(false);
-  const [activeMatrixTab, setActiveMatrixTab] = useState('data'); // 'data' | 'columns'
 
-  // Modals State
-  const [inspectedPod, setInspectedPod] = useState(null);
+  // Sync Modal State (Bulk/Table Sync)
   const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [targetPodIds, setTargetPodIds] = useState([]);
   const [dryRun, setDryRun] = useState(false);
   const [syncColumns, setSyncColumns] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // Single Row Sync Modal State
+  const [singleRowSyncModal, setSingleRowSyncModal] = useState({
+    isOpen: false,
+    pkColumn: 'id',
+    pkValue: null,
+    rowData: null,
+    targetPodIds: []
+  });
+  const [isSingleRowSyncing, setIsSingleRowSyncing] = useState(false);
+
+  // Delete Modal State
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    targetType: 'master', // 'master' | 'pod'
+    targetName: '',
+    serverId: null,
+    tableName: '',
+    pkColumn: 'id',
+    pkValue: null
+  });
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Alerts
   const [error, setError] = useState('');
@@ -62,58 +90,69 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
   }, []);
 
   // 2. Fetch Tables when Master DB changes
-  useEffect(() => {
-    if (!selectedMasterId) {
+  const loadMasterTables = async (masterId) => {
+    if (!masterId) {
       setTables([]);
-      setSelectedTable('');
       return;
     }
 
     setIsLoadingTables(true);
     setError('');
-    fetchMasterTablesApi(selectedMasterId)
-      .then(res => {
-        const tblList = res.tables || [];
-        setTables(tblList);
-        // Preselect popular table if exists, else first table
-        const defaultTable = tblList.find(t => t.tableName === 'pod_topics' || t.tableName === 'settings') || tblList[0];
-        if (defaultTable) {
-          setSelectedTable(defaultTable.tableName);
-        } else {
-          setSelectedTable('');
-        }
-      })
-      .catch(err => {
-        setError(err.message || 'Gagal memuat daftar tabel master.');
-      })
-      .finally(() => {
-        setIsLoadingTables(false);
-      });
+    try {
+      const res = await fetchMasterTablesApi(masterId);
+      setTables(res.tables || []);
+    } catch (err) {
+      setError(err.message || 'Gagal memuat daftar tabel master.');
+    } finally {
+      setIsLoadingTables(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedMasterId) {
+      loadMasterTables(selectedMasterId);
+    }
   }, [selectedMasterId]);
 
-  // 3. Load Comparison Matrix
-  const handleCompare = async () => {
-    if (!selectedMasterId || !selectedTable) return;
+  // 3. Open Detail Workspace for a specific Table
+  const handleOpenTableDetail = async (tableName) => {
+    setSelectedTableName(tableName);
+    setViewMode('detail');
     setIsComparing(true);
     setError('');
+    setMatrixData(null);
+
     try {
-      const data = await fetchMasterTableMatrixApi(selectedMasterId, selectedTable);
+      const data = await fetchMasterTableMatrixApi(selectedMasterId, tableName);
       setMatrixData(data);
+      if (data?.pods?.length > 0) {
+        // Default to first online pod or first pod
+        const firstOnline = data.pods.find(p => p.isOnline);
+        setActivePodId(firstOnline ? firstOnline.id : data.pods[0].id);
+      }
     } catch (err) {
-      setError(err.message || 'Gagal membandingkan tabel Master vs PODs.');
+      setError(err.message || `Gagal memuat data komparasi tabel '${tableName}'.`);
     } finally {
       setIsComparing(false);
     }
   };
 
-  // Auto compare when table is selected
-  useEffect(() => {
-    if (selectedMasterId && selectedTable) {
-      handleCompare();
+  // Reload current matrix comparison
+  const handleRefreshCurrentMatrix = async () => {
+    if (!selectedMasterId || !selectedTableName) return;
+    setIsComparing(true);
+    setError('');
+    try {
+      const data = await fetchMasterTableMatrixApi(selectedMasterId, selectedTableName);
+      setMatrixData(data);
+    } catch (err) {
+      setError(err.message || 'Gagal memuat ulang data matriks.');
+    } finally {
+      setIsComparing(false);
     }
-  }, [selectedMasterId, selectedTable]);
+  };
 
-  // 4. Trigger Bulk Sync (All mismatching online pods)
+  // 4. Trigger Sync Modals
   const triggerBulkSync = () => {
     if (!matrixData) return;
     const mismatchOnlineIds = matrixData.pods
@@ -121,7 +160,6 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
       .map(p => p.id);
 
     if (mismatchOnlineIds.length === 0) {
-      // If all synced, pick all online
       const allOnlineIds = matrixData.pods.filter(p => p.isOnline).map(p => p.id);
       setTargetPodIds(allOnlineIds);
     } else {
@@ -130,7 +168,6 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
     setSyncModalOpen(true);
   };
 
-  // Trigger Sync for Single POD
   const triggerSinglePodSync = (podId) => {
     setTargetPodIds([podId]);
     setSyncModalOpen(true);
@@ -138,7 +175,7 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
 
   // 5. Execute Sync
   const handlePerformSync = async () => {
-    if (!selectedMasterId || !selectedTable || targetPodIds.length === 0) {
+    if (!selectedMasterId || !selectedTableName || targetPodIds.length === 0) {
       setError('Pilih minimal satu target POD online.');
       return;
     }
@@ -148,7 +185,7 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
     try {
       const res = await performMasterSyncApi({
         masterId: Number(selectedMasterId),
-        tableName: selectedTable,
+        tableName: selectedTableName,
         targetPodIds,
         dryRun,
         syncColumns,
@@ -156,10 +193,10 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
       });
 
       setSuccessMsg(
-        `Sukses! ${dryRun ? 'Simulasi' : 'Sinkronisasi'} tabel '${selectedTable}' berhasil dijalankan ke ${res.successfulTargets} target POD.`
+        `Sukses! ${dryRun ? 'Simulasi' : 'Sinkronisasi'} tabel '${selectedTableName}' berhasil dijalankan ke ${res.successfulTargets} target POD.`
       );
       setSyncModalOpen(false);
-      await handleCompare();
+      await handleRefreshCurrentMatrix();
       setTimeout(() => setSuccessMsg(''), 6000);
     } catch (err) {
       setError(err.message || 'Gagal melakukan sinkronisasi ke POD.');
@@ -168,25 +205,151 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
     }
   };
 
+  // 6. Delete Row Handlers
+  const handlePromptDeleteMasterRow = ({ pkColumn, pkValue }) => {
+    const master = masterDatabases.find(d => String(d.id) === String(selectedMasterId));
+    setDeleteModal({
+      isOpen: true,
+      targetType: 'master',
+      targetName: master ? master.name : 'Master DB',
+      serverId: null,
+      tableName: selectedTableName,
+      pkColumn: pkColumn || 'id',
+      pkValue
+    });
+  };
+
+  const handlePromptDeletePodRow = ({ serverId, serverName, pkColumn, pkValue }) => {
+    setDeleteModal({
+      isOpen: true,
+      targetType: 'pod',
+      targetName: serverName || `POD #${serverId}`,
+      serverId,
+      tableName: selectedTableName,
+      pkColumn: pkColumn || 'id',
+      pkValue
+    });
+  };
+
+  const handleExecuteDelete = async () => {
+    setIsDeleting(true);
+    setError('');
+    try {
+      if (deleteModal.targetType === 'master') {
+        await deleteMasterRowApi({
+          masterId: Number(selectedMasterId),
+          tableName: deleteModal.tableName,
+          pkColumn: deleteModal.pkColumn,
+          pkValue: deleteModal.pkValue
+        });
+        setSuccessMsg(`Baris (${deleteModal.pkColumn} = ${deleteModal.pkValue}) berhasil dihapus dari Master Database.`);
+      } else {
+        await deletePodRowApi({
+          serverId: Number(deleteModal.serverId),
+          tableName: deleteModal.tableName,
+          pkColumn: deleteModal.pkColumn,
+          pkValue: deleteModal.pkValue
+        });
+        setSuccessMsg(`Baris (${deleteModal.pkColumn} = ${deleteModal.pkValue}) berhasil dihapus dari ${deleteModal.targetName}.`);
+      }
+
+      setDeleteModal(prev => ({ ...prev, isOpen: false }));
+      await handleRefreshCurrentMatrix();
+      setTimeout(() => setSuccessMsg(''), 6000);
+    } catch (err) {
+      setError(err.message || 'Gagal menghapus baris data.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // 7. Single Row Sync Handlers
+  // A. Trigger from Master Data Viewer -> Open Modal
+  const handlePromptSyncSingleRowMaster = ({ pkColumn, pkValue, rowData }) => {
+    const onlineIds = (matrixData?.pods || []).filter(p => p.isOnline).map(p => p.id);
+    setSingleRowSyncModal({
+      isOpen: true,
+      pkColumn: pkColumn || 'id',
+      pkValue,
+      rowData,
+      targetPodIds: onlineIds
+    });
+  };
+
+  // B. Execute Single Row Sync from Modal
+  const handleExecuteSingleRowSyncModal = async () => {
+    if (!selectedMasterId || !selectedTableName || singleRowSyncModal.targetPodIds.length === 0) {
+      setError('Pilih minimal 1 unit target POD online.');
+      return;
+    }
+
+    setIsSingleRowSyncing(true);
+    setError('');
+    try {
+      const res = await syncSingleMasterRowApi({
+        masterId: Number(selectedMasterId),
+        tableName: selectedTableName,
+        pkColumn: singleRowSyncModal.pkColumn,
+        pkValue: singleRowSyncModal.pkValue,
+        targetPodIds: singleRowSyncModal.targetPodIds
+      });
+
+      setSuccessMsg(`Sukses! Baris (${singleRowSyncModal.pkColumn} = ${singleRowSyncModal.pkValue}) berhasil disinkronkan ke ${res.successfulTargets} unit POD.`);
+      setSingleRowSyncModal(prev => ({ ...prev, isOpen: false }));
+      await handleRefreshCurrentMatrix();
+      setTimeout(() => setSuccessMsg(''), 6000);
+    } catch (err) {
+      setError(err.message || 'Gagal menyinkronkan 1 baris data ke POD.');
+    } finally {
+      setIsSingleRowSyncing(false);
+    }
+  };
+
+  // C. Instant Quick Sync 1 Row from PodDataViewer (Specific target POD)
+  const handleQuickSyncSingleRowToSpecificPod = async ({ serverId, serverName, pkColumn, pkValue }) => {
+    setError('');
+    try {
+      await syncSingleMasterRowApi({
+        masterId: Number(selectedMasterId),
+        tableName: selectedTableName,
+        pkColumn: pkColumn || 'id',
+        pkValue,
+        targetPodIds: [serverId]
+      });
+
+      setSuccessMsg(`Sukses! 1 baris data (${pkColumn} = ${pkValue}) berhasil disinkronkan ke ${serverName || 'POD'}.`);
+      await handleRefreshCurrentMatrix();
+      setTimeout(() => setSuccessMsg(''), 6000);
+    } catch (err) {
+      setError(err.message || `Gagal menyinkronkan baris ke ${serverName}: ${err.message}`);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6 text-slate-100 w-full">
-      {/* Top Header */}
+      {/* Top Header Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-cyan-500/20">
         <div className="flex items-center gap-3">
           <button
-            onClick={onBack}
+            onClick={() => {
+              if (viewMode === 'detail') {
+                setViewMode('catalog');
+              } else {
+                onBack();
+              }
+            }}
             className="p-2 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 transition-colors cursor-pointer"
-            title="Kembali ke Dashboard"
+            title="Kembali"
           >
             <ArrowLeft size={18} />
           </button>
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-extrabold text-white tracking-tight">
-                Master ➡️ Multi-POD Sync Matrix
+                Master Multi-POD Sync Matrix
               </h1>
               <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30">
-                PostgreSQL
+                {viewMode === 'catalog' ? 'Katalog Master' : `Tabel: ${selectedTableName}`}
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
@@ -195,25 +358,28 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
           </div>
         </div>
 
-        {/* Action Button: Refresh */}
+        {/* Global Action: Back / Refresh */}
         <div className="flex items-center gap-3">
-          {matrixData && matrixData.summary?.mismatchPods > 0 && (
+          {viewMode === 'detail' && (
             <button
-              onClick={triggerBulkSync}
-              className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-amber-500/25 transition-all cursor-pointer hover:scale-105"
+              onClick={() => setViewMode('catalog')}
+              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors border border-slate-700 cursor-pointer shadow-sm"
             >
-              <Zap size={15} className="fill-slate-950" />
-              <span>Sync Semua POD Kurang ({matrixData.summary.mismatchPods})</span>
+              <Table size={14} />
+              <span>Semua Tabel Master</span>
             </button>
           )}
 
           <button
-            onClick={handleCompare}
-            disabled={isComparing || !selectedTable}
+            onClick={() => {
+              if (viewMode === 'detail') handleRefreshCurrentMatrix();
+              else loadMasterTables(selectedMasterId);
+            }}
+            disabled={isLoadingTables || isComparing}
             className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors border border-slate-700 cursor-pointer shadow-sm disabled:opacity-50"
           >
-            <RefreshCw size={14} className={isComparing ? 'animate-spin' : ''} />
-            <span>Muat Ulang Matriks</span>
+            <RefreshCw size={14} className={isLoadingTables || isComparing ? 'animate-spin' : ''} />
+            <span>Muat Ulang</span>
           </button>
         </div>
       </div>
@@ -238,104 +404,44 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
         </div>
       )}
 
-      {/* Step 1 & 2: Master Selector Bar */}
-      <MasterSelectorBar
-        masterDatabases={masterDatabases}
-        selectedMasterId={selectedMasterId}
-        onSelectMaster={setSelectedMasterId}
-        tables={tables}
-        selectedTable={selectedTable}
-        onSelectTable={setSelectedTable}
-        isLoadingTables={isLoadingTables}
-        onCompare={handleCompare}
-        isComparing={isComparing}
-      />
-
-      {/* RENDER SKELETON LOADER OR REAL MATRIX */}
-      {isComparing ? (
-        <MasterPodSkeleton />
-      ) : matrixData ? (
-        <div className="flex flex-col gap-5">
-          {/* Summary Stat Overview Cards */}
-          <MasterPodMatrixSummaryCards
-            summary={matrixData.summary}
-            masterInfo={matrixData.master}
-            onBulkSync={triggerBulkSync}
-          />
-
-          {/* Matrix Tab Switcher Toolbar */}
-          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-3 shadow-sm">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setActiveMatrixTab('data')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  activeMatrixTab === 'data'
-                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                📊 Matriks Baris Data ({matrixData.master?.rowCount || 0} Baris Master)
-              </button>
-
-              <button
-                onClick={() => setActiveMatrixTab('columns')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  activeMatrixTab === 'columns'
-                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                📑 Matriks Skema Kolom ({matrixData.master?.columnCount || 0} Kolom DDL)
-              </button>
-            </div>
-
-            {matrixData.summary?.mismatchPods > 0 && (
-              <button
-                onClick={triggerBulkSync}
-                className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all cursor-pointer"
-              >
-                <Zap size={14} className="fill-slate-950" />
-                <span>Sync Tabel Ini ke {matrixData.summary.mismatchPods} POD</span>
-              </button>
-            )}
-          </div>
-
-          {/* TAB 1: Data Row Matrix */}
-          {activeMatrixTab === 'data' && (
-            <MasterPodDataMatrix
-              dataMatrix={matrixData.dataMatrix}
-              pods={matrixData.pods}
-              onInspectPod={setInspectedPod}
-              onQuickSyncRow={(podId) => triggerSinglePodSync(podId)}
-            />
-          )}
-
-          {/* TAB 2: Column Schema Matrix */}
-          {activeMatrixTab === 'columns' && (
-            <MasterPodColumnMatrix
-              columnsMatrix={matrixData.columnsMatrix}
-              pods={matrixData.pods}
-            />
-          )}
-        </div>
-      ) : (
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-12 text-center text-slate-400 font-sans text-xs flex flex-col items-center justify-center gap-3">
-          <Database size={32} className="text-cyan-400/60" />
-          <p>Pilih Database Master dan Tabel di atas untuk menampilkan Matriks Perbandingan Multi-POD.</p>
-        </div>
-      )}
-
-      {/* DETAIL DIFF MODAL */}
-      {inspectedPod && (
-        <MasterPodDiffModal
-          pod={inspectedPod}
-          masterInfo={matrixData?.master}
-          onClose={() => setInspectedPod(null)}
-          onSyncThisPod={triggerSinglePodSync}
+      {/* VIEW LEVEL 1: MASTER TABLES CATALOG */}
+      {viewMode === 'catalog' && (
+        <MasterTablesCatalogView
+          masterDatabases={masterDatabases}
+          selectedMasterId={selectedMasterId}
+          onSelectMaster={setSelectedMasterId}
+          tables={tables}
+          isLoadingTables={isLoadingTables}
+          onRefreshTables={() => loadMasterTables(selectedMasterId)}
+          onSelectTableForDetail={handleOpenTableDetail}
         />
       )}
 
-      {/* SYNC CONFIRMATION MODAL */}
+      {/* VIEW LEVEL 2: TABLE DETAIL WORKSPACE */}
+      {viewMode === 'detail' && (
+        isComparing ? (
+          <MasterPodSkeleton />
+        ) : (
+          <TableDetailWorkspaceView
+            tableName={selectedTableName}
+            masterInfo={matrixData?.master}
+            matrixData={matrixData}
+            isComparing={isComparing}
+            onRefresh={handleRefreshCurrentMatrix}
+            onBackToCatalog={() => setViewMode('catalog')}
+            activePodId={activePodId}
+            setActivePodId={setActivePodId}
+            onQuickSyncPod={triggerSinglePodSync}
+            onBulkSync={triggerBulkSync}
+            onDeleteMasterRow={handlePromptDeleteMasterRow}
+            onDeletePodRow={handlePromptDeletePodRow}
+            onSyncSingleRow={handlePromptSyncSingleRowMaster}
+            onSyncSingleRowToPod={handleQuickSyncSingleRowToSpecificPod}
+          />
+        )
+      )}
+
+      {/* SYNC CONFIRMATION MODAL (BULK / TABLE) */}
       {syncModalOpen && (
         <MasterPodSyncModal
           isOpen={syncModalOpen}
@@ -343,13 +449,48 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
           masterInfo={matrixData?.master}
           targetPodIds={targetPodIds}
           setTargetPodIds={setTargetPodIds}
-          pods={matrixData?.pods}
+          pods={matrixData?.pods || []}
           dryRun={dryRun}
           setDryRun={setDryRun}
           syncColumns={syncColumns}
           setSyncColumns={setSyncColumns}
           isSyncing={isSyncing}
           onPerformSync={handlePerformSync}
+        />
+      )}
+
+      {/* SINGLE ROW SYNC MODAL */}
+      {singleRowSyncModal.isOpen && (
+        <SingleRowSyncModal
+          isOpen={singleRowSyncModal.isOpen}
+          onClose={() => setSingleRowSyncModal(prev => ({ ...prev, isOpen: false }))}
+          masterInfo={matrixData?.master}
+          pkColumn={singleRowSyncModal.pkColumn}
+          pkValue={singleRowSyncModal.pkValue}
+          rowData={singleRowSyncModal.rowData}
+          targetPodIds={singleRowSyncModal.targetPodIds}
+          setTargetPodIds={(ids) => setSingleRowSyncModal(prev => ({
+            ...prev,
+            targetPodIds: typeof ids === 'function' ? ids(prev.targetPodIds) : ids
+          }))}
+          pods={matrixData?.pods || []}
+          isSyncing={isSingleRowSyncing}
+          onConfirmSync={handleExecuteSingleRowSyncModal}
+        />
+      )}
+
+      {/* MANUAL DELETE CONFIRMATION MODAL */}
+      {deleteModal.isOpen && (
+        <DeleteRowConfirmationModal
+          isOpen={deleteModal.isOpen}
+          onClose={() => setDeleteModal(prev => ({ ...prev, isOpen: false }))}
+          targetType={deleteModal.targetType}
+          targetName={deleteModal.targetName}
+          tableName={deleteModal.tableName}
+          pkColumn={deleteModal.pkColumn}
+          pkValue={deleteModal.pkValue}
+          isDeleting={isDeleting}
+          onConfirmDelete={handleExecuteDelete}
         />
       )}
     </div>
