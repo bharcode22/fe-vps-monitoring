@@ -1,5 +1,5 @@
 import React from 'react';
-import { Zap, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Zap, AlertTriangle, ShieldCheck, Loader2 } from 'lucide-react';
 
 export default function MasterPodSyncModal({
   isOpen,
@@ -22,7 +22,7 @@ export default function MasterPodSyncModal({
       <div className="bg-slate-950 border border-cyan-500/30 rounded-3xl p-6 max-w-lg w-full shadow-2xl flex flex-col gap-4">
         <h3 className="text-base font-bold text-white flex items-center gap-2">
           <Zap size={18} className="text-amber-400 fill-amber-400" />
-          Konfirmasi Sinkronisasi: Master ➡️ PODs
+          Konfirmasi Sinkronisasi: Master To POD
         </h3>
 
         <p className="text-xs text-slate-400">
@@ -85,9 +85,8 @@ export default function MasterPodSyncModal({
               return (
                 <label
                   key={p.id}
-                  className={`flex items-center justify-between ${
-                    isOffline ? 'text-slate-600 cursor-not-allowed' : 'text-slate-300 cursor-pointer'
-                  }`}
+                  className={`flex items-center justify-between ${isOffline ? 'text-slate-600 cursor-not-allowed' : 'text-slate-300 cursor-pointer'
+                    }`}
                 >
                   <div className="flex items-center gap-2">
                     <input
@@ -102,9 +101,8 @@ export default function MasterPodSyncModal({
                     />
                     <span>{p.name} {isOffline ? '(OFFLINE)' : `(${p.rowCount} baris)`}</span>
                   </div>
-                  <span className={`text-[10px] font-mono font-bold ${
-                    p.status === 'SYNCED' ? 'text-emerald-400' : isOffline ? 'text-slate-600' : 'text-amber-400'
-                  }`}>
+                  <span className={`text-[10px] font-mono font-bold ${p.status === 'SYNCED' ? 'text-emerald-400' : isOffline ? 'text-slate-600' : 'text-amber-400'
+                    }`}>
                     {p.status}
                   </span>
                 </label>
@@ -132,14 +130,17 @@ export default function MasterPodSyncModal({
           <button
             onClick={onPerformSync}
             disabled={isSyncing || targetPodIds.length === 0}
-            className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all ${
-              dryRun
-                ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950'
-                : 'bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all ${dryRun
+              ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950'
+              : 'bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950'
+              }`}
           >
-            <Zap size={14} className={isSyncing ? 'animate-spin' : ''} />
-            <span>{isSyncing ? 'Memproses...' : dryRun ? 'Jalankan Simulasi Sync' : 'Mulai Sinkronisasi Nyata'}</span>
+            {isSyncing ? (
+              <Loader2 size={14} className="animate-spin text-slate-950" />
+            ) : (
+              <Zap size={14} className={dryRun ? 'text-slate-950' : 'fill-slate-950 text-slate-950'} />
+            )}
+            <span>{isSyncing ? 'Memproses Sinkronisasi...' : dryRun ? 'Jalankan Simulasi Sync' : 'Mulai Sinkronisasi Nyata'}</span>
           </button>
         </div>
       </div>

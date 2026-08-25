@@ -16,7 +16,10 @@ import {
   CheckSquare,
   Square,
   MinusSquare,
-  X
+  X,
+  Maximize2,
+  Minimize2,
+  Loader2
 } from 'lucide-react';
 
 export default function MasterDataViewer({
@@ -32,10 +35,13 @@ export default function MasterDataViewer({
   onSyncSinglePodRowToMaster
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
+  const [isTableExpanded, setIsTableExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('rows'); // 'rows' | 'columns'
   const [rowSourceFilter, setRowSourceFilter] = useState('all'); // 'all' | 'master_only' | 'pod_only'
   const [selectedKeys, setSelectedKeys] = useState(new Set());
+  const [uploadingRowKey, setUploadingRowKey] = useState(null);
+  const [isBulkUploading, setIsBulkUploading] = useState(false);
 
   const pkColumn = masterInfo?.pkColumn || columns.find(c => c.isPk)?.columnName || columns[0]?.columnName || 'id';
 
@@ -48,7 +54,10 @@ export default function MasterDataViewer({
         __isPodOnly: item.isPodOnly,
         __originPodId: item.originPodId,
         __originPodName: item.originPodName,
+        __originPodHost: item.originPodHost,
         __podSources: item.podSources || [],
+        __podIds: item.podIds || (item.originPodId ? [item.originPodId] : []),
+        __podSourcesDetail: item.podSourcesDetail || item.podSources || [],
         __rowKey: item.rowKey
       }));
     }
@@ -57,6 +66,18 @@ export default function MasterDataViewer({
 
   const masterRowsCount = useMemo(() => combinedRows.filter(r => r.__inMaster).length, [combinedRows]);
   const podOnlyRowsCount = useMemo(() => combinedRows.filter(r => r.__isPodOnly).length, [combinedRows]);
+
+  // Breakdown of POD-only rows by source POD
+  const podBreakdown = useMemo(() => {
+    const map = new Map();
+    combinedRows.filter(r => r.__isPodOnly).forEach(r => {
+      const srcList = r.__podSources && r.__podSources.length > 0 ? r.__podSources : [r.__originPodName || 'POD'];
+      srcList.forEach(src => {
+        map.set(src, (map.get(src) || 0) + 1);
+      });
+    });
+    return Array.from(map.entries()).map(([name, count]) => ({ name, count }));
+  }, [combinedRows]);
 
   // Filter rows by search and source filter
   const filteredRows = useMemo(() => {
@@ -107,9 +128,13 @@ export default function MasterDataViewer({
   }, [combinedRows, selectedKeys, pkColumn]);
 
   const allSelectedArePodOnly = selectedRowsList.length > 0 && selectedRowsList.every(r => r.__isPodOnly);
-  const firstPodSource = selectedRowsList.find(r => r.__originPodId);
-  const targetPodId = firstPodSource?.__originPodId;
-  const targetPodName = firstPodSource?.__originPodName || firstPodSource?.__podSources?.[0] || 'POD';
+  const targetPodIds = useMemo(() => {
+    return Array.from(new Set(selectedRowsList.flatMap(r => r.__podIds || (r.__originPodId ? [r.__originPodId] : []))));
+  }, [selectedRowsList]);
+
+  const targetPodNames = useMemo(() => {
+    return Array.from(new Set(selectedRowsList.flatMap(r => r.__podSources || (r.__originPodName ? [r.__originPodName] : [])))).join(', ') || 'POD';
+  }, [selectedRowsList]);
 
   // Selection handlers
   const toggleSelectRow = (key) => {
@@ -149,30 +174,32 @@ export default function MasterDataViewer({
 
   const clearSelection = () => setSelectedKeys(new Set());
 
-  // Handle Bulk Delete for selected rows
+  // Handle Bulk Delete for selected rows (Routes to Master or across all involved PODs)
   const handleBulkDelete = () => {
     if (selectedKeys.size === 0) return;
     const pkValues = Array.from(selectedKeys);
 
     if (allSelectedArePodOnly || rowSourceFilter === 'pod_only') {
-      // 🚀 TARGET IS POD!
+      // 🚀 TARGET IS ALL INVOLVED PODs!
       if (onDeleteMultiplePodRows) {
         onDeleteMultiplePodRows({
-          serverId: targetPodId,
-          serverName: targetPodName,
+          serverId: targetPodIds[0],
+          serverIds: targetPodIds,
+          serverName: targetPodNames,
           pkColumn,
           pkValues
         });
       } else if (onDeletePodRow) {
         onDeletePodRow({
-          serverId: targetPodId,
-          serverName: targetPodName,
+          serverId: targetPodIds[0],
+          serverIds: targetPodIds,
+          serverName: targetPodNames,
           pkColumn,
           pkValues
         });
       }
     } else {
-      // 🚀 TARGET IS MASTER!
+      // 🚀 TARGET IS MASTER (with automatic fleet-wide propagation to all PODs)!
       if (onDeleteMultipleRows) {
         onDeleteMultipleRows({
           targetType: 'master',
@@ -207,9 +234,9 @@ export default function MasterDataViewer({
               <span>Data di Database Master:</span>
               <span className="font-mono text-cyan-300">public.{masterInfo?.tableName}</span>
               {podOnlyRowsCount > 0 && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 flex items-center gap-1">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 flex items-center gap-1 shadow-sm">
                   <Sparkles size={11} className="text-purple-400" />
-                  <span>{podOnlyRowsCount} Baris Baru di POD (Siap Ditarik)</span>
+                  <span>{podOnlyRowsCount} Baris Baru di POD (Siap Di-Upload)</span>
                 </span>
               )}
             </h3>
@@ -231,7 +258,7 @@ export default function MasterDataViewer({
 
       {isExpanded && (
         <div className="mt-4 flex flex-col gap-4 animate-in fade-in duration-200">
-          {/* Controls: Search & Source Tabs */}
+          {/* Controls: Search & Source Tabs & Table Size Toggle */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2 flex-wrap">
               {/* Sub-Tab: Data Rows vs Schema Columns */}
@@ -239,8 +266,8 @@ export default function MasterDataViewer({
                 <button
                   onClick={() => setActiveTab('rows')}
                   className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${activeTab === 'rows'
-                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                      : 'text-slate-400 hover:text-white'
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                    : 'text-slate-400 hover:text-white'
                     }`}
                 >
                   Data Baris ({combinedRows.length})
@@ -249,8 +276,8 @@ export default function MasterDataViewer({
                 <button
                   onClick={() => setActiveTab('columns')}
                   className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${activeTab === 'columns'
-                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                      : 'text-slate-400 hover:text-white'
+                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                    : 'text-slate-400 hover:text-white'
                     }`}
                 >
                   Skema Kolom DDL ({columns.length})
@@ -259,12 +286,12 @@ export default function MasterDataViewer({
 
               {/* Row Source Filter Pills (Semua, Ada di Master, Belum Ada di Master) */}
               {activeTab === 'rows' && (
-                <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+                <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs flex-wrap">
                   <button
                     onClick={() => setRowSourceFilter('all')}
                     className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${rowSourceFilter === 'all'
-                        ? 'bg-slate-800 text-white'
-                        : 'text-slate-400 hover:text-slate-200'
+                      ? 'bg-slate-800 text-white'
+                      : 'text-slate-400 hover:text-slate-200'
                       }`}
                   >
                     Semua ({combinedRows.length})
@@ -272,8 +299,8 @@ export default function MasterDataViewer({
                   <button
                     onClick={() => setRowSourceFilter('master_only')}
                     className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${rowSourceFilter === 'master_only'
-                        ? 'bg-cyan-500/25 text-cyan-300 border border-cyan-500/40'
-                        : 'text-slate-400 hover:text-cyan-300'
+                      ? 'bg-cyan-500/25 text-cyan-300 border border-cyan-500/40'
+                      : 'text-slate-400 hover:text-cyan-300'
                       }`}
                   >
                     Ada di Master ({masterRowsCount})
@@ -281,29 +308,47 @@ export default function MasterDataViewer({
                   {podOnlyRowsCount > 0 && (
                     <button
                       onClick={() => setRowSourceFilter('pod_only')}
-                      className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1 ${rowSourceFilter === 'pod_only'
-                          ? 'bg-purple-500/30 text-purple-200 border border-purple-500/50 shadow-sm'
-                          : 'text-purple-300 hover:text-white'
+                      className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${rowSourceFilter === 'pod_only'
+                        ? 'bg-purple-500/30 text-purple-200 border border-purple-500/50 shadow-sm'
+                        : 'text-purple-300 hover:text-white'
                         }`}
                     >
                       <Sparkles size={12} className="text-purple-400" />
                       <span>Belum di Master ({podOnlyRowsCount})</span>
+                      {podBreakdown.length > 0 && (
+                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-900/60 text-purple-300 border border-purple-500/30 font-mono">
+                          {podBreakdown.map(b => `${b.name}: ${b.count}`).join(', ')}
+                        </span>
+                      )}
                     </button>
                   )}
                 </div>
               )}
             </div>
 
+            {/* Right Controls: Search & Table Height Toggle */}
             {activeTab === 'rows' && (
-              <div className="relative w-full sm:w-64">
-                <Search size={13} className="absolute left-3 top-2.5 text-slate-500" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Cari dalam data master..."
-                  className="w-full pl-8 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500"
-                />
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="relative flex-1 sm:w-64">
+                  <Search size={13} className="absolute left-3 top-2.5 text-slate-500" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Cari dalam data master..."
+                    className="w-full pl-8 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+                  />
+                </div>
+
+                {/* Table Height Toggle Button (Expand / Normal) */}
+                <button
+                  onClick={() => setIsTableExpanded(!isTableExpanded)}
+                  className="p-2 bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl border border-slate-800 text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                  title={isTableExpanded ? "Kecilkan Tinggi Tabel" : "Perpanjang / Perbesar Tampilan Tabel"}
+                >
+                  {isTableExpanded ? <Minimize2 size={14} className="text-cyan-400" /> : <Maximize2 size={14} />}
+                  <span className="hidden md:inline text-[11px]">{isTableExpanded ? 'Tinggi Standar' : 'Tabel Luas'}</span>
+                </button>
               </div>
             )}
           </div>
@@ -315,30 +360,49 @@ export default function MasterDataViewer({
               <div className="flex items-center gap-2 text-xs">
                 <span className={`w-2.5 h-2.5 rounded-full animate-ping ${allSelectedArePodOnly ? 'bg-purple-500' : 'bg-red-500'}`} />
                 <span className="font-bold text-white">
-                  <strong className={`${allSelectedArePodOnly ? 'text-purple-400' : 'text-red-400'} font-mono text-sm`}>{selectedKeys.size}</strong> baris data {allSelectedArePodOnly ? `di unit ${targetPodName}` : 'di Master'} dipilih
+                  <strong className={`${allSelectedArePodOnly ? 'text-purple-400' : 'text-red-400'} font-mono text-sm`}>{selectedKeys.size}</strong> baris data {allSelectedArePodOnly ? `di ${targetPodNames}` : 'di Master'} dipilih
                 </span>
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
-                {/* Pull to Master for POD-only selected rows */}
+                {/* Pull/Upload to Master for POD-only selected rows */}
                 {allSelectedArePodOnly && onSyncSinglePodRowToMaster && (
                   <button
-                    onClick={() => {
-                      selectedRowsList.forEach(r => {
-                        const pkVal = r[pkColumn] !== undefined ? r[pkColumn] : r.__rowKey;
-                        onSyncSinglePodRowToMaster({
-                          serverId: r.__originPodId || targetPodId,
-                          serverName: r.__originPodName || targetPodName,
-                          pkColumn,
-                          pkValue: pkVal
-                        });
-                      });
-                      clearSelection();
+                    disabled={isBulkUploading}
+                    onClick={async () => {
+                      setIsBulkUploading(true);
+                      try {
+                        for (const r of selectedRowsList) {
+                          const pkVal = r[pkColumn] !== undefined ? r[pkColumn] : r.__rowKey;
+                          const sId = r.__podIds?.[0] || r.__originPodId || targetPodIds[0];
+                          const sIds = r.__podIds || (r.__originPodId ? [r.__originPodId] : targetPodIds);
+                          const sName = r.__podSources?.join(', ') || r.__originPodName || targetPodNames;
+                          await onSyncSinglePodRowToMaster({
+                            serverId: sId,
+                            serverIds: sIds,
+                            serverName: sName,
+                            pkColumn,
+                            pkValue: pkVal
+                          }).catch(() => { });
+                        }
+                      } finally {
+                        setIsBulkUploading(false);
+                        clearSelection();
+                      }
                     }}
-                    className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-purple-600/30 transition-all cursor-pointer hover:scale-105"
+                    className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-purple-600/30 transition-all cursor-pointer hover:scale-105 disabled:opacity-50"
                   >
-                    <ArrowUpCircle size={13} />
-                    <span>Tarik Terpilih ke Master ({selectedKeys.size})</span>
+                    {isBulkUploading ? (
+                      <>
+                        <Loader2 size={13} className="animate-spin text-white" />
+                        <span>Mengupload ({selectedKeys.size})...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ArrowUpCircle size={13} />
+                        <span>Upload Terpilih ke Master ({selectedKeys.size})</span>
+                      </>
+                    )}
                   </button>
                 )}
 
@@ -347,7 +411,7 @@ export default function MasterDataViewer({
                   className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-red-600/30 transition-all cursor-pointer hover:scale-105"
                 >
                   <Trash2 size={13} />
-                  <span>Hard Delete di {allSelectedArePodOnly ? targetPodName : 'Master'} ({selectedKeys.size})</span>
+                  <span>Hard Delete di {allSelectedArePodOnly ? targetPodNames : 'Master'} ({selectedKeys.size})</span>
                 </button>
 
                 <button
@@ -361,14 +425,14 @@ export default function MasterDataViewer({
             </div>
           )}
 
-          {/* TAB 1: Data Rows Table */}
+          {/* TAB 1: Data Rows Table (Generous Height: 640px to 900px) */}
           {activeTab === 'rows' && (
-            <div className="overflow-x-auto rounded-2xl border border-slate-800 max-h-80 overflow-y-auto shadow-inner bg-slate-950/70">
+            <div className={`overflow-x-auto rounded-2xl border border-slate-800 ${isTableExpanded ? 'max-h-[880px]' : 'max-h-[640px] min-h-[380px]'} overflow-y-auto shadow-inner bg-slate-950/80 transition-all duration-300`}>
               <table className="w-full text-left text-xs border-collapse font-mono">
                 <thead>
-                  <tr className="bg-slate-900/95 border-b border-slate-800 text-slate-400 sticky top-0 z-10 font-sans">
+                  <tr className="bg-slate-900/95 border-b border-slate-800 text-slate-400 sticky top-0 z-10 font-sans shadow-md backdrop-blur-md">
                     {/* Select All Checkbox */}
-                    <th className="p-2.5 text-center w-10">
+                    <th className="p-3 text-center w-10">
                       <button
                         onClick={toggleSelectAllFiltered}
                         className="text-slate-400 hover:text-white cursor-pointer"
@@ -383,10 +447,10 @@ export default function MasterDataViewer({
                         )}
                       </button>
                     </th>
-                    <th className="p-2.5 font-bold w-28 text-center">Aksi</th>
-                    <th className="p-2.5 font-bold text-center w-28">Status Keberadaan</th>
+                    <th className="p-3 font-bold w-28 text-center">Aksi</th>
+                    <th className="p-3 font-bold text-center w-48">Status & Sumber Lokasi</th>
                     {columns.map((col) => (
-                      <th key={col.columnName} className="p-2.5 font-bold whitespace-nowrap font-mono">
+                      <th key={col.columnName} className="p-3 font-bold whitespace-nowrap font-mono">
                         <div className="flex items-center gap-1">
                           {col.isPk && <Key size={12} className="text-amber-400" title="Primary Key" />}
                           <span className={col.isPk ? 'text-cyan-300' : 'text-slate-300'}>{col.columnName}</span>
@@ -398,7 +462,7 @@ export default function MasterDataViewer({
                 <tbody className="divide-y divide-slate-800/50 text-[11px]">
                   {filteredRows.length === 0 ? (
                     <tr>
-                      <td colSpan={(columns.length || 1) + 3} className="p-6 text-center text-slate-500 font-sans">
+                      <td colSpan={(columns.length || 1) + 3} className="p-12 text-center text-slate-500 font-sans">
                         Tidak ada data yang cocok dengan filter atau pencarian.
                       </td>
                     </tr>
@@ -408,19 +472,24 @@ export default function MasterDataViewer({
                       const rowKeyStr = String(pkVal);
                       const isPodOnly = row.__isPodOnly;
                       const isSelected = selectedKeys.has(rowKeyStr);
+                      const isRowUploading = uploadingRowKey === rowKeyStr;
+                      const podSources = row.__podSourcesDetail && row.__podSourcesDetail.length > 0
+                        ? row.__podSourcesDetail
+                        : row.__podSources || (row.__originPodName ? [row.__originPodName] : []);
 
                       return (
                         <tr
                           key={idx}
-                          className={`hover:bg-white/[0.02] transition-colors ${isSelected
-                              ? 'bg-cyan-500/10 border-l-2 border-cyan-400'
-                              : isPodOnly
-                                ? 'bg-purple-950/20 border-l-2 border-purple-500'
-                                : ''
+                          onClick={() => toggleSelectRow(rowKeyStr)}
+                          className={`cursor-pointer select-none transition-all ${isSelected
+                            ? 'bg-cyan-500/20 hover:bg-cyan-500/25 border-l-4 border-cyan-400 font-medium'
+                            : isPodOnly
+                              ? 'bg-purple-950/25 hover:bg-purple-900/30 border-l-2 border-purple-500'
+                              : 'hover:bg-slate-800/60'
                             }`}
                         >
                           {/* Row Checkbox */}
-                          <td className="p-2.5 text-center">
+                          <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                             <button
                               onClick={() => toggleSelectRow(rowKeyStr)}
                               className="text-slate-400 hover:text-white cursor-pointer"
@@ -434,35 +503,75 @@ export default function MasterDataViewer({
                           </td>
 
                           {/* Action Column */}
-                          <td className="p-2.5 text-center whitespace-nowrap">
-                            <div className="flex items-center justify-center gap-1">
+                          <td className="p-3 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-center gap-1.5">
                               {isPodOnly ? (
                                 <div className="flex items-center gap-1">
-                                  {/* Button to Pull POD row into Master */}
+                                  {/* Button to Upload/Pull POD row into Master */}
                                   <button
-                                    onClick={() => onSyncSinglePodRowToMaster && onSyncSinglePodRowToMaster({
-                                      serverId: row.__originPodId,
-                                      serverName: row.__originPodName,
-                                      pkColumn,
-                                      pkValue: pkVal
-                                    })}
-                                    className="px-2 py-1 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer hover:scale-105"
-                                    title={`Tarik baris ini dari ${row.__originPodName || 'POD'} dan simpan ke Master DB`}
+                                    disabled={isRowUploading}
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      setUploadingRowKey(rowKeyStr);
+                                      const sId = row.__podIds?.[0] || row.__originPodId;
+                                      const sIds = row.__podIds || (row.__originPodId ? [row.__originPodId] : []);
+                                      const sName = row.__podSources?.join(', ') || row.__originPodName;
+                                      try {
+                                        onSyncSinglePodRowToMaster && await onSyncSinglePodRowToMaster({
+                                          serverId: sId,
+                                          serverIds: sIds,
+                                          serverName: sName,
+                                          pkColumn,
+                                          pkValue: pkVal
+                                        });
+                                      } finally {
+                                        setUploadingRowKey(null);
+                                      }
+                                    }}
+                                    className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer hover:scale-105 disabled:opacity-50"
+                                    title={`Upload / Tarik baris ini dari ${podSources.join(', ')} dan simpan ke Master DB`}
                                   >
-                                    <ArrowUpCircle size={12} />
-                                    <span>Tarik ke Master</span>
+                                    {isRowUploading ? (
+                                      <>
+                                        <Loader2 size={12} className="animate-spin text-white" />
+                                        <span>Uploading...</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <ArrowUpCircle size={12} />
+                                        <span>Upload</span>
+                                      </>
+                                    )}
                                   </button>
 
-                                  {/* Button to Delete this row from POD */}
+                                  {/* Button to Delete this row from PODs */}
                                   <button
-                                    onClick={() => onDeletePodRow && onDeletePodRow({
-                                      serverId: row.__originPodId,
-                                      serverName: row.__originPodName,
-                                      pkColumn,
-                                      pkValue: pkVal
-                                    })}
-                                    className="p-1 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/15 transition-colors cursor-pointer"
-                                    title={`Hapus baris data ini dari unit ${row.__originPodName || 'POD'}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const sId = row.__podIds?.[0] || row.__originPodId;
+                                      const sIds = row.__podIds || (row.__originPodId ? [row.__originPodId] : []);
+                                      const sName = row.__podSources?.join(', ') || row.__originPodName;
+                                      if (onDeleteMultiplePodRows && sIds.length > 1) {
+                                        onDeleteMultiplePodRows({
+                                          serverId: sId,
+                                          serverIds: sIds,
+                                          serverName: sName,
+                                          pkColumn,
+                                          pkValues: [pkVal]
+                                        });
+                                      } else if (onDeletePodRow) {
+                                        onDeletePodRow({
+                                          serverId: sId,
+                                          serverIds: sIds,
+                                          serverName: sName,
+                                          pkColumn,
+                                          pkValue: pkVal,
+                                          pkValues: [pkVal]
+                                        });
+                                      }
+                                    }}
+                                    className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/15 transition-colors cursor-pointer"
+                                    title={`Hapus permanen baris data ini dari ${podSources.join(', ')}`}
                                   >
                                     <Trash2 size={13} />
                                   </button>
@@ -471,23 +580,29 @@ export default function MasterDataViewer({
                                 <>
                                   {/* Button to Push Master row into POD */}
                                   <button
-                                    onClick={() => onSyncSingleRow && onSyncSingleRow({
-                                      pkColumn,
-                                      pkValue: pkVal,
-                                      rowData: row
-                                    })}
-                                    className="p-1 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-amber-500/20 transition-colors cursor-pointer"
-                                    title="Kirim/Sinkronkan baris ini ke POD"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onSyncSingleRow && onSyncSingleRow({
+                                        pkColumn,
+                                        pkValue: pkVal,
+                                        rowData: row
+                                      });
+                                    }}
+                                    className="p-1.5 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-amber-500/20 transition-colors cursor-pointer"
+                                    title="Kirim / Sinkronkan baris ini ke POD"
                                   >
                                     <Zap size={13} className="fill-amber-400" />
                                   </button>
                                   <button
-                                    onClick={() => onDeleteRow && onDeleteRow({
-                                      pkColumn,
-                                      pkValue: pkVal
-                                    })}
-                                    className="p-1 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/15 transition-colors cursor-pointer"
-                                    title="Hapus baris ini dari Database Master (Cascade)"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onDeleteRow && onDeleteRow({
+                                        pkColumn,
+                                        pkValue: pkVal
+                                      });
+                                    }}
+                                    className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/15 transition-colors cursor-pointer"
+                                    title="Hapus baris ini dari Database Master dan seluruh POD (Cascade)"
                                   >
                                     <Trash2 size={13} />
                                   </button>
@@ -496,26 +611,34 @@ export default function MasterDataViewer({
                             </div>
                           </td>
 
-                          {/* Status Badge Column */}
-                          <td className="p-2.5 text-center whitespace-nowrap font-sans">
+                          {/* Status & Exact POD Source Information Column */}
+                          <td className="p-3 text-center whitespace-nowrap font-sans">
                             {isPodOnly ? (
-                              <span
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[9px] font-bold"
-                                title={`Ditemukan di: ${row.__podSources?.join(', ')}`}
-                              >
-                                <Sparkles size={10} className="text-purple-400" />
-                                <span>Hanya di POD</span>
-                              </span>
+                              <div className="flex flex-col items-center gap-1">
+                                <div className="flex flex-wrap items-center justify-center gap-1 max-w-[200px]">
+                                  {podSources.map((src, sIdx) => (
+                                    <span
+                                      key={sIdx}
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-950/80 text-purple-300 border border-purple-500/30 text-[9px] font-mono font-bold"
+                                      title={`Data tersimpan di unit: ${src}`}
+                                    >
+                                      <Server size={9} className="text-purple-400" />
+                                      <span>{src}</span>
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
                             ) : (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-[9px] font-bold">
-                                <span>Master</span>
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-[10px] font-bold">
+                                <Database size={10} className="text-cyan-400" />
+                                <span>Master DB</span>
                               </span>
                             )}
                           </td>
 
                           {/* Data Columns */}
                           {columns.map((col) => (
-                            <td key={col.columnName} className="p-2.5 whitespace-nowrap text-slate-300 font-mono">
+                            <td key={col.columnName} className="p-3 whitespace-nowrap text-slate-300 font-mono">
                               {row[col.columnName] !== null && row[col.columnName] !== undefined
                                 ? String(row[col.columnName])
                                 : <span className="text-slate-600 italic">null</span>}
@@ -532,29 +655,29 @@ export default function MasterDataViewer({
 
           {/* TAB 2: Columns DDL Schema */}
           {activeTab === 'columns' && (
-            <div className="overflow-x-auto rounded-2xl border border-slate-800 max-h-72 overflow-y-auto shadow-inner bg-slate-950/70">
+            <div className="overflow-x-auto rounded-2xl border border-slate-800 max-h-[550px] overflow-y-auto shadow-inner bg-slate-950/70">
               <table className="w-full text-left text-xs border-collapse font-mono">
                 <thead>
                   <tr className="bg-slate-900/95 border-b border-slate-800 text-slate-400 sticky top-0 z-10 font-sans">
-                    <th className="p-2.5 font-bold">Nama Kolom</th>
-                    <th className="p-2.5 font-bold">Tipe Data</th>
-                    <th className="p-2.5 font-bold">Nullable</th>
-                    <th className="p-2.5 font-bold">Atribut</th>
+                    <th className="p-3 font-bold">Nama Kolom</th>
+                    <th className="p-3 font-bold">Tipe Data</th>
+                    <th className="p-3 font-bold">Nullable</th>
+                    <th className="p-3 font-bold">Atribut</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/50 text-[11px]">
                   {columns.map((col) => (
                     <tr key={col.columnName} className="hover:bg-white/[0.02] transition-colors">
-                      <td className="p-2.5 font-bold text-cyan-300">
+                      <td className="p-3 font-bold text-cyan-300">
                         {col.columnName}
                       </td>
-                      <td className="p-2.5 text-purple-300">
+                      <td className="p-3 text-purple-300">
                         {col.dataType}
                       </td>
-                      <td className="p-2.5 text-slate-400 font-sans">
+                      <td className="p-3 text-slate-400 font-sans">
                         {col.isNullable === 'YES' ? 'Nullable' : 'NOT NULL'}
                       </td>
-                      <td className="p-2.5 font-sans">
+                      <td className="p-3 font-sans">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {col.isPk && (
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">

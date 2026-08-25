@@ -192,11 +192,10 @@ export default function PodDataViewer({
             <div>
               <h3 className="text-base font-black text-white flex items-center gap-2">
                 <span>Data di Unit POD: <strong className="text-purple-400 font-mono">{pod.name}</strong></span>
-                <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
-                  pod.status === 'SYNCED'
-                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                    : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                }`}>
+                <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${pod.status === 'SYNCED'
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                  : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                  }`}>
                   {pod.status === 'SYNCED' ? '100% SYNCED' : 'DRIFT / KURANG DATA'}
                 </span>
               </h3>
@@ -239,22 +238,20 @@ export default function PodDataViewer({
           <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
             <button
               onClick={() => setActiveSubTab('data')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                activeSubTab === 'data'
-                  ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                  : 'text-slate-400 hover:text-white'
-              }`}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeSubTab === 'data'
+                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                : 'text-slate-400 hover:text-white'
+                }`}
             >
               <Database size={13} />
               <span>Data Baris ({filteredData.length})</span>
             </button>
             <button
               onClick={() => setActiveSubTab('columns')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                activeSubTab === 'columns'
-                  ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                  : 'text-slate-400 hover:text-white'
-              }`}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${activeSubTab === 'columns'
+                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                : 'text-slate-400 hover:text-white'
+                }`}
             >
               <span>Struktur Kolom ({columnsMatrix.length})</span>
             </button>
@@ -263,11 +260,10 @@ export default function PodDataViewer({
           {activeSubTab === 'data' && missingCountInThisPod > 0 && (
             <button
               onClick={() => setFilterMissingOnly(!filterMissingOnly)}
-              className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                filterMissingOnly
-                  ? 'bg-red-500/20 text-red-300 border-red-500/40'
-                  : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
-              }`}
+              className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${filterMissingOnly
+                ? 'bg-red-500/20 text-red-300 border-red-500/40'
+                : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                }`}
             >
               <AlertTriangle size={13} className="text-red-400" />
               <span>Hanya Data Hilang ({missingCountInThisPod})</span>
@@ -365,16 +361,16 @@ export default function PodDataViewer({
                   return (
                     <tr
                       key={idx}
-                      className={`hover:bg-white/[0.02] transition-colors ${
-                        isSelected
-                          ? 'bg-purple-500/10 border-l-2 border-purple-400'
-                          : !isPresent
-                          ? 'bg-red-500/[0.04]'
-                          : ''
-                      }`}
+                      onClick={() => toggleSelectRow(rowKeyStr)}
+                      className={`cursor-pointer select-none transition-all ${isSelected
+                        ? 'bg-purple-500/20 hover:bg-purple-500/25 border-l-4 border-purple-400 font-medium'
+                        : !isPresent
+                          ? 'bg-red-500/[0.04] hover:bg-slate-800/60'
+                          : 'hover:bg-slate-800/60'
+                        }`}
                     >
                       {/* Row Checkbox */}
-                      <td className="p-3 text-center">
+                      <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => toggleSelectRow(rowKeyStr)}
                           className="text-slate-400 hover:text-white cursor-pointer"
@@ -388,19 +384,22 @@ export default function PodDataViewer({
                       </td>
 
                       {/* Action column (Pull to Master, Sync to Pod, Delete in Pod) */}
-                      <td className="p-3 text-center">
+                      <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-1">
                           {isPresent ? (
                             <>
                               {/* Pull this row to Master */}
                               {onSyncSinglePodRowToMaster && (
                                 <button
-                                  onClick={() => onSyncSinglePodRowToMaster({
-                                    serverId: pod.id,
-                                    serverName: pod.name,
-                                    pkColumn,
-                                    pkValue: pkVal
-                                  })}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onSyncSinglePodRowToMaster({
+                                      serverId: pod.id,
+                                      serverName: pod.name,
+                                      pkColumn,
+                                      pkValue: pkVal
+                                    });
+                                  }}
                                   className="p-1 rounded-lg text-purple-400 hover:text-white hover:bg-purple-500/20 transition-all cursor-pointer hover:scale-110"
                                   title={`Tarik 1 baris ini dari ${pod.name} ke Master Database`}
                                 >
@@ -410,12 +409,15 @@ export default function PodDataViewer({
 
                               {/* Delete row in POD */}
                               <button
-                                onClick={() => onDeletePodRow && onDeletePodRow({
-                                  serverId: pod.id,
-                                  serverName: pod.name,
-                                  pkColumn,
-                                  pkValue: pkVal
-                                })}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onDeletePodRow && onDeletePodRow({
+                                    serverId: pod.id,
+                                    serverName: pod.name,
+                                    pkColumn,
+                                    pkValue: pkVal
+                                  });
+                                }}
                                 className="p-1 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/15 transition-colors cursor-pointer"
                                 title={`Hard delete baris ini dari database ${pod.name} (Cascade)`}
                               >
@@ -433,7 +435,10 @@ export default function PodDataViewer({
                         <div className="flex items-center gap-1.5">
                           <span className="truncate max-w-[240px]" title={item.rowKey}>{item.rowKey}</span>
                           <button
-                            onClick={() => handleCopy(item.rowKey, `pod_r_${idx}`)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCopy(item.rowKey, `pod_r_${idx}`);
+                            }}
                             className="text-slate-500 hover:text-cyan-400 p-0.5 cursor-pointer"
                           >
                             {copiedKey === `pod_r_${idx}` ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
@@ -459,7 +464,7 @@ export default function PodDataViewer({
                             title={`Klik untuk mengirim 1 baris ini dari Master ke ${pod.name}`}
                           >
                             <Zap size={11} className="fill-amber-400 text-amber-400" />
-                            <span>Kirim ke POD</span>
+                            <span>Upload</span>
                           </button>
                         )}
                       </td>

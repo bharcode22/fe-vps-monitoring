@@ -130,6 +130,16 @@ export default function DeleteRowConfirmationModal({
           />
         </label>
 
+        {/* Master Fleet-Wide Propagation Notice */}
+        {targetType === 'master' && (
+          <div className="p-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs flex items-start gap-2.5">
+            <Database size={16} className="text-cyan-400 shrink-0 mt-0.5" />
+            <span>
+              <strong>Sinkronisasi Armada:</strong> Penghapusan dari Master Database otomatis membersihkan baris data ber-ID ini di Master dan di seluruh unit database POD armada secara permanen agar data tidak kembali saat reload.
+            </span>
+          </div>
+        )}
+
         {/* High Risk Warning */}
         <div className="p-3 bg-red-500/15 border border-red-500/30 rounded-xl text-red-300 text-xs flex items-start gap-2">
           <AlertTriangle size={16} className="shrink-0 mt-0.5 text-red-400" />

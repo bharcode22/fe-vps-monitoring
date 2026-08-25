@@ -15,7 +15,9 @@ import {
   performMasterSyncApi,
   deleteMasterRowApi,
   deletePodRowApi,
-  syncSingleMasterRowApi
+  syncSingleMasterRowApi,
+  syncPodToMasterApi,
+  syncSinglePodRowApi
 } from '../api/masterPodSyncApi';
 import MasterTablesCatalogView from '../components/masterPodSync/MasterTablesCatalogView';
 import TableDetailWorkspaceView from '../components/masterPodSync/TableDetailWorkspaceView';
@@ -190,8 +192,82 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
           : `Sinkronisasi Live Berhasil! ${result.successfulTargets || 0} POD berhasil diperbarui.`
       );
 
+      // 🚀 Optimistic Instant UI Update (Zero reload, no delay!)
+      if (!dryRun) {
+        setMatrixData(prev => {
+          if (!prev) return prev;
+          const successfulTargetIds = new Set(
+            (result?.results || [])
+              .filter(r => r.success)
+              .map(r => Number(r.serverId))
+          );
+          if (successfulTargetIds.size === 0) return prev;
+
+          // 1. Update POD status & row count
+          const masterRowCount = prev.master?.rowCount || 0;
+          const updatedPods = (prev.pods || []).map(p => {
+            if (successfulTargetIds.has(Number(p.id))) {
+              return {
+                ...p,
+                status: 'SYNCED',
+                rowCount: masterRowCount
+              };
+            }
+            return p;
+          });
+
+          // 2. Update presence for Master rows in dataMatrix
+          const updatedDataMatrix = (prev.dataMatrix || []).map(item => {
+            if (item.inMaster) {
+              const updatedPresence = { ...(item.presence || {}) };
+              let newPresentCount = item.presentCount || 0;
+              for (const pId of successfulTargetIds) {
+                if (!updatedPresence[pId] || !updatedPresence[pId].present) {
+                  updatedPresence[pId] = { isOnline: true, present: true };
+                  newPresentCount++;
+                }
+              }
+              return {
+                ...item,
+                presence: updatedPresence,
+                presentCount: Math.min(newPresentCount, prev.pods?.length || newPresentCount)
+              };
+            }
+            return item;
+          });
+
+          // 3. Update columns presence if syncColumns was enabled
+          const updatedColumns = (prev.columns || []).map(col => {
+            const updatedColPresence = { ...(col.presence || {}) };
+            let colPresentCount = col.presentCount || 0;
+            for (const pId of successfulTargetIds) {
+              if (!updatedColPresence[pId] || !updatedColPresence[pId].exists) {
+                updatedColPresence[pId] = {
+                  isOnline: true,
+                  exists: true,
+                  typeMatch: true,
+                  podType: col.dataType
+                };
+                colPresentCount++;
+              }
+            }
+            return {
+              ...col,
+              presence: updatedColPresence,
+              presentCount: Math.min(colPresentCount, prev.pods?.length || colPresentCount)
+            };
+          });
+
+          return {
+            ...prev,
+            pods: updatedPods,
+            dataMatrix: updatedDataMatrix,
+            columns: updatedColumns
+          };
+        });
+      }
+
       setSyncModalOpen(false);
-      await handleRefreshCurrentMatrix();
       setTimeout(() => setSuccessMsg(''), 6000);
     } catch (err) {
       setError(err.message || 'Gagal mengeksekusi sinkronisasi.');
@@ -217,15 +293,17 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
     });
   };
 
-  const handlePromptDeletePodRow = ({ serverId, serverName, pkColumn, pkValue, pkValues }) => {
-    const podObj = (matrixData?.pods || []).find(p => p.id === serverId);
+  const handlePromptDeletePodRow = ({ serverId, serverIds, serverName, pkColumn, pkValue, pkValues }) => {
+    const targetIds = Array.isArray(serverIds) && serverIds.length > 0 ? serverIds : (serverId ? [serverId] : []);
+    const podObj = (matrixData?.pods || []).find(p => p.id === targetIds[0]);
     const values = Array.isArray(pkValues) && pkValues.length > 0 ? pkValues : (pkValue !== undefined ? [pkValue] : []);
     setDeleteModal({
       isOpen: true,
       targetType: 'pod',
-      targetName: podObj?.name || serverName || `POD #${serverId}`,
+      targetName: serverName || podObj?.name || (targetIds.length > 1 ? `${targetIds.length} Unit POD` : `POD #${targetIds[0]}`),
       serverHost: podObj?.host || podObj?.ip_address || '',
-      serverId,
+      serverId: targetIds[0],
+      serverIds: targetIds,
       tableName: selectedTableName,
       pkColumn: pkColumn || 'id',
       pkValue: values[0],
@@ -250,19 +328,23 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
         });
         setSuccessMsg(`Sukses! ${res.deletedCount || valuesToDelete.length} baris data berhasil di-Hard Delete dari Master Database${cascade && res.cascadeCount > 0 ? ` (+${res.cascadeCount} data relasi)` : ''}.`);
 
-        // 🚀 Optimistic Instant State Update (No full matrix reload!)
+        // 🚀 Optimistic Instant State Update (Purged from Master & All PODs!)
         setMatrixData(prev => {
           if (!prev) return prev;
           const updatedDataMatrix = (prev.dataMatrix || []).filter(item => {
             const pkVal = item.sampleData?.[deleteModal.pkColumn] !== undefined ? item.sampleData[deleteModal.pkColumn] : item.rowKey;
             const key = String(pkVal);
             if (keysSet.has(key)) {
-              if (!item.presentCount || item.presentCount === 0) return false;
-              item.inMaster = false;
-              item.isPodOnly = true;
-              return true;
+              return false; // Purged from Master and all PODs
             }
             return true;
+          });
+
+          const updatedPods = (prev.pods || []).map(p => {
+            return {
+              ...p,
+              rowCount: Math.max(0, (p.rowCount || 0) - (res.deletedCount || valuesToDelete.length))
+            };
           });
 
           return {
@@ -271,12 +353,14 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
               ...prev.master,
               rowCount: Math.max(0, (prev.master?.rowCount || 0) - (res.deletedCount || valuesToDelete.length))
             },
+            pods: updatedPods,
             dataMatrix: updatedDataMatrix
           };
         });
       } else {
         const res = await deletePodRowApi({
           serverId: Number(deleteModal.serverId),
+          serverIds: deleteModal.serverIds || [Number(deleteModal.serverId)],
           tableName: deleteModal.tableName,
           pkColumn: deleteModal.pkColumn,
           pkValues: valuesToDelete,
@@ -287,25 +371,29 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
         // 🚀 Optimistic Instant State Update (No full matrix reload!)
         setMatrixData(prev => {
           if (!prev) return prev;
-          const targetServerId = Number(deleteModal.serverId);
+          const targetIdsSet = new Set((deleteModal.serverIds || [Number(deleteModal.serverId)]).map(Number));
 
           const updatedDataMatrix = (prev.dataMatrix || []).filter(item => {
             const pkVal = item.sampleData?.[deleteModal.pkColumn] !== undefined ? item.sampleData[deleteModal.pkColumn] : item.rowKey;
             const key = String(pkVal);
             if (keysSet.has(key)) {
-              if (item.isPodOnly && (item.originPodId === targetServerId || item.presentCount <= 1)) {
+              if (item.isPodOnly || !item.inMaster) {
                 return false;
               }
-              if (item.presence && item.presence[targetServerId]) {
-                item.presence[targetServerId] = { isOnline: true, present: false };
-                item.presentCount = Math.max(0, item.presentCount - 1);
+              if (item.presence) {
+                for (const sId of targetIdsSet) {
+                  if (item.presence[sId] && item.presence[sId].present) {
+                    item.presence[sId] = { isOnline: true, present: false };
+                    item.presentCount = Math.max(0, item.presentCount - 1);
+                  }
+                }
               }
             }
             return true;
           });
 
           const updatedPods = (prev.pods || []).map(p => {
-            if (p.id === targetServerId) {
+            if (targetIdsSet.has(Number(p.id))) {
               return {
                 ...p,
                 rowCount: Math.max(0, (p.rowCount || 0) - (res.deletedCount || valuesToDelete.length))
@@ -412,21 +500,55 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
   };
 
   // E. Pull 1 single row from POD to Master (POD ➔ Master)
-  const handleSyncSinglePodRowToMaster = async ({ serverId, serverName, pkColumn, pkValue }) => {
+  const handleSyncSinglePodRowToMaster = async ({ serverId, serverIds, serverName, pkColumn, pkValue }) => {
     setError('');
+    const targetIds = Array.isArray(serverIds) && serverIds.length > 0
+      ? serverIds.map(Number)
+      : (serverId ? [Number(serverId)] : (matrixData?.pods || []).map(p => Number(p.id)));
+
     try {
-      await syncSinglePodRowApi({
+      const res = await syncSinglePodRowApi({
         masterId: Number(selectedMasterId),
-        serverId: Number(serverId),
+        serverId: targetIds[0],
+        serverIds: targetIds,
         tableName: selectedTableName,
         pkColumn: pkColumn || 'id',
         pkValue
       });
-      setSuccessMsg(`Sukses! 1 baris (${pkColumn} = ${pkValue}) dari ${serverName} berhasil ditarik ke Master DB.`);
-      await handleRefreshCurrentMatrix();
+
+      setSuccessMsg(`Sukses! Baris (${pkColumn || 'id'} = ${pkValue}) dari ${serverName || res?.serverName || 'POD'} berhasil di-upload ke Master DB.`);
+
+      // 🚀 Optimistic Instant Update (Converts POD-only row to Master row instantly!)
+      setMatrixData(prev => {
+        if (!prev) return prev;
+        const strKey = String(pkValue);
+        const updatedDataMatrix = (prev.dataMatrix || []).map(item => {
+          const pkVal = item.sampleData?.[pkColumn || 'id'] !== undefined ? item.sampleData[pkColumn || 'id'] : item.rowKey;
+          if (String(pkVal) === strKey) {
+            return {
+              ...item,
+              inMaster: true,
+              isPodOnly: false
+            };
+          }
+          return item;
+        });
+
+        return {
+          ...prev,
+          master: {
+            ...prev.master,
+            rowCount: (prev.master?.rowCount || 0) + 1
+          },
+          dataMatrix: updatedDataMatrix
+        };
+      });
+
       setTimeout(() => setSuccessMsg(''), 6000);
+      return res;
     } catch (err) {
-      setError(err.message || `Gagal menarik baris dari ${serverName}: ${err.message}`);
+      setError(err.message || `Gagal mengupload baris dari ${serverName || 'POD'}: ${err.message}`);
+      throw err;
     }
   };
 
