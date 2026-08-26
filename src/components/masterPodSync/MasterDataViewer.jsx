@@ -19,7 +19,8 @@ import {
   X,
   Maximize2,
   Minimize2,
-  Loader2
+  Loader2,
+  Eraser
 } from 'lucide-react';
 
 export default function MasterDataViewer({
@@ -33,7 +34,8 @@ export default function MasterDataViewer({
   onDeleteMultiplePodRows,
   onSyncSingleRow,
   onSyncSinglePodRowToMaster,
-  onBulkSyncPodRowsToMaster
+  onBulkSyncPodRowsToMaster,
+  onCheckDuplicates
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isTableExpanded, setIsTableExpanded] = useState(false);
@@ -351,6 +353,18 @@ export default function MasterDataViewer({
                     className="w-full pl-8 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
                   />
                 </div>
+
+                {/* Cek Duplikat Master Button */}
+                {onCheckDuplicates && (
+                  <button
+                    onClick={onCheckDuplicates}
+                    className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"
+                    title="Periksa dan bersihkan data ganda / duplikat di Master Database"
+                  >
+                    <Eraser size={13} className="text-amber-400" />
+                    <span>Cek Duplikat</span>
+                  </button>
+                )}
 
                 {/* Table Height Toggle Button (Expand / Normal) */}
                 <button

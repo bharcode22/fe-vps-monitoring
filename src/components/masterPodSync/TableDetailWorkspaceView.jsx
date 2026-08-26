@@ -14,7 +14,8 @@ import {
   UploadCloud,
   ShieldCheck,
   Activity,
-  Filter
+  Filter,
+  Eraser
 } from 'lucide-react';
 import MasterDataViewer from './MasterDataViewer';
 import PodStatusCardsGrid from './PodStatusCardsGrid';
@@ -227,6 +228,15 @@ export default function TableDetailWorkspaceView({
             )}
 
             <button
+              onClick={() => setIsCleanModalOpen(true)}
+              className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"
+              title="Periksa dan bersihkan data ganda / duplikat di Master Database"
+            >
+              <Eraser size={13} className="text-amber-400" />
+              <span>Cek Duplikat</span>
+            </button>
+
+            <button
               onClick={onRefresh}
               disabled={isComparing}
               className="p-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded-lg border border-slate-700 cursor-pointer transition-colors disabled:opacity-50"
@@ -252,6 +262,7 @@ export default function TableDetailWorkspaceView({
           onSyncSingleRow={onSyncSingleRow}
           onSyncSinglePodRowToMaster={onSyncSinglePodRowToMaster}
           onBulkSyncPodRowsToMaster={onBulkSyncPodRowsToMaster}
+          onCheckDuplicates={() => setIsCleanModalOpen(true)}
         />
       )}
 

@@ -21,6 +21,8 @@ export default function CleanMasterDuplicatesModal({
   useEffect(() => {
     if (tableName === 'terms_and_conditions_answers') {
       setSelectedCols(['fk_user_id', 'fk_question_id']);
+    } else if (tableName === 'terms_and_conditions_accepted') {
+      setSelectedCols(['fk_user_id', 'fk_terms_and_conditions_version_id']);
     } else {
       if (columns && columns.length > 0) {
         // Find PK column or fallback to first column
