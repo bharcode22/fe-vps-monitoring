@@ -1,46 +1,56 @@
 import React, { useState, useEffect } from 'react';
-import { Network, Database, UploadCloud, DownloadCloud, Activity, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
-import { 
-  fetchMasterDatabasesApi, 
-  publishTncDefinitionsApi, 
-  pullConsentsAndDistributeApi,
+import { Network, Database, Activity, AlertTriangle, DownloadCloud, UploadCloud } from 'lucide-react';
+import {
+  fetchMasterDatabasesApi,
   syncSingleMasterRowApi
 } from '../api/masterPodSyncApi';
 import SyncProgressReportModal from '../components/masterPodSync/SyncProgressReportModal';
 import MasterDataEditor from '../components/masterPodSync/MasterDataEditor';
+import TncPodDiffSyncView from '../components/masterPodSync/TncPodDiffSyncView';
+
+const WORKSPACE_PARTS = {
+  1: {
+    name: 'Part 1: General T&C',
+    type: 'editor',
+    tables: ['terms_and_conditions', 'terms_and_conditions_version']
+  },
+  2: {
+    name: 'Part 2: Questionnaire T&C & Matrix',
+    type: 'editor',
+    tables: [
+      'terms_and_conditions_questions',
+      'terms_and_conditions_question_history',
+      'matrix_user_history'
+    ]
+  },
+  3: {
+    name: 'Part 3: Sinkronisasi Master ➔ POD',
+    type: 'sync',
+    direction: 'master_to_pod'
+  },
+  4: {
+    name: 'Part 4: Sinkronisasi POD ➔ Master',
+    type: 'sync',
+    direction: 'pod_to_master'
+  }
+};
 
 export default function TncManagerPage() {
   const [masterDatabases, setMasterDatabases] = useState([]);
   const [selectedMasterId, setSelectedMasterId] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
   // Editor Workspace State
   const [activePart, setActivePart] = useState(1);
   const [activeTable, setActiveTable] = useState('terms_and_conditions');
 
-  const WORKSPACE_PARTS = {
-    1: {
-      name: 'Part 1: General T&C',
-      tables: ['terms_and_conditions', 'terms_and_conditions_version'] 
-    },
-    2: {
-      name: 'Part 2: Questionnaire T&C & Matrix',
-      tables: [
-        'terms_and_conditions_questions', 
-        'terms_and_conditions_question_history',
-        'matrix_user_history'
-      ]
-    }
-  };
-
-  // Progress Modal State
+  // Single Row Sync Progress Modal State
   const [progressModal, setProgressModal] = useState({
     isOpen: false,
     isProcessing: false,
     title: '',
-    results: [],
-    direction: 'master_to_pod'
+    tableName: '',
+    results: []
   });
 
   useEffect(() => {
@@ -56,68 +66,6 @@ export default function TncManagerPage() {
       });
   }, []);
 
-  const handlePublishDefinitions = async () => {
-    if (!selectedMasterId) return;
-    const confirm = window.confirm('Anda yakin ingin menyebarkan (publish) semua definisi T&C terbaru ke seluruh POD? Tindakan ini akan menimpa definisi di POD.');
-    if (!confirm) return;
-
-    setProgressModal({
-      isOpen: true,
-      isProcessing: true,
-      title: 'Menyebarkan Definisi T&C: Master ➔ POD',
-      results: [],
-      direction: 'master_to_pod'
-    });
-
-    try {
-      const res = await publishTncDefinitionsApi({
-        masterId: selectedMasterId,
-        targetPodIds: [] // empty means ALL connected pods
-      });
-      
-      if (res.success) {
-        setProgressModal(prev => ({ ...prev, isProcessing: false, results: res.data.results }));
-      } else {
-        alert(`Gagal: ${res.error}`);
-        setProgressModal(prev => ({ ...prev, isOpen: false }));
-      }
-    } catch (err) {
-      alert(`Terjadi kesalahan jaringan: ${err.message}`);
-      setProgressModal(prev => ({ ...prev, isOpen: false }));
-    }
-  };
-
-  const handlePullConsents = async () => {
-    if (!selectedMasterId) return;
-    const confirm = window.confirm('Anda yakin ingin menarik (pull) konsolidasi data User dan Jawaban T&C dari semua POD ke Master? Ini juga akan mendistribusikannya kembali agar seragam.');
-    if (!confirm) return;
-
-    setProgressModal({
-      isOpen: true,
-      isProcessing: true,
-      title: 'Konsolidasi Data User: POD ➔ Master ➔ POD',
-      results: [],
-      direction: 'pod_to_master'
-    });
-
-    try {
-      const res = await pullConsentsAndDistributeApi({
-        masterId: selectedMasterId,
-        sourcePodIds: [] // empty means ALL connected pods
-      });
-      
-      if (res.success) {
-        setProgressModal(prev => ({ ...prev, isProcessing: false, results: res.data.results }));
-      } else {
-        alert(`Gagal: ${res.error}`);
-        setProgressModal(prev => ({ ...prev, isOpen: false }));
-      }
-    } catch (err) {
-      alert(`Terjadi kesalahan jaringan: ${err.message}`);
-      setProgressModal(prev => ({ ...prev, isOpen: false }));
-    }
-  };
-
   const handleSyncSingleRow = async (tableName, pkColumn, pkValue) => {
     if (!selectedMasterId) return;
     const confirm = window.confirm(`Kirim baris data ini (${pkColumn}=${pkValue}) dari Master ke seluruh POD?`);
@@ -127,8 +75,8 @@ export default function TncManagerPage() {
       isOpen: true,
       isProcessing: true,
       title: `Sinkronisasi Baris: ${tableName}`,
-      results: [],
-      direction: 'master_to_pod'
+      tableName,
+      results: []
     });
 
     try {
@@ -140,8 +88,12 @@ export default function TncManagerPage() {
         pkValue,
         dryRun: false
       });
-      
-      setProgressModal(prev => ({ ...prev, isProcessing: false, results: res.results || [] }));
+
+      setProgressModal(prev => ({
+        ...prev,
+        isProcessing: false,
+        results: res.results || []
+      }));
     } catch (err) {
       alert(`Terjadi kesalahan: ${err.message}`);
       setProgressModal(prev => ({ ...prev, isOpen: false }));
@@ -150,16 +102,18 @@ export default function TncManagerPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto min-h-screen text-slate-300 font-sans">
-      
+
       {/* Header */}
-      <div className="flex flex-col gap-2 mb-8">
-        <h1 className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-500 flex items-center gap-3">
-          <Network className="text-emerald-400" size={32} />
-          Sinkronisasi Terms & Conditions
-        </h1>
-        <p className="text-slate-400 text-sm">
-          Modul khusus untuk mengorkestrasi sinkronisasi 13 tabel T&C secara berurutan dan terstruktur di seluruh ekosistem Master-POD.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-500 flex items-center gap-3">
+            <Network className="text-emerald-400" size={32} />
+            Sinkronisasi Terms & Conditions
+          </h1>
+          <p className="text-slate-400 text-sm">
+            Modul khusus untuk mengorkestrasi sinkronisasi definisi T&C dan Matrix Pod secara berurutan dan terstruktur di seluruh ekosistem Master-POD.
+          </p>
+        </div>
       </div>
 
       {error && (
@@ -180,11 +134,11 @@ export default function TncManagerPage() {
             <p className="text-xs text-slate-400">Pusat konfigurasi definisi T&C dan tujuan agregasi data.</p>
           </div>
         </div>
-        
+
         <select
           value={selectedMasterId}
           onChange={(e) => setSelectedMasterId(e.target.value)}
-          className="bg-slate-950 border border-slate-700 text-sm font-bold text-white px-4 py-2.5 rounded-xl outline-none focus:border-emerald-500 transition-colors w-64 shadow-inner"
+          className="bg-slate-950 border border-slate-700 text-sm font-bold text-white px-4 py-2.5 rounded-xl outline-none focus:border-emerald-500 transition-colors w-64 shadow-inner cursor-pointer"
         >
           {masterDatabases.length === 0 && <option value="">Memuat...</option>}
           {masterDatabases.map(db => (
@@ -195,68 +149,109 @@ export default function TncManagerPage() {
         </select>
       </div>
 
-      {/* Action Pipelines have been temporarily hidden as requested */}
-
-      {/* Editor Workspace */}
-      <div className="mt-12 mb-8">
-        <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-          <Database className="text-blue-400" size={24} />
-          Master Database Editor Workspace
-        </h2>
-
-        <div className="flex flex-col gap-4 h-[700px]">
+      {/* Workspace Area */}
+      <div className="mt-8 mb-8">
+        <div className="flex flex-col gap-6">
           {/* Top Horizontal Tabs (Parts) */}
-          <div className="flex bg-slate-900 border border-slate-800 rounded-2xl p-1">
-            {Object.entries(WORKSPACE_PARTS).map(([key, part]) => (
-              <button
-                key={key}
-                onClick={() => { setActivePart(Number(key)); setActiveTable(part.tables[0]); }}
-                className={`flex-1 px-4 py-2.5 text-center font-bold text-sm rounded-xl transition-all ${activePart === Number(key) ? 'bg-slate-800 text-white shadow-md' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/30'}`}
-              >
-                {part.name}
-              </button>
-            ))}
+          <div className="flex flex-wrap bg-slate-900 border border-slate-800 rounded-2xl p-1.5 gap-1 shadow-md">
+            {Object.entries(WORKSPACE_PARTS).map(([key, part]) => {
+              const numKey = Number(key);
+              const isActive = activePart === numKey;
+              const isSyncMaster = part.direction === 'master_to_pod';
+              const isSyncPod = part.direction === 'pod_to_master';
+              return (
+                <button
+                  key={key}
+                  onClick={() => {
+                    setActivePart(numKey);
+                    if (part.tables && part.tables.length > 0) {
+                      setActiveTable(part.tables[0]);
+                    }
+                  }}
+                  className={`flex-1 min-w-[200px] px-5 py-3 text-center font-bold text-sm rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer
+                    ${isActive
+                      ? isSyncPod
+                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-900/30 border border-emerald-500/40'
+                        : isSyncMaster
+                          ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-900/30 border border-cyan-500/40'
+                          : 'bg-slate-800 text-white shadow-md border border-slate-700'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                    }`}
+                >
+                  {isSyncPod ? (
+                    <UploadCloud size={16} className={isActive ? 'text-emerald-200' : 'text-emerald-400'} />
+                  ) : isSyncMaster ? (
+                    <DownloadCloud size={16} className={isActive ? 'text-cyan-200' : 'text-cyan-400'} />
+                  ) : (
+                    <Database size={16} className={isActive ? 'text-blue-200' : 'text-slate-500'} />
+                  )}
+                  <span>{part.name}</span>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Sub-tabs (Tables) */}
-          {activePart && (
-            <div className="flex flex-wrap gap-2 mb-6 p-1 bg-slate-900 rounded-2xl w-fit">
-            {WORKSPACE_PARTS[activePart].tables.map(table => (
-              <button
-                key={table}
-                onClick={() => setActiveTable(table)}
-                className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2
-                  ${activeTable === table 
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' 
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                  }`}
-              >
-                <Database size={16} className={activeTable === table ? 'text-blue-200' : 'text-slate-500'} />
-                {table}
-              </button>
-            ))}
-          </div>
-          )}
-
-          {/* Editor Area */}
-          <div className="flex-1 min-h-0 mt-2">
-            <MasterDataEditor 
-              masterId={selectedMasterId} 
-              tableName={activeTable} 
-              onSyncRowRequest={handleSyncSingleRow}
+          {/* Conditional Rendering: Editor vs Sync View */}
+          {WORKSPACE_PARTS[activePart]?.type === 'sync' ? (
+            <TncPodDiffSyncView
+              key={`sync-part-${activePart}`}
+              masterId={selectedMasterId}
+              direction={WORKSPACE_PARTS[activePart]?.direction || 'master_to_pod'}
             />
-          </div>
+          ) : (
+            <div className="flex flex-col gap-4 h-[720px]">
+              {/* Sub-tabs (Tables) */}
+              {WORKSPACE_PARTS[activePart]?.tables && (
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                  <div className="flex flex-wrap gap-2 p-1 bg-slate-900 rounded-2xl w-fit">
+                    {WORKSPACE_PARTS[activePart].tables.map(table => (
+                      <button
+                        key={table}
+                        onClick={() => setActiveTable(table)}
+                        className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 cursor-pointer
+                          ${activeTable === table
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
+                            : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                          }`}
+                      >
+                        <Database size={16} className={activeTable === table ? 'text-blue-200' : 'text-slate-500'} />
+                        {table}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => { setActivePart(3); }}
+                    className="px-4 py-2.5 bg-slate-900 border border-cyan-500/30 hover:bg-cyan-500/10 text-cyan-300 text-xs font-bold rounded-2xl transition-all flex items-center gap-2 shadow-sm cursor-pointer"
+                  >
+                    <Activity size={14} className="text-cyan-400" />
+                    <span>Buka Inspeksi Sinkronisasi POD ➔</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Editor Area */}
+              <div className="flex-1 min-h-0">
+                <MasterDataEditor
+                  masterId={selectedMasterId}
+                  tableName={activeTable}
+                  onSyncRowRequest={handleSyncSingleRow}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Reusing existing Sync Progress Modal */}
+      {/* Row Sync Progress Modal */}
       {progressModal.isOpen && (
         <SyncProgressReportModal
           isOpen={progressModal.isOpen}
           onClose={() => setProgressModal(prev => ({ ...prev, isOpen: false }))}
           isProcessing={progressModal.isProcessing}
           title={progressModal.title}
-          direction={progressModal.direction}
+          tableName={progressModal.tableName}
+          direction="master_to_pod"
           syncResults={progressModal.results}
           dryRun={false}
           syncColumns={true}

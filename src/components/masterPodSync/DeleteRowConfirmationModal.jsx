@@ -12,7 +12,8 @@ export default function DeleteRowConfirmationModal({
   pkValue,
   pkValues = [],
   isDeleting,
-  onConfirmDelete
+  onConfirmDelete,
+  onConfirm
 }) {
   const [cascade, setCascade] = useState(true);
 
@@ -22,10 +23,13 @@ export default function DeleteRowConfirmationModal({
   const isBulk = valuesList.length > 1;
 
   const handleConfirm = () => {
-    onConfirmDelete({
-      cascade,
-      pkValues: valuesList
-    });
+    const confirmFn = onConfirmDelete || onConfirm;
+    if (typeof confirmFn === 'function') {
+      confirmFn({
+        cascade,
+        pkValues: valuesList
+      });
+    }
   };
 
   return (

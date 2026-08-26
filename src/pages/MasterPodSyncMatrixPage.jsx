@@ -180,15 +180,19 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
   };
 
   // 4. Refresh Current Matrix
-  const handleRefreshCurrentMatrix = async () => {
+  const handleRefreshCurrentMatrix = async (isSoft = false) => {
     if (!selectedMasterId || !selectedTableName) return;
-    setIsComparing(true);
+    if (!isSoft && !matrixData) {
+      setIsComparing(true);
+    }
     setError('');
     try {
       const data = await fetchMasterTableMatrixApi(selectedMasterId, selectedTableName);
       setMatrixData(data);
     } catch (err) {
-      setError(err.message || 'Gagal memuat ulang matriks.');
+      if (!isSoft) {
+        setError(err.message || 'Gagal memuat ulang matriks.');
+      }
     } finally {
       setIsComparing(false);
     }
@@ -339,6 +343,7 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
           : `Sinkronisasi Live Berhasil! ${result.successfulTargets || 0} POD berhasil diperbarui (${totalSynced} baris data disinkronkan).`
       );
       setTimeout(() => setSuccessMsg(''), 6000);
+      handleRefreshCurrentMatrix(true);
     } catch (err) {
       setError(err.message || 'Gagal mengeksekusi sinkronisasi.');
       setProgressModal(prev => ({
@@ -498,6 +503,7 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
 
       setDeleteModal(prev => ({ ...prev, isOpen: false }));
       setTimeout(() => setSuccessMsg(''), 6000);
+      handleRefreshCurrentMatrix(true);
     } catch (err) {
       setError(err.message || 'Gagal menghapus baris data.');
     } finally {
@@ -583,6 +589,7 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
       });
 
       setTimeout(() => setSuccessMsg(''), 6000);
+      handleRefreshCurrentMatrix(true);
     } catch (err) {
       setError(err.message || 'Gagal menyinkronkan 1 baris data ke POD.');
     } finally {
@@ -646,6 +653,7 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
       });
 
       setTimeout(() => setSuccessMsg(''), 6000);
+      handleRefreshCurrentMatrix(true);
     } catch (err) {
       setError(err.message || `Gagal menyinkronkan baris ke ${serverName}: ${err.message}`);
     }
@@ -723,6 +731,7 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
 
       setSuccessMsg(`Sukses! ${res.rowsProcessed || 0} baris dari ${pod.name} berhasil ditarik dan disinkronkan ke Master Database.`);
       setTimeout(() => setSuccessMsg(''), 6000);
+      handleRefreshCurrentMatrix(true);
       return res;
     } catch (err) {
       setError(err.message || `Gagal menarik data dari ${pod.name}: ${err.message}`);
@@ -761,6 +770,8 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
       });
 
       setSuccessMsg(`Sukses! Baris (${pkColumn || 'id'} = ${pkValue}) dari ${serverName || res?.serverName || 'POD'} berhasil di-upload ke Master DB.`);
+      setTimeout(() => setSuccessMsg(''), 6000);
+      handleRefreshCurrentMatrix(true);
 
       // 🚀 Optimistic Instant Update (Converts POD-only row to Master row instantly!)
       setMatrixData(prev => {
@@ -1109,7 +1120,7 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
 
       {/* VIEW LEVEL 2: TABLE DETAIL WORKSPACE */}
       {viewMode === 'detail' && (
-        isComparing ? (
+        isComparing && !matrixData ? (
           <MasterPodSkeleton />
         ) : (
           <TableDetailWorkspaceView
@@ -1117,7 +1128,7 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
             masterInfo={matrixData?.master}
             matrixData={matrixData}
             isComparing={isComparing}
-            onRefresh={handleRefreshCurrentMatrix}
+            onRefresh={() => handleRefreshCurrentMatrix(false)}
             onBackToCatalog={() => setViewMode('catalog')}
             activePodId={activePodId}
             setActivePodId={setActivePodId}
