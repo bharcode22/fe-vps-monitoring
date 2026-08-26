@@ -20,6 +20,7 @@ import StorageManagerPage from './pages/StorageManagerPage';
 import DashboardPage from './pages/DashboardPage';
 import PodTopicDebuggerPage from './pages/PodTopicDebuggerPage';
 import MasterPodSyncMatrixPage from './pages/MasterPodSyncMatrixPage';
+import TncManagerPage from './pages/TncManagerPage';
 import { useServers } from './hooks/useServers';
 import { useSocket } from './hooks/useSocket';
 import { fetchSettingsApi, saveSettingApi } from './api/vpsApi';
@@ -185,7 +186,9 @@ export default function App() {
 
       {/* Render View: Dashboard, Server List, Installation, or Tools */}
       <ErrorBoundary title="Gagal Memuat Tampilan Halaman">
-      {currentView === 'master-pod-sync' || currentView === 'master-sync' ? (
+      {currentView === 'tnc-sync-manager' ? (
+        <TncManagerPage onBack={() => setCurrentView('dashboard')} />
+      ) : currentView === 'master-pod-sync' || currentView === 'master-sync' ? (
         <MasterPodSyncMatrixPage onBack={() => setCurrentView('dashboard')} />
       ) : currentView === 'pod-topic-debugger' || currentView === 'pod-topics' ? (
         <PodTopicDebuggerPage onBack={() => setCurrentView('dashboard')} />

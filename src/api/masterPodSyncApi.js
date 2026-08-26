@@ -119,6 +119,22 @@ export async function deletePodRowApi(payload) {
   return res.data;
 }
 
+export async function checkMasterDuplicatesApi(payload) {
+  const res = await safeFetchJson(`${BASE_URL}/check-master-duplicates`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  return res;
+}
+
+export async function cleanMasterDuplicatesApi(payload) {
+  const res = await safeFetchJson(`${BASE_URL}/clean-master-duplicates`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  return res;
+}
+
 /**
  * Sync 1 single row from Master Database to Selected PODs
  */
@@ -148,6 +164,43 @@ export async function syncSinglePodRowApi(payload) {
   const res = await safeFetchJson(`${BASE_URL}/sync-single-pod-row`, {
     method: 'POST',
     body: JSON.stringify(payload)
+  });
+  return res.data;
+}
+
+export async function publishTncDefinitionsApi(payload) {
+  const res = await safeFetchJson(`/api/tnc-sync/publish-definitions`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  return res;
+}
+
+export async function pullConsentsAndDistributeApi(payload) {
+  const res = await safeFetchJson(`/api/tnc-sync/pull-consents`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  return res;
+}
+
+export async function fetchMasterTableDataApi(masterId, tableName) {
+  const res = await safeFetchJson(`/api/master-crud/${masterId}/${tableName}`);
+  return res.data;
+}
+
+export async function createMasterRowApi(masterId, tableName, data) {
+  const res = await safeFetchJson(`/api/master-crud/${masterId}/${tableName}`, {
+    method: 'POST',
+    body: JSON.stringify({ data })
+  });
+  return res.data;
+}
+
+export async function updateMasterRowApi(masterId, tableName, payload) {
+  const res = await safeFetchJson(`/api/master-crud/${masterId}/${tableName}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload) // { pkColumn, pkValue, data }
   });
   return res.data;
 }

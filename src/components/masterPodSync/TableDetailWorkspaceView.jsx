@@ -21,6 +21,8 @@ import PodStatusCardsGrid from './PodStatusCardsGrid';
 import PodDataViewer from './PodDataViewer';
 import MasterPodColumnMatrix from './MasterPodColumnMatrix';
 import MasterPodDataMatrix from './MasterPodDataMatrix';
+import CleanMasterDuplicatesModal from './CleanMasterDuplicatesModal';
+import { cleanMasterDuplicatesApi } from '../../api/masterPodSyncApi';
 
 export default function TableDetailWorkspaceView({
   tableName,
@@ -46,12 +48,19 @@ export default function TableDetailWorkspaceView({
   const [viewMode, setViewMode] = useState('per_pod'); // 'per_pod' | 'matrix_overview'
   const [matrixSubTab, setMatrixSubTab] = useState('data'); // 'data' | 'columns'
   const [podStatusFilter, setPodStatusFilter] = useState('all');
+  const [isCleanModalOpen, setIsCleanModalOpen] = useState(false);
+  const [isCleaning, setIsCleaning] = useState(false);
 
   const activePod = (matrixData?.pods || []).find(p => String(p.id) === String(activePodId)) || matrixData?.pods?.[0];
 
   const isPartitionedTable = tableName === 'pod';
   const isHighVolumeTable = tableName.includes('log') || tableName.includes('answer') || (masterInfo?.rowCount || 0) > 2000;
   const isPodIntakeTable = tableName === 'user' || tableName.includes('terms_and_conditions') || tableName.includes('log');
+
+  const handleCleanSuccess = () => {
+    setIsCleanModalOpen(false);
+    onRefresh(); // Refresh UI to update row count
+  };
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-200">
@@ -98,6 +107,14 @@ export default function TableDetailWorkspaceView({
                 <span>Kirim ke POD Selisih ({matrixData.summary.mismatchPods})</span>
               </button>
             )}
+
+            <button
+              onClick={() => setIsCleanModalOpen(true)}
+              className="px-3.5 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+            >
+              <Database size={14} />
+              <span>Bersihkan Master</span>
+            </button>
 
             <button
               onClick={onRefresh}
@@ -205,6 +222,15 @@ export default function TableDetailWorkspaceView({
             onSyncSingleRowToPod={onSyncSingleRowToPod}
             onSyncSinglePodRowToMaster={onSyncSinglePodRowToMaster}
             onBulkSyncPodRowsToMaster={onBulkSyncPodRowsToMaster}
+          />
+
+          <CleanMasterDuplicatesModal
+            isOpen={isCleanModalOpen}
+            onClose={() => setIsCleanModalOpen(false)}
+            tableName={tableName}
+            masterInfo={masterInfo}
+            columns={matrixData?.columnsMatrix || []}
+            onSuccess={handleCleanSuccess}
           />
         </div>
       ) : (

@@ -61,6 +61,14 @@ export const NAV_DROPDOWN_GROUPS = [
         bgActiveClass: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
       },
       {
+        id: 'tnc-sync-manager',
+        label: 'T&C Sync Manager',
+        desc: 'Konsolidasi & Distribusi 13 Tabel T&C (Batch)',
+        icon: Database,
+        colorClass: 'text-blue-400',
+        bgActiveClass: 'bg-blue-500/15 text-blue-300 border-blue-500/30'
+      },
+      {
         id: 'pod-topic-debugger',
         aliases: ['pod-topics'],
         label: 'POD Topic Matrix',
