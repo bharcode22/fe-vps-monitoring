@@ -199,7 +199,7 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
               <Box size={16} /> Docker Apps
             </button>
 
-            {isPod && (
+            {isPod && podVersionText !== 'V2' && (
               <button
                 onClick={() => setViewMode('screen')}
                 className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${viewMode === 'screen'
@@ -221,27 +221,31 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
               <Layers size={16} /> PM2 Services
             </button>
 
-            <button
-              onClick={() => setViewMode('scripts')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${viewMode === 'scripts'
-                ? 'bg-gradient-to-r from-amber-400 to-amber-600 text-slate-950 shadow-md shadow-amber-500/20'
-                : 'bg-white/5 text-slate-400 hover:text-slate-200'
-                }`}
-            >
-              <FileCode size={16} /> Exec Scripts
-            </button>
+            {server.type !== 'vps' && podVersionText !== 'V2' && (
+              <button
+                onClick={() => setViewMode('scripts')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${viewMode === 'scripts'
+                  ? 'bg-gradient-to-r from-amber-400 to-amber-600 text-slate-950 shadow-md shadow-amber-500/20'
+                  : 'bg-white/5 text-slate-400 hover:text-slate-200'
+                  }`}
+              >
+                <FileCode size={16} /> Exec Scripts
+              </button>
+            )}
 
-            <button
-              onClick={() => setViewMode('sounds')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${viewMode === 'sounds'
-                ? 'bg-gradient-to-r from-cyan-400 to-sky-500 text-slate-950 shadow-md shadow-cyan-500/20'
-                : 'bg-white/5 text-slate-400 hover:text-slate-200'
-                }`}
-            >
-              <Music size={16} /> Sounds Metadata
-            </button>
+            {server.type !== 'vps' && (
+              <button
+                onClick={() => setViewMode('sounds')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${viewMode === 'sounds'
+                  ? 'bg-gradient-to-r from-cyan-400 to-sky-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                  : 'bg-white/5 text-slate-400 hover:text-slate-200'
+                  }`}
+              >
+                <Music size={16} /> Sounds Metadata
+              </button>
+            )}
 
-            {isPod && (
+            {isPod && podVersionText !== 'V3' && (
               <button
                 onClick={() => setViewMode('pod-config')}
                 className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${viewMode === 'pod-config'
@@ -253,7 +257,7 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
               </button>
             )}
 
-            {isPod && (
+            {isPod && podVersionText !== 'V2' && (
               <button
                 onClick={() => setViewMode('versions')}
                 className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${viewMode === 'versions'
@@ -265,7 +269,7 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
               </button>
             )}
 
-            {isPod && (
+            {isPod && podVersionText !== 'V2' && (
               <button
                 onClick={() => setViewMode('pod-topics')}
                 className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${viewMode === 'pod-topics'

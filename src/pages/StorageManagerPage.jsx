@@ -10,7 +10,8 @@ import {
   Zap,
   Folder,
   Layers,
-  Sparkles
+  Sparkles,
+  Search
 } from 'lucide-react';
 import {
   fetchPodsStorageSummaryApi,
@@ -27,14 +28,21 @@ import {
 } from '../api/vpsApi';
 
 import DockerJunkManagerView from '../components/storage/DockerJunkManagerView';
+import RogueMediaScannerView from '../components/storage/RogueMediaScannerView';
 import DockerCleanupModal from '../components/storage/DockerCleanupModal';
 import CatalogView from '../components/content/CatalogView';
 import CodeWorkspaceView from '../components/content/CodeWorkspaceView';
 import HardDeleteModal from '../components/content/HardDeleteModal';
 
 export default function StorageManagerPage({ onBack }) {
-  // Main Tab Navigation: 'docker_storage' | 'media_catalog'
-  const [activeTab, setActiveTab] = useState('docker_storage');
+  // Main Tab Navigation: 'docker_storage' | 'media_catalog' | 'rogue_scanner'
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('storageManagerActiveTab') || 'docker_storage';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('storageManagerActiveTab', activeTab);
+  }, [activeTab]);
 
   // =========================================================================
   // 1. PODs Storage & Docker Build Junk State
@@ -350,6 +358,7 @@ export default function StorageManagerPage({ onBack }) {
     if (catalogCategoryFilter === 'video') return folder.videoCount > 0;
     if (catalogCategoryFilter === 'image') return folder.imageCount > 0;
     if (catalogCategoryFilter === 'strobe') return folder.strobeCount > 0;
+    if (catalogCategoryFilter === 'orphan') return folder.isOrphan === true;
     return true;
   });
 
@@ -361,7 +370,8 @@ export default function StorageManagerPage({ onBack }) {
 
   const tabs = [
     { id: 'docker_storage', label: 'Sampah Docker & Disk 1 TB', icon: Zap, color: 'cyan', badge: `${storageData?.pods?.length || 0} POD` },
-    { id: 'media_catalog', label: 'Direktori Media & S3', icon: Cloud, color: 'rose', badge: `${allFolders.length} Kode S3` }
+    { id: 'media_catalog', label: 'Direktori Media & S3', icon: Cloud, color: 'rose', badge: `${allFolders.length} Kode S3` },
+    { id: 'rogue_scanner', label: 'Rogue Media Scanner', icon: Search, color: 'emerald' }
   ];
 
   return (
@@ -458,6 +468,9 @@ export default function StorageManagerPage({ onBack }) {
               rose: isActive
                 ? 'bg-gradient-to-r from-rose-500/25 to-pink-500/25 text-rose-300 border-rose-500/40 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60',
+              emerald: isActive
+                ? 'bg-gradient-to-r from-emerald-500/25 to-teal-500/25 text-emerald-300 border-emerald-500/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60',
             }[tab.color];
 
             return (
@@ -494,6 +507,11 @@ export default function StorageManagerPage({ onBack }) {
           onOpenCleanupModal={handleOpenDockerCleanupModal}
           onGoToMediaStorage={() => setActiveTab('media_catalog')}
         />
+      )}
+
+      {/* TAB 3: Rogue Media Scanner */}
+      {activeTab === 'rogue_scanner' && !activeCodeDetail && (
+        <RogueMediaScannerView />
       )}
 
       {/* TAB 2: Level 1 Media & S3 Catalog */}

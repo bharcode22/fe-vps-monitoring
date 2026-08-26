@@ -67,6 +67,7 @@ export default function CatalogView({
             { id: 'video', label: 'Video (MP4)', icon: Film },
             { id: 'image', label: 'Gambar (Cover)', icon: ImageIcon },
             { id: 'strobe', label: 'Strobe (Lighting)', icon: Zap },
+            { id: 'orphan', label: 'Yatim Piatu (Orphan)', icon: AlertTriangle },
           ].map(cat => {
             const Icon = cat.icon;
             const isSelected = categoryFilter === cat.id;
@@ -75,11 +76,10 @@ export default function CatalogView({
               <button
                 key={cat.id}
                 onClick={() => onCategoryFilterChange(cat.id)}
-                className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border ${
-                  isSelected
-                    ? 'bg-rose-500/25 text-rose-300 border-rose-500/40 shadow-sm'
-                    : 'bg-slate-950/80 text-slate-400 border-slate-800 hover:text-slate-200 hover:bg-slate-900'
-                }`}
+                className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border ${isSelected
+                  ? 'bg-rose-500/25 text-rose-300 border-rose-500/40 shadow-sm'
+                  : 'bg-slate-950/80 text-slate-400 border-slate-800 hover:text-slate-200 hover:bg-slate-900'
+                  }`}
               >
                 {Icon && <Icon size={12} />}
                 <span>{cat.label}</span>
@@ -117,10 +117,21 @@ export default function CatalogView({
                 <div>
                   {/* Code Badge & Size */}
                   <div className="flex items-center justify-between gap-1 mb-2.5">
-                    <span className="font-mono font-black text-base text-white group-hover:text-rose-300 transition-colors">
-                      #{folder.code}
-                    </span>
-                    <Folder size={16} className="text-slate-500 group-hover:text-rose-400 transition-colors" />
+                    <div className="flex items-center gap-2">
+                      <span className={`font-mono font-black text-base transition-colors ${folder.isOrphan ? 'text-rose-400 group-hover:text-rose-300' : 'text-white group-hover:text-rose-300'}`}>
+                        #{folder.code}
+                      </span>
+                      {folder.isOrphan && (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                          ORPHAN
+                        </span>
+                      )}
+                    </div>
+                    {folder.isOrphan ? (
+                      <AlertTriangle size={16} className="text-rose-500 animate-pulse" title="Yatim Piatu: Tidak ada di Master Database" />
+                    ) : (
+                      <Folder size={16} className="text-slate-500 group-hover:text-rose-400 transition-colors" />
+                    )}
                   </div>
 
                   <div className="text-xs font-mono font-bold text-sky-300 mb-2">

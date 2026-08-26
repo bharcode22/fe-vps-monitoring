@@ -1118,4 +1118,31 @@ export async function cleanupBatchPodsDockerApi(serverIds = [], cleanType = 'saf
   return data;
 }
 
+/**
+ * Scan all PODs for rogue media files
+ */
+export async function scanRogueFilesApi() {
+  const res = await fetch(`${BACKEND_URL}/api/vps/content/pod-rogue-files`, {
+    method: 'GET',
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memindai file rogue');
+  return data.data;
+}
+
+/**
+ * Cleanup rogue media files from a POD
+ */
+export async function cleanupRogueFilesApi(serverId, filePaths, isDryRun = true) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/content/pod-rogue-files/cleanup`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ serverId, filePaths, isDryRun })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal membersihkan file rogue');
+  return data;
+}
+
 
