@@ -204,3 +204,29 @@ export async function updateMasterRowApi(masterId, tableName, payload) {
   });
   return res.data;
 }
+
+export async function deleteMasterCrudRowApi(masterId, tableName, payload) {
+  const res = await safeFetchJson(`/api/master-crud/${masterId}/${tableName}`, {
+    method: 'DELETE',
+    body: JSON.stringify(payload) // { pkColumn, pkValue }
+  });
+  return res.data;
+}
+
+export async function validateMatrixQuestionsApi(masterId) {
+  const res = await safeFetchJson(`/api/master-crud/${masterId}/validate-matrix-questions`);
+  return res.data;
+}
+
+export async function fetchMatrixByQuestionApi(masterId, questionId) {
+  const res = await safeFetchJson(`/api/master-crud/${masterId}/matrix-by-question/${questionId}`);
+  return res.data;
+}
+
+export async function saveUnifiedQuestionMatrixApi(masterId, payload) {
+  const res = await safeFetchJson(`/api/master-crud/${masterId}/unified-question-matrix`, {
+    method: 'POST',
+    body: JSON.stringify(payload) // { questionData, matrixData, isEdit, questionId }
+  });
+  return res.data;
+}

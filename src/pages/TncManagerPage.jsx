@@ -17,20 +17,20 @@ export default function TncManagerPage() {
 
   // Editor Workspace State
   const [activePart, setActivePart] = useState(1);
-  const [activeTable, setActiveTable] = useState('');
+  const [activeTable, setActiveTable] = useState('terms_and_conditions');
 
   const WORKSPACE_PARTS = {
     1: {
       name: 'Part 1: General T&C',
-      tables: ['terms_and_conditions', 'terms_and_conditions_version'] // Reduced as per user feedback (no accepted/history CRUD)
+      tables: ['terms_and_conditions', 'terms_and_conditions_version'] 
     },
     2: {
-      name: 'Part 2: Questionnaire T&C',
-      tables: ['terms_and_conditions_questions', 'terms_and_conditions_question_bundle', 'terms_and_conditions_question_history', 'terms_and_conditions_version_question'] // Reduced answers/history
-    },
-    3: {
-      name: 'Part 3: Matrix User',
-      tables: ['matrix_user', 'matrix_user_history'] // Assuming these are definition matrices. If user-generated, maybe no CRUD either, but I'll leave them.
+      name: 'Part 2: Questionnaire T&C & Matrix',
+      tables: [
+        'terms_and_conditions_questions', 
+        'terms_and_conditions_question_history',
+        'matrix_user_history'
+      ]
     }
   };
 
@@ -210,7 +210,7 @@ export default function TncManagerPage() {
             {Object.entries(WORKSPACE_PARTS).map(([key, part]) => (
               <button
                 key={key}
-                onClick={() => { setActivePart(Number(key)); setActiveTable(''); }}
+                onClick={() => { setActivePart(Number(key)); setActiveTable(part.tables[0]); }}
                 className={`flex-1 px-4 py-2.5 text-center font-bold text-sm rounded-xl transition-all ${activePart === Number(key) ? 'bg-slate-800 text-white shadow-md' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/30'}`}
               >
                 {part.name}
@@ -220,17 +220,22 @@ export default function TncManagerPage() {
 
           {/* Sub-tabs (Tables) */}
           {activePart && (
-            <div className="flex flex-wrap gap-2">
-              {WORKSPACE_PARTS[activePart].tables.map(tbl => (
-                <button
-                  key={tbl}
-                  onClick={() => setActiveTable(tbl)}
-                  className={`px-4 py-2 rounded-xl text-xs transition-all ${activeTable === tbl ? 'bg-blue-600 text-white font-bold shadow-lg shadow-blue-900/30 border border-blue-500' : 'bg-slate-900 border border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}
-                >
-                  {tbl}
-                </button>
-              ))}
-            </div>
+            <div className="flex flex-wrap gap-2 mb-6 p-1 bg-slate-900 rounded-2xl w-fit">
+            {WORKSPACE_PARTS[activePart].tables.map(table => (
+              <button
+                key={table}
+                onClick={() => setActiveTable(table)}
+                className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2
+                  ${activeTable === table 
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' 
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  }`}
+              >
+                <Database size={16} className={activeTable === table ? 'text-blue-200' : 'text-slate-500'} />
+                {table}
+              </button>
+            ))}
+          </div>
           )}
 
           {/* Editor Area */}

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Edit2, Plus, RefreshCw, Send, Save, X, Database } from 'lucide-react';
-import { fetchMasterTableDataApi, createMasterRowApi, updateMasterRowApi } from '../../api/masterPodSyncApi';
+import { Edit2, Plus, RefreshCw, Send, Save, X, Database, Trash2, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { fetchMasterTableDataApi, createMasterRowApi, updateMasterRowApi, deleteMasterCrudRowApi, validateMatrixQuestionsApi } from '../../api/masterPodSyncApi';
+import UnifiedQuestionMatrixEditor from './UnifiedQuestionMatrixEditor';
+import MatrixDetailView from './MatrixDetailView';
 
 // Modal for Create/Edit
 function RowEditorModal({ isOpen, onClose, onSave, columns, initialData, isEdit }) {
@@ -81,16 +83,25 @@ export default function MasterDataEditor({ masterId, tableName, onSyncRowRequest
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-
+  const [expandedRow, setExpandedRow] = useState(null);
   const [modalState, setModalState] = useState({ isOpen: false, isEdit: false, rowData: null });
+  const [matrixValidationResult, setMatrixValidationResult] = useState(null);
 
   const loadData = async () => {
     if (!masterId || !tableName) return;
     setIsLoading(true);
     setError('');
+    setMatrixValidationResult(null);
     try {
       const res = await fetchMasterTableDataApi(masterId, tableName);
       setData(res);
+
+      if (tableName === 'matrix_user') {
+        const valRes = await validateMatrixQuestionsApi(masterId);
+        if (!valRes.isValid) {
+          setMatrixValidationResult(valRes.message);
+        }
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -101,6 +112,9 @@ export default function MasterDataEditor({ masterId, tableName, onSyncRowRequest
   useEffect(() => {
     loadData();
   }, [masterId, tableName]);
+
+  const isHistoryTable = tableName.includes('_history') || tableName.includes('_version');
+  const isReadOnlyTable = isHistoryTable || tableName === 'matrix_user';
 
   const handleSave = async (formData) => {
     try {
@@ -117,6 +131,19 @@ export default function MasterDataEditor({ masterId, tableName, onSyncRowRequest
       loadData(); // Refresh table
     } catch (err) {
       alert(`Gagal menyimpan: ${err.message}`);
+    }
+  };
+
+  const handleDelete = async (row) => {
+    if (!window.confirm(`Yakin ingin menghapus data dengan ${data.pkColumn} = ${row[data.pkColumn]}?`)) return;
+    try {
+      await deleteMasterCrudRowApi(masterId, tableName, {
+        pkColumn: data.pkColumn,
+        pkValue: row[data.pkColumn]
+      });
+      loadData();
+    } catch (err) {
+      alert(`Gagal menghapus: ${err.message}`);
     }
   };
 
@@ -138,6 +165,7 @@ export default function MasterDataEditor({ masterId, tableName, onSyncRowRequest
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
             <Database size={18} className="text-cyan-400" />
             {tableName}
+            {isHistoryTable && <span className="ml-2 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400">READ-ONLY</span>}
           </h2>
           {data && <p className="text-xs text-slate-500 mt-1">Total {data.totalCount} baris (Dibatasi 1000)</p>}
         </div>
@@ -152,18 +180,27 @@ export default function MasterDataEditor({ masterId, tableName, onSyncRowRequest
             <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
           </button>
           
-          <button 
-            onClick={() => setModalState({ isOpen: true, isEdit: false, rowData: {} })}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded-xl flex items-center gap-2 transition-colors shadow-lg shadow-emerald-900/20"
-          >
-            <Plus size={16} /> Tambah Data
-          </button>
+          {!isReadOnlyTable && (
+            <button 
+              onClick={() => setModalState({ isOpen: true, isEdit: false, rowData: {} })}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded-xl flex items-center gap-2 transition-colors shadow-lg shadow-emerald-900/20"
+            >
+              <Plus size={16} /> Tambah Data
+            </button>
+          )}
         </div>
       </div>
 
       {error && (
         <div className="p-4 m-4 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl text-sm font-bold">
           Error: {error}
+        </div>
+      )}
+
+      {matrixValidationResult && (
+        <div className="p-4 mx-4 mt-4 bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 rounded-xl text-sm font-bold flex items-start gap-3">
+          <AlertTriangle size={20} className="shrink-0" />
+          <p>{matrixValidationResult}</p>
         </div>
       )}
 
@@ -179,7 +216,7 @@ export default function MasterDataEditor({ masterId, tableName, onSyncRowRequest
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="sticky top-0 bg-slate-900 z-10 shadow-sm">
               <tr>
-                <th className="px-4 py-3 font-bold text-slate-400 border-b border-slate-800 bg-slate-950/50">Aksi</th>
+                {!isReadOnlyTable && <th className="px-4 py-3 font-bold text-slate-400 border-b border-slate-800 bg-slate-950/50">Aksi</th>}
                 {data.columns.map(col => (
                   <th key={col.name} className="px-4 py-3 font-bold text-slate-400 border-b border-slate-800 bg-slate-950/50">
                     <div className="flex flex-col">
@@ -192,23 +229,42 @@ export default function MasterDataEditor({ masterId, tableName, onSyncRowRequest
             </thead>
             <tbody className="divide-y divide-slate-800">
               {data.rows.map((row, idx) => (
-                <tr key={idx} className="hover:bg-slate-800/50 transition-colors">
-                  <td className="px-4 py-3 flex items-center gap-2">
-                    <button 
-                      onClick={() => setModalState({ isOpen: true, isEdit: true, rowData: row })}
-                      className="p-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-lg transition-colors border border-blue-500/20"
-                      title="Edit Baris"
-                    >
-                      <Edit2 size={14} />
-                    </button>
-                    <button 
-                      onClick={() => onSyncRowRequest(tableName, data.pkColumn, row[data.pkColumn])}
-                      className="p-1.5 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 rounded-lg transition-colors border border-purple-500/20"
-                      title="Sync (Push) baris ini ke POD"
-                    >
-                      <Send size={14} />
-                    </button>
-                  </td>
+                <React.Fragment key={idx}>
+                  <tr className="hover:bg-slate-800/50 transition-colors">
+                  {!isReadOnlyTable && (
+                    <td className="px-4 py-3 flex items-center gap-2">
+                      {tableName === 'terms_and_conditions_questions' && (
+                        <button 
+                          onClick={() => setExpandedRow(expandedRow === row.id ? null : row.id)}
+                          className={`p-1.5 rounded-lg transition-colors border ${expandedRow === row.id ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700 hover:text-white'}`}
+                          title={expandedRow === row.id ? "Tutup Rincian Matrix" : "Lihat Rincian Matrix"}
+                        >
+                          {expandedRow === row.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        </button>
+                      )}
+                      <button 
+                        onClick={() => setModalState({ isOpen: true, isEdit: true, rowData: row })}
+                        className="p-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-lg transition-colors border border-blue-500/20"
+                        title="Edit Baris"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button 
+                        onClick={() => onSyncRowRequest(tableName, data.pkColumn, row[data.pkColumn])}
+                        className="p-1.5 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 rounded-lg transition-colors border border-purple-500/20"
+                        title="Sync (Push) baris ini ke POD"
+                      >
+                        <Send size={14} />
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(row)}
+                        className="p-1.5 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors border border-red-500/20"
+                        title="Hapus Baris"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
+                  )}
                   {data.columns.map(col => {
                     let val = row[col.name];
                     if (val === null) val = <span className="text-slate-600 italic">NULL</span>;
@@ -221,20 +277,42 @@ export default function MasterDataEditor({ masterId, tableName, onSyncRowRequest
                     );
                   })}
                 </tr>
-              ))}
-            </tbody>
+                {expandedRow === row.id && tableName === 'terms_and_conditions_questions' && (
+                  <tr key={`expanded-${row.id}`} className="bg-slate-900/50">
+                    <td colSpan={data.columns.length + (!isReadOnlyTable ? 1 : 0)} className="p-0 border-b border-slate-800/50">
+                      <MatrixDetailView masterId={masterId} questionId={row.id} />
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
+            ))}
+          </tbody>
           </table>
         )}
       </div>
 
-      <RowEditorModal
-        isOpen={modalState.isOpen}
-        onClose={() => setModalState({ isOpen: false, isEdit: false, rowData: null })}
-        onSave={handleSave}
-        columns={data ? data.columns : []}
-        initialData={modalState.rowData}
-        isEdit={modalState.isEdit}
-      />
+      {tableName === 'terms_and_conditions_questions' ? (
+        <UnifiedQuestionMatrixEditor
+          isOpen={modalState.isOpen}
+          onClose={() => setModalState({ isOpen: false, isEdit: false, rowData: null })}
+          onSuccess={() => {
+            setModalState({ isOpen: false, isEdit: false, rowData: null });
+            loadData();
+          }}
+          masterId={masterId}
+          initialData={modalState.rowData}
+          isEdit={modalState.isEdit}
+        />
+      ) : (
+        <RowEditorModal
+          isOpen={modalState.isOpen}
+          onClose={() => setModalState({ isOpen: false, isEdit: false, rowData: null })}
+          onSave={handleSave}
+          columns={data ? data.columns : []}
+          initialData={modalState.rowData}
+          isEdit={modalState.isEdit}
+        />
+      )}
     </div>
   );
 }
