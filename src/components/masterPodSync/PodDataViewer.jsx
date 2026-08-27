@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Server,
   CheckCircle2,
@@ -17,7 +18,11 @@ import {
   Square,
   MinusSquare,
   X,
-  Loader2
+  Loader2,
+  RefreshCw,
+  Eye,
+  Code,
+  Table
 } from 'lucide-react';
 
 export default function PodDataViewer({
@@ -38,7 +43,7 @@ export default function PodDataViewer({
   onQuickSyncSingleRow
 }) {
   const [activeSubTab, setActiveSubTab] = useState('data'); // 'data' | 'columns'
-  const [filterMissingOnly, setFilterMissingOnly] = useState(false);
+  const [dataStatusFilter, setDataStatusFilter] = useState('all'); // 'all' | 'present' | 'missing'
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedKey, setCopiedKey] = useState(null);
   const [selectedKeys, setSelectedKeys] = useState(new Set());
@@ -48,6 +53,12 @@ export default function PodDataViewer({
   const [downloadingRowKey, setDownloadingRowKey] = useState(null);
   const [justUploadedKeys, setJustUploadedKeys] = useState(new Set());
 
+  // Row Inspection Modal States
+  const [inspectingRow, setInspectingRow] = useState(null);
+  const [modalTab, setModalTab] = useState('table'); // 'table' | 'json'
+  const [modalSearch, setModalSearch] = useState('');
+  const [copiedModalJson, setCopiedModalJson] = useState(false);
+
   const pkColumn = masterInfo?.pkColumn || 'id';
 
   const handleCopy = (text, key) => {
@@ -56,13 +67,24 @@ export default function PodDataViewer({
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
+  // Present count in this POD
+  const presentCountInThisPod = useMemo(() => {
+    return dataMatrix.filter(item => Boolean(item.presence?.[pod?.id]?.present)).length;
+  }, [dataMatrix, pod]);
+
+  // Missing count in this POD
+  const missingCountInThisPod = useMemo(() => {
+    return dataMatrix.filter(item => !item.presence?.[pod?.id]?.present).length;
+  }, [dataMatrix, pod]);
+
   // Filter rows for this specific POD
   const filteredData = useMemo(() => {
     return dataMatrix.filter(item => {
       const presence = item.presence?.[pod?.id];
-      const isPresent = presence?.present;
+      const isPresent = Boolean(presence?.present);
 
-      if (filterMissingOnly && isPresent) return false;
+      if (dataStatusFilter === 'present' && !isPresent) return false;
+      if (dataStatusFilter === 'missing' && isPresent) return false;
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
@@ -75,13 +97,7 @@ export default function PodDataViewer({
 
       return true;
     });
-  }, [dataMatrix, pod, filterMissingOnly, searchQuery]);
-
-
-  // Missing count in this POD
-  const missingCountInThisPod = useMemo(() => {
-    return dataMatrix.filter(item => !item.presence?.[pod?.id]?.present).length;
-  }, [dataMatrix, pod]);
+  }, [dataMatrix, pod, dataStatusFilter, searchQuery]);
 
   // Automatically prune selectedKeys if rows are deleted / removed from dataMatrix
   React.useEffect(() => {
@@ -104,10 +120,20 @@ export default function PodDataViewer({
   }, [filteredData, pkColumn]);
 
   // Reset selectedKeys and justUploadedKeys when pod or table changes
-  React.useEffect(() => {
+  useEffect(() => {
     setSelectedKeys(new Set());
     setJustUploadedKeys(new Set());
   }, [pod?.id, masterInfo?.tableName]);
+
+  // Prevent background scrolling when inspection modal is open
+  useEffect(() => {
+    if (inspectingRow) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
+    }
+  }, [inspectingRow]);
 
   // Selection handlers
   const toggleSelectRow = (key) => {
@@ -181,20 +207,22 @@ export default function PodDataViewer({
     );
   }
 
+  const hasBeenCompared = Boolean(pod && pod.tableExists !== null && pod.rowCount !== null && pod.status !== 'NOT_LOADED');
+
   if (isLoading || (loadingPodId && String(loadingPodId) === String(pod.id))) {
     return (
       <div className="bg-slate-900/60 border border-purple-500/30 rounded-3xl p-12 text-center text-slate-400 font-sans text-xs flex flex-col items-center justify-center gap-3 animate-in fade-in duration-200">
         <Loader2 size={32} className="animate-spin text-purple-400" />
-        <span className="text-sm font-bold text-white">Memuat Data {pod.name}...</span>
+        <span className="text-sm font-bold text-white">Memuat & Membandingkan Data {pod.name}...</span>
         <span className="text-slate-500 text-[11px]">Menghubungkan ke server {pod.host || ''} dan membandingkan baris data dengan Master Database.</span>
       </div>
     );
   }
 
-  if (pod.status === 'NOT_LOADED') {
+  if (!hasBeenCompared) {
     return (
       <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-12 text-center text-slate-400 font-sans text-xs flex flex-col items-center justify-center gap-3.5 animate-in fade-in duration-200">
-        <div className="p-3.5 bg-slate-800/80 rounded-2xl text-slate-400 border border-slate-700">
+        <div className="p-3.5 bg-slate-800/80 rounded-2xl text-purple-400 border border-slate-700">
           <Server size={28} />
         </div>
         <div>
@@ -222,6 +250,13 @@ export default function PodDataViewer({
           <h4 className="font-bold text-sm text-white">Unit {pod.name} Sedang OFFLINE</h4>
           <p className="text-slate-400 mt-1">Database PostgreSQL pada server ini tidak dapat dihubungi. Pastikan server POD menyala dan terhubung ke jaringan.</p>
         </div>
+        <button
+          onClick={() => onInspectPod?.(pod.id)}
+          className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+        >
+          <RefreshCw size={13} />
+          <span>Coba Hubungkan Kembali</span>
+        </button>
       </div>
     );
   }
@@ -293,12 +328,25 @@ export default function PodDataViewer({
             <DownloadCloud size={14} />
             <span>Master ➔ {pod.name}</span>
           </button>
+
+          {/* Re-compare / Refresh comparison for this POD */}
+          {onInspectPod && (
+            <button
+              disabled={isLoading || (loadingPodId && String(loadingPodId) === String(pod.id))}
+              onClick={() => onInspectPod(pod.id)}
+              className="p-2 bg-slate-800 hover:bg-slate-700 text-purple-300 rounded-xl border border-slate-700 cursor-pointer transition-colors disabled:opacity-50"
+              title={`Bandingkan ulang data ${pod.name} dengan Master`}
+            >
+              <RefreshCw size={14} className={loadingPodId === pod.id ? 'animate-spin' : ''} />
+            </button>
+          )}
         </div>
       </div>
 
       {/* Toolbar Sub-Tabs & Filters */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-1">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-3 pt-1">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Main View Tab: Data vs Columns */}
           <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
             <button
               onClick={() => setActiveSubTab('data')}
@@ -308,7 +356,7 @@ export default function PodDataViewer({
                 }`}
             >
               <Database size={13} />
-              <span>Data Baris ({filteredData.length})</span>
+              <span>Data Baris ({dataMatrix.length})</span>
             </button>
             <button
               onClick={() => setActiveSubTab('columns')}
@@ -321,22 +369,48 @@ export default function PodDataViewer({
             </button>
           </div>
 
-          {activeSubTab === 'data' && missingCountInThisPod > 0 && (
-            <button
-              onClick={() => setFilterMissingOnly(!filterMissingOnly)}
-              className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${filterMissingOnly
-                ? 'bg-red-500/20 text-red-300 border-red-500/40'
-                : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
-                }`}
-            >
-              <AlertTriangle size={13} className="text-red-400" />
-              <span>Hanya Data Hilang ({missingCountInThisPod})</span>
-            </button>
+          {/* Filter Status Data di POD: Semua / Sudah Ada / Belum Ada */}
+          {activeSubTab === 'data' && (
+            <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+              <button
+                onClick={() => setDataStatusFilter('all')}
+                className={`px-2.5 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${dataStatusFilter === 'all'
+                  ? 'bg-slate-800 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+                  }`}
+              >
+                <span>Semua ({dataMatrix.length})</span>
+              </button>
+
+              <button
+                onClick={() => setDataStatusFilter('present')}
+                className={`px-2.5 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${dataStatusFilter === 'present'
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                  : 'text-emerald-400/70 hover:text-emerald-300'
+                  }`}
+                title="Tampilkan hanya data yang sudah ada di database unit POD ini"
+              >
+                <CheckCircle2 size={13} className="text-emerald-400" />
+                <span>Sudah Ada di POD ({presentCountInThisPod})</span>
+              </button>
+
+              <button
+                onClick={() => setDataStatusFilter('missing')}
+                className={`px-2.5 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${dataStatusFilter === 'missing'
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                  : 'text-amber-400/70 hover:text-amber-300'
+                  }`}
+                title="Tampilkan data Master yang belum ada di unit POD ini"
+              >
+                <AlertTriangle size={13} className="text-amber-400" />
+                <span>Belum Ada di POD ({missingCountInThisPod})</span>
+              </button>
+            </div>
           )}
         </div>
 
         {activeSubTab === 'data' && (
-          <div className="relative w-full sm:w-60">
+          <div className="relative w-full sm:w-64">
             <Search size={13} className="absolute left-3 top-2.5 text-slate-500" />
             <input
               type="text"
@@ -438,8 +512,22 @@ export default function PodDataViewer({
             <tbody className="divide-y divide-slate-800/50 text-[11px]">
               {filteredData.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-slate-500 font-sans">
-                    Tidak ada baris data yang cocok dengan filter.
+                  <td colSpan={5} className="p-10 text-center text-slate-400 font-sans">
+                    {dataStatusFilter === 'missing' ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <CheckCircle2 size={26} className="text-emerald-400" />
+                        <span className="font-bold text-white text-xs">Semua Data Sudah Ada di {pod.name}</span>
+                        <span className="text-[11px] text-slate-500">Seluruh data Master sudah 100% tersimpan pada database unit POD ini.</span>
+                      </div>
+                    ) : dataStatusFilter === 'present' ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <AlertTriangle size={26} className="text-amber-400" />
+                        <span className="font-bold text-white text-xs">Belum Ada Data di {pod.name}</span>
+                        <span className="text-[11px] text-slate-500">Semua baris Master belum tersinkronisasi ke database unit POD ini.</span>
+                      </div>
+                    ) : (
+                      <span>Tidak ada baris data yang cocok dengan filter atau pencarian.</span>
+                    )}
                   </td>
                 </tr>
               ) : (
@@ -613,8 +701,32 @@ export default function PodDataViewer({
                       </td>
 
                       {/* Data Value Preview */}
-                      <td className="p-3 text-slate-300 truncate max-w-[340px] font-sans">
-                        {item.sampleData ? JSON.stringify(item.sampleData) : '-'}
+                      <td
+                        className="p-3 text-slate-300 font-sans cursor-pointer group hover:bg-purple-950/20 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setInspectingRow({
+                            rowKey: item.rowKey,
+                            sampleData: item.sampleData,
+                            isPresent,
+                            pkVal,
+                            rowKeyStr
+                          });
+                        }}
+                        title="Klik untuk melihat keseluruhan data baris ini secara lengkap"
+                      >
+                        <div className="flex items-center justify-between gap-2 max-w-[420px]">
+                          <span className="truncate font-mono text-[11px] text-slate-400 group-hover:text-cyan-300 transition-colors">
+                            {item.sampleData ? JSON.stringify(item.sampleData) : '-'}
+                          </span>
+                          <button
+                            type="button"
+                            className="shrink-0 px-2 py-0.5 rounded-lg bg-slate-800/80 group-hover:bg-purple-600/30 text-slate-400 group-hover:text-purple-300 border border-slate-700/60 group-hover:border-purple-500/40 transition-all flex items-center gap-1 text-[10px] font-sans font-semibold cursor-pointer"
+                          >
+                            <Eye size={11} />
+                            <span className="hidden sm:inline">Detail</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -669,6 +781,229 @@ export default function PodDataViewer({
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Full Row Data Inspection Modal with Portal to avoid any stacking context or footer overlap */}
+      {inspectingRow && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-[99999] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150"
+          onClick={() => setInspectingRow(null)}
+        >
+          <div
+            className="bg-slate-900 border border-slate-800 rounded-3xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-5 border-b border-slate-800 bg-slate-950/50 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-400">
+                  <Database size={18} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="text-base font-bold text-white">Detail Lengkap Data Baris</h4>
+                    {inspectingRow.isPresent ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                        <CheckCircle2 size={11} /> Ada di {pod.name}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[10px] font-bold">
+                        <AlertTriangle size={11} /> Belum Ada di {pod.name}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5 font-mono">
+                    <span>Key:</span>
+                    <strong className="text-cyan-300">{inspectingRow.rowKey}</strong>
+                    <span className="text-slate-600">&bull;</span>
+                    <span>Tabel:</span>
+                    <strong className="text-white">{masterInfo?.tableName}</strong>
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setInspectingRow(null)}
+                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                title="Tutup"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Sub-header Toolbar */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 border-b border-slate-800 bg-slate-900/50 shrink-0">
+              <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+                <button
+                  onClick={() => setModalTab('table')}
+                  className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${modalTab === 'table'
+                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                      : 'text-slate-400 hover:text-white'
+                    }`}
+                >
+                  <Table size={13} />
+                  <span>Tabel Kolom ({Object.keys(inspectingRow.sampleData || {}).length})</span>
+                </button>
+                <button
+                  onClick={() => setModalTab('json')}
+                  className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${modalTab === 'json'
+                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                      : 'text-slate-400 hover:text-white'
+                    }`}
+                >
+                  <Code size={13} />
+                  <span>Format JSON</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                {modalTab === 'table' && (
+                  <div className="relative flex-1 sm:w-56">
+                    <Search size={12} className="absolute left-2.5 top-2.5 text-slate-500" />
+                    <input
+                      type="text"
+                      value={modalSearch}
+                      onChange={(e) => setModalSearch(e.target.value)}
+                      placeholder="Cari kolom / nilai..."
+                      className="w-full pl-7 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 font-mono"
+                    />
+                  </div>
+                )}
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(JSON.stringify(inspectingRow.sampleData || {}, null, 2));
+                    setCopiedModalJson(true);
+                    setTimeout(() => setCopiedModalJson(false), 2000);
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all"
+                  title="Salin seluruh data JSON ke clipboard"
+                >
+                  {copiedModalJson ? (
+                    <>
+                      <Check size={13} className="text-emerald-400" />
+                      <span className="text-emerald-400">Tersalin!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={13} />
+                      <span>Salin JSON</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 overflow-y-auto flex-1 min-h-0">
+              {modalTab === 'table' ? (
+                <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/70">
+                  <table className="w-full text-left text-xs border-collapse font-mono">
+                    <thead>
+                      <tr className="bg-slate-900/90 border-b border-slate-800 text-slate-400 font-sans sticky top-0 z-10">
+                        <th className="p-3 font-bold w-48">Nama Kolom</th>
+                        <th className="p-3 font-bold">Nilai Data</th>
+                        <th className="p-3 text-center w-16">Salin</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/50 text-[11px]">
+                      {Object.entries(inspectingRow.sampleData || {})
+                        .filter(([colKey, colVal]) => {
+                          if (!modalSearch.trim()) return true;
+                          const q = modalSearch.toLowerCase().trim();
+                          return colKey.toLowerCase().includes(q) || String(colVal || '').toLowerCase().includes(q);
+                        })
+                        .map(([colKey, colVal], fIdx) => (
+                          <tr key={fIdx} className="hover:bg-slate-800/30 transition-colors">
+                            <td className="p-3 font-bold text-cyan-300 align-top whitespace-nowrap">
+                              {colKey}
+                            </td>
+                            <td className="p-3 text-slate-200 break-all select-text font-mono">
+                              {colVal === null ? (
+                                <span className="text-slate-500 italic">null</span>
+                              ) : colVal === undefined ? (
+                                <span className="text-slate-600 italic">undefined</span>
+                              ) : typeof colVal === 'object' ? (
+                                <pre className="text-purple-300 bg-slate-900/80 p-2 rounded-lg border border-slate-800 overflow-x-auto whitespace-pre-wrap">
+                                  {JSON.stringify(colVal, null, 2)}
+                                </pre>
+                              ) : (
+                                String(colVal)
+                              )}
+                            </td>
+                            <td className="p-3 text-center align-top">
+                              <button
+                                onClick={() => handleCopy(String(colVal ?? ''), `modal_col_${fIdx}`)}
+                                className="p-1 rounded-lg text-slate-500 hover:text-cyan-300 hover:bg-slate-800 transition-colors cursor-pointer"
+                                title="Salin nilai kolom ini"
+                              >
+                                {copiedKey === `modal_col_${fIdx}` ? (
+                                  <Check size={12} className="text-emerald-400" />
+                                ) : (
+                                  <Copy size={12} />
+                                )}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="relative">
+                  <pre className="p-4 bg-slate-950 rounded-2xl border border-slate-800 font-mono text-xs text-purple-300 overflow-auto whitespace-pre-wrap leading-relaxed select-text shadow-inner max-h-[420px]">
+                    {JSON.stringify(inspectingRow.sampleData || {}, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between p-4 border-t border-slate-800 bg-slate-950/50 shrink-0">
+              <div>
+                {!inspectingRow.isPresent && onSyncSingleRowToPod && (
+                  <button
+                    disabled={downloadingRowKey === inspectingRow.rowKeyStr}
+                    onClick={async () => {
+                      setDownloadingRowKey(inspectingRow.rowKeyStr);
+                      try {
+                        await onSyncSingleRowToPod({
+                          serverId: pod.id,
+                          serverName: pod.name,
+                          pkColumn,
+                          pkValue: inspectingRow.pkVal
+                        });
+                        setInspectingRow(prev => prev ? { ...prev, isPresent: true } : null);
+                      } finally {
+                        setDownloadingRowKey(null);
+                      }
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-md shadow-amber-500/20 transition-all hover:scale-105 disabled:opacity-50"
+                  >
+                    {downloadingRowKey === inspectingRow.rowKeyStr ? (
+                      <>
+                        <Loader2 size={13} className="animate-spin text-white" />
+                        <span>Mengirim ke {pod.name}...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Zap size={13} className="fill-white" />
+                        <span>Kirim Baris Ini ke {pod.name}</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+
+              <button
+                onClick={() => setInspectingRow(null)}
+                className="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold cursor-pointer transition-colors"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

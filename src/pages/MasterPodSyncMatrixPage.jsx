@@ -192,10 +192,11 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
 
   // 3B. Load comparison on-demand for a single POD (~200ms)
   const loadSinglePodComparison = async (tableName, podId) => {
-    if (!selectedMasterId || !tableName || !podId) return;
+    const tbl = tableName || selectedTableName || matrixData?.master?.tableName;
+    if (!selectedMasterId || !tbl || !podId) return;
     setLoadingPodId(podId);
     try {
-      const result = await fetchSinglePodComparisonApi(selectedMasterId, tableName, podId);
+      const result = await fetchSinglePodComparisonApi(selectedMasterId, tbl, podId);
       if (result?.success && result.podSummary) {
         setMatrixData(prev => {
           if (!prev) return prev;
@@ -203,39 +204,33 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
           // Update pods array
           const updatedPods = (prev.pods || []).map(p => {
             if (String(p.id) === String(podId)) {
-              return { ...p, ...result.podSummary };
+              return { ...p, ...result.podSummary, hasCompared: true };
             }
             return p;
           });
 
           // Update columnsMatrix
           const updatedColumns = (prev.columnsMatrix || []).map(col => {
-            const colPresence = result.columnPresenceMap?.[col.columnName];
-            if (colPresence) {
-              return {
-                ...col,
-                presence: {
-                  ...(col.presence || {}),
-                  [podId]: colPresence
-                }
-              };
-            }
-            return col;
+            const colPresence = result.columnPresenceMap?.[col.columnName] || { isOnline: false, exists: false, typeMatch: false };
+            return {
+              ...col,
+              presence: {
+                ...(col.presence || {}),
+                [podId]: colPresence
+              }
+            };
           });
 
           // Update dataMatrix presence
           const updatedDataMatrix = (prev.dataMatrix || []).map(item => {
-            const presence = result.dataPresenceMap?.[item.rowKey];
-            if (presence) {
-              return {
-                ...item,
-                presence: {
-                  ...(item.presence || {}),
-                  [podId]: presence
-                }
-              };
-            }
-            return item;
+            const presence = result.dataPresenceMap?.[item.rowKey] || { isOnline: false, present: false };
+            return {
+              ...item,
+              presence: {
+                ...(item.presence || {}),
+                [podId]: presence
+              }
+            };
           });
 
           // Append any podOnlyRows if not already present
@@ -274,12 +269,17 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
     }
   };
 
-  // 3C. Select POD handler (triggers on-demand load if NOT_LOADED)
+  // 3C. Select POD handler (triggers on-demand load if not yet compared)
   const handleSelectPod = (podId) => {
     setActivePodId(podId);
+    const tbl = selectedTableName || matrixData?.master?.tableName;
     const targetPod = (matrixData?.pods || []).find(p => String(p.id) === String(podId));
-    if (targetPod && targetPod.status === 'NOT_LOADED') {
-      loadSinglePodComparison(selectedTableName, podId);
+    
+    // Check if this POD has already been compared (tableExists is non-null and rowCount is non-null and status is not NOT_LOADED)
+    const isAlreadyCompared = targetPod && targetPod.tableExists !== null && targetPod.rowCount !== null && targetPod.status !== 'NOT_LOADED';
+    
+    if (!isAlreadyCompared && tbl) {
+      loadSinglePodComparison(tbl, podId);
     }
   };
 

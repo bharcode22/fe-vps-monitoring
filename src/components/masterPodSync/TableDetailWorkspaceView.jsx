@@ -75,44 +75,49 @@ export default function TableDetailWorkspaceView({
       {/* 1. Top Workspace Banner (or Compact Bar if hideTopBanner is true) */}
       {!hideTopBanner ? (
         <div className="glass-card p-5 sm:p-6 rounded-3xl border border-purple-500/40 bg-slate-900/70 shadow-2xl backdrop-blur-xl">
-          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-4 mb-4 border-b border-slate-800">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-br from-cyan-500/20 via-purple-500/20 to-pink-500/20 border border-cyan-500/40 rounded-2xl text-cyan-400">
+          <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 pb-4 mb-4 border-b border-slate-800/80">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="p-3 bg-gradient-to-br from-cyan-500/20 via-purple-500/20 to-pink-500/20 border border-cyan-500/40 rounded-2xl text-cyan-400 shrink-0">
                 <Database size={24} />
               </div>
-              <div>
-                <h2 className="text-lg sm:text-xl font-black text-white flex items-center gap-2.5 flex-wrap">
-                  <span>Detail Pengelolaan Tabel: <strong className="text-cyan-400 font-mono">public.{tableName}</strong></span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">
+                    Detail Pengelolaan Tabel: <strong className="text-cyan-400 font-mono">public.{tableName}</strong>
+                  </h2>
+                  <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30">
                     Master: {masterInfo?.name}
                   </span>
                   {isPartitionedTable && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1">
                       <Filter size={11} />
-                      <span>Partisi Khusus per-POD</span>
+                      <span>Partisi Khusus</span>
                     </span>
                   )}
                   {isPodIntakeTable && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
                       <UploadCloud size={11} />
-                      <span>Dukungan Tarik POD ➔ Master</span>
+                      <span>Tarik POD ➔ Master</span>
                     </span>
                   )}
-                </h2>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Total di Master: <strong className="text-white font-mono">{masterInfo?.rowCount || 0} Baris</strong> &bull; Kolom: <strong className="text-purple-300 font-mono">{masterInfo?.columnCount || 0} Kolom</strong>
-                </p>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-slate-400 mt-1">
+                  <span>Total di Master: <strong className="text-white font-mono">{masterInfo?.rowCount || 0} Baris</strong></span>
+                  <span className="text-slate-600">&bull;</span>
+                  <span>Kolom: <strong className="text-purple-300 font-mono">{masterInfo?.columnCount || 0} Kolom</strong></span>
+                </div>
               </div>
             </div>
 
-            {/* Action Buttons: Refresh & Sync All Mismatches */}
-            <div className="flex items-center gap-2.5 flex-wrap">
+            {/* Action Buttons Toolbar: Unified, Aligned, No Awkward Breaking */}
+            <div className="flex items-center gap-2 shrink-0 self-stretch sm:self-auto justify-start xl:justify-end flex-nowrap overflow-x-auto p-1 bg-slate-950/60 rounded-2xl border border-slate-800/80">
               {matrixData?.summary?.mismatchPods > 0 && (
                 <button
                   onClick={onBulkSync}
-                  className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-amber-500/25 transition-all cursor-pointer hover:scale-105"
+                  className="h-9 px-3.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all cursor-pointer hover:scale-[1.02] shrink-0"
+                  title={`Sinkronkan data Master ke ${matrixData.summary.mismatchPods} POD yang memiliki perbedaan`}
                 >
-                  <Zap size={14} className="fill-slate-950" />
+                  <Zap size={13} className="fill-slate-950" />
                   <span>Kirim ke POD Selisih ({matrixData.summary.mismatchPods})</span>
                 </button>
               )}
@@ -121,7 +126,7 @@ export default function TableDetailWorkspaceView({
                 <button
                   onClick={onCompareAllPods}
                   disabled={isComparingAll}
-                  className="px-3.5 py-2 bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors disabled:opacity-50"
+                  className="h-9 px-3 bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/30 hover:border-purple-500/50 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors disabled:opacity-50 shrink-0"
                   title="Bandingkan data tabel ini ke seluruh armada server POD sekaligus"
                 >
                   <Layers size={14} className={isComparingAll ? 'animate-spin' : ''} />
@@ -131,19 +136,20 @@ export default function TableDetailWorkspaceView({
 
               <button
                 onClick={() => setIsCleanModalOpen(true)}
-                className="px-3.5 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                className="h-9 px-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:border-emerald-500/50 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shrink-0"
+                title="Bersihkan duplikasi data dan sampah pada Master Database"
               >
-                <Database size={14} />
+                <Database size={13} />
                 <span>Bersihkan Master</span>
               </button>
 
               <button
                 onClick={onRefresh}
                 disabled={isComparing}
-                className="p-2 bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded-xl border border-slate-700 cursor-pointer transition-colors disabled:opacity-50"
+                className="h-9 w-9 flex items-center justify-center bg-slate-900 hover:bg-slate-800 text-cyan-400 hover:text-cyan-300 rounded-xl border border-slate-700/80 cursor-pointer transition-colors disabled:opacity-50 shrink-0"
                 title="Muat Ulang Matriks Komparasi"
               >
-                <RefreshCw size={15} className={isComparing ? 'animate-spin' : ''} />
+                <RefreshCw size={14} className={isComparing ? 'animate-spin' : ''} />
               </button>
             </div>
           </div>
@@ -238,7 +244,7 @@ export default function TableDetailWorkspaceView({
               direction === 'pod_to_master' ? (
                 <button
                   onClick={onBulkSync}
-                  className="px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-purple-600/25 transition-all cursor-pointer"
+                  className="h-8 px-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-purple-600/20 transition-all cursor-pointer shrink-0"
                   title="Tarik seluruh baris data dari semua unit POD ke Master Database"
                 >
                   <DownloadCloud size={13} className="text-white" />
@@ -247,7 +253,7 @@ export default function TableDetailWorkspaceView({
               ) : (
                 <button
                   onClick={onBulkSync}
-                  className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-amber-500/25 transition-all cursor-pointer"
+                  className="h-8 px-3 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all cursor-pointer shrink-0"
                 >
                   <Zap size={13} className="fill-slate-950" />
                   <span>Kirim ke POD Selisih ({matrixData.summary.mismatchPods})</span>
@@ -257,7 +263,7 @@ export default function TableDetailWorkspaceView({
 
             <button
               onClick={() => setIsCleanModalOpen(true)}
-              className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"
+              className="h-8 px-2.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm shrink-0"
               title="Periksa dan bersihkan data ganda / duplikat di Master Database"
             >
               <Eraser size={13} className="text-amber-400" />
@@ -267,10 +273,10 @@ export default function TableDetailWorkspaceView({
             <button
               onClick={onRefresh}
               disabled={isComparing}
-              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded-lg border border-slate-700 cursor-pointer transition-colors disabled:opacity-50"
+              className="h-8 w-8 flex items-center justify-center bg-slate-800 hover:bg-slate-700 text-cyan-400 rounded-xl border border-slate-700 cursor-pointer transition-colors disabled:opacity-50 shrink-0"
               title="Muat Ulang Matriks Komparasi"
             >
-              <RefreshCw size={14} className={isComparing ? 'animate-spin' : ''} />
+              <RefreshCw size={13} className={isComparing ? 'animate-spin' : ''} />
             </button>
           </div>
         </div>
