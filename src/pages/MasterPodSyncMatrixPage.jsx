@@ -22,7 +22,8 @@ import {
   deletePodRowApi,
   syncSingleMasterRowApi,
   syncPodToMasterApi,
-  syncSinglePodRowApi
+  syncSinglePodRowApi,
+  updateMasterRowApi
 } from '../api/masterPodSyncApi';
 import MasterTablesCatalogView from '../components/masterPodSync/MasterTablesCatalogView';
 import FleetSyncAuditView from '../components/masterPodSync/FleetSyncAuditView';
@@ -486,6 +487,47 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
       }));
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  // 5B. Update a Master row (e.g. userLevel on table 'user')
+  const handleUpdateMasterRow = async (pkColumn, pkValue, updatedFields) => {
+    if (!selectedMasterId || !selectedTableName) return;
+    try {
+      const res = await updateMasterRowApi(selectedMasterId, selectedTableName, {
+        pkColumn,
+        pkValue,
+        data: updatedFields
+      });
+      if (res?.success) {
+        // Optimistically update local matrixData state
+        setMatrixData(prev => {
+          if (!prev) return prev;
+          const updatedDataMatrix = (prev.dataMatrix || []).map(item => {
+            const currentPk = item.sampleData?.[pkColumn] !== undefined ? item.sampleData[pkColumn] : item.rowKey;
+            if (String(currentPk) === String(pkValue)) {
+              return {
+                ...item,
+                sampleData: {
+                  ...(item.sampleData || {}),
+                  ...updatedFields
+                }
+              };
+            }
+            return item;
+          });
+          return {
+            ...prev,
+            dataMatrix: updatedDataMatrix
+          };
+        });
+        return res.data;
+      } else {
+        throw new Error(res?.error || 'Gagal memperbarui data baris.');
+      }
+    } catch (err) {
+      console.error('[Update Master Row Error]:', err);
+      throw err;
     }
   };
 
@@ -1259,6 +1301,7 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
             setActivePodId={handleSelectPod}
             onQuickSyncPod={triggerSinglePodSync}
             onBulkSync={triggerBulkSync}
+            onUpdateMasterRow={handleUpdateMasterRow}
             onDeleteMasterRow={handlePromptDeleteMasterRow}
             onDeleteMultipleRows={handlePromptDeleteMasterRow}
             onDeletePodRow={handlePromptDeletePodRow}

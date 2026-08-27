@@ -20,14 +20,50 @@ import {
   Maximize2,
   Minimize2,
   Loader2,
-  Eraser
+  Eraser,
+  CheckCircle2
 } from 'lucide-react';
+
+export const USER_LEVEL_CONFIG = {
+  primary_user: {
+    label: 'primary_user',
+    desc: 'Pengguna Utama',
+    badgeClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
+  },
+  full_admin: {
+    label: 'full_admin',
+    desc: 'Super Administrator',
+    badgeClass: 'bg-purple-500/20 text-purple-300 border-purple-500/40 hover:bg-purple-500/30'
+  },
+  admin: {
+    label: 'admin',
+    desc: 'Administrator',
+    badgeClass: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40 hover:bg-indigo-500/30'
+  },
+  operator: {
+    label: 'operator',
+    desc: 'Operator POD',
+    badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'
+  },
+  assistant: {
+    label: 'assistant',
+    desc: 'Asisten Operator',
+    badgeClass: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 hover:bg-cyan-500/30'
+  },
+  guest: {
+    label: 'guest',
+    desc: 'Tamu / Terbatas',
+    badgeClass: 'bg-slate-700/40 text-slate-300 border-slate-600/50 hover:bg-slate-700/60'
+  }
+};
+export const USER_LEVEL_LIST = ['primary_user', 'full_admin', 'admin', 'operator', 'assistant', 'guest'];
 
 export default function MasterDataViewer({
   masterInfo,
   columns = [],
   dataMatrix = [],
   rows = [],
+  onUpdateRow,
   onDeleteRow,
   onDeleteMultipleRows,
   onDeletePodRow,
@@ -48,6 +84,12 @@ export default function MasterDataViewer({
   const [deletingPodRowKey, setDeletingPodRowKey] = useState(null);
   const [deletingMasterRowKey, setDeletingMasterRowKey] = useState(null);
   const [isBulkUploading, setIsBulkUploading] = useState(false);
+
+  // User Management State (Exclusive for table 'user' or tables with userLevel)
+  const [updatingUserLevelKey, setUpdatingUserLevelKey] = useState(null);
+  const [userLevelFilter, setUserLevelFilter] = useState('all');
+  const [justUpdatedKeys, setJustUpdatedKeys] = useState(new Set());
+  const [updateToast, setUpdateToast] = useState(null);
 
   const pkColumn = masterInfo?.pkColumn || columns.find(c => c.isPk)?.columnName || columns[0]?.columnName || 'id';
 
@@ -75,11 +117,16 @@ export default function MasterDataViewer({
   const podOnlyRows = useMemo(() => combinedRows.filter(r => r.__isPodOnly), [combinedRows]);
 
 
-  // Filter rows by search and source filter
+  // Filter rows by search, source filter, and userLevel filter
   const filteredRows = useMemo(() => {
     return combinedRows.filter(r => {
       if (rowSourceFilter === 'master_only' && !r.__inMaster) return false;
       if (rowSourceFilter === 'pod_only' && !r.__isPodOnly) return false;
+
+      // Filter by userLevel if active
+      if (masterInfo?.tableName === 'user' && userLevelFilter !== 'all') {
+        if (r.userLevel !== userLevelFilter) return false;
+      }
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
@@ -90,7 +137,7 @@ export default function MasterDataViewer({
 
       return true;
     });
-  }, [combinedRows, rowSourceFilter, searchQuery]);
+  }, [combinedRows, rowSourceFilter, userLevelFilter, searchQuery, masterInfo?.tableName]);
 
   // Automatically prune selectedKeys if rows are deleted / removed from dataMatrix
   React.useEffect(() => {
@@ -378,6 +425,66 @@ export default function MasterDataViewer({
               </div>
             )}
           </div>
+
+          {/* Update Notification Toast */}
+          {updateToast && (
+            <div className="p-3 bg-emerald-500/15 border border-emerald-500/30 rounded-2xl flex items-center justify-between gap-3 text-xs text-emerald-300 animate-in fade-in duration-200 shadow-md">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+                <span className="font-semibold">{updateToast}</span>
+              </div>
+              <button
+                onClick={() => setUpdateToast(null)}
+                className="p-1 text-emerald-400 hover:text-white rounded-lg hover:bg-emerald-500/20 transition-colors cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
+
+          {/* User Level Filter Sub-toolbar (Exclusive for table 'user') */}
+          {activeTab === 'rows' && masterInfo?.tableName === 'user' && (
+            <div className="flex flex-wrap items-center justify-between gap-2.5 p-3 bg-slate-950/70 rounded-2xl border border-slate-800/80 shadow-sm">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-bold text-slate-400">Filter userLevel:</span>
+                <div className="flex items-center gap-1.5 overflow-x-auto p-1 bg-slate-900/90 rounded-xl border border-slate-800 text-xs">
+                  <button
+                    onClick={() => setUserLevelFilter('all')}
+                    className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
+                      userLevelFilter === 'all'
+                        ? 'bg-slate-800 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    Semua Level ({combinedRows.length})
+                  </button>
+                  {USER_LEVEL_LIST.map(lvl => {
+                    const count = combinedRows.filter(r => r.userLevel === lvl).length;
+                    const cfg = USER_LEVEL_CONFIG[lvl];
+                    return (
+                      <button
+                        key={lvl}
+                        onClick={() => setUserLevelFilter(lvl)}
+                        className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 border ${
+                          userLevelFilter === lvl
+                            ? `${cfg.badgeClass} shadow-sm`
+                            : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                        }`}
+                      >
+                        <span>{lvl}</span>
+                        <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-950 font-mono text-slate-300">
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="text-[11px] text-slate-500 font-mono">
+                Menampilkan {filteredRows.length} dari {combinedRows.length} user
+              </div>
+            </div>
+          )}
 
           {/* Floating Bulk Action Bar for Selected Rows */}
           {activeTab === 'rows' && selectedKeys.size > 0 && (
@@ -698,13 +805,86 @@ export default function MasterDataViewer({
                           </td>
 
                           {/* Data Columns */}
-                          {columns.map((col) => (
-                            <td key={col.columnName} className="p-3 whitespace-nowrap text-slate-300 font-mono">
-                              {row[col.columnName] !== null && row[col.columnName] !== undefined
-                                ? String(row[col.columnName])
-                                : <span className="text-slate-600 italic">null</span>}
-                            </td>
-                          ))}
+                          {columns.map((col) => {
+                            const isUserLevelCol = col.columnName === 'userLevel' || (masterInfo?.tableName === 'user' && col.columnName === 'userLevel');
+                            if (isUserLevelCol) {
+                              const curLevel = row.userLevel || 'guest';
+                              const cfg = USER_LEVEL_CONFIG[curLevel] || USER_LEVEL_CONFIG['guest'];
+                              const isUpdating = updatingUserLevelKey === rowKeyStr;
+                              const isJustUpdated = justUpdatedKeys.has(rowKeyStr);
+
+                              return (
+                                <td key={col.columnName} className="p-3 whitespace-nowrap text-slate-300 font-mono">
+                                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                    <div className="relative inline-flex items-center">
+                                      <select
+                                        value={curLevel}
+                                        disabled={isUpdating}
+                                        onChange={async (e) => {
+                                          const newLevel = e.target.value;
+                                          if (newLevel === curLevel) return;
+                                          setUpdatingUserLevelKey(rowKeyStr);
+                                          try {
+                                            if (onUpdateRow) {
+                                              await onUpdateRow(pkColumn, pkVal, { userLevel: newLevel });
+                                              setJustUpdatedKeys(prev => new Set(prev).add(rowKeyStr));
+                                              setUpdateToast(`userLevel user ${row.username || row.email || pkVal} berhasil diubah menjadi "${newLevel}" di Master DB`);
+                                              setTimeout(() => setUpdateToast(null), 5000);
+                                            }
+                                          } catch (err) {
+                                            alert('Gagal memperbarui userLevel: ' + (err.message || 'Error'));
+                                          } finally {
+                                            setUpdatingUserLevelKey(null);
+                                          }
+                                        }}
+                                        className={`px-3 py-1 pr-7 rounded-xl text-xs font-bold font-mono border transition-all cursor-pointer outline-none appearance-none ${
+                                          cfg.badgeClass
+                                        } disabled:opacity-50 shadow-sm`}
+                                        title="Klik untuk mengubah userLevel langsung di Master DB"
+                                      >
+                                        {USER_LEVEL_LIST.map(lvl => (
+                                          <option key={lvl} value={lvl} className="bg-slate-900 text-white font-mono">
+                                            {lvl} ({USER_LEVEL_CONFIG[lvl].desc})
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <ChevronDown size={12} className="absolute right-2 pointer-events-none text-slate-400" />
+                                    </div>
+
+                                    {isUpdating && (
+                                      <Loader2 size={13} className="animate-spin text-cyan-400" />
+                                    )}
+
+                                    {isJustUpdated && !isUpdating && onSyncSingleRow && (
+                                      <button
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          await onSyncSingleRow({
+                                            pkColumn,
+                                            pkValue: pkVal,
+                                            rowData: { ...row, userLevel: curLevel }
+                                          });
+                                        }}
+                                        className="px-2 py-1 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer hover:scale-105"
+                                        title="Level user baru tersimpan di Master. Klik untuk push perubahan ini ke seluruh POD V3!"
+                                      >
+                                        <Zap size={10} className="fill-white" />
+                                        <span>Sync ke POD</span>
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              );
+                            }
+
+                            return (
+                              <td key={col.columnName} className="p-3 whitespace-nowrap text-slate-300 font-mono">
+                                {row[col.columnName] !== null && row[col.columnName] !== undefined
+                                  ? String(row[col.columnName])
+                                  : <span className="text-slate-600 italic">null</span>}
+                              </td>
+                            );
+                          })}
                         </tr>
                       );
                     })

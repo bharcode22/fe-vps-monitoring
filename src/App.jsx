@@ -21,6 +21,7 @@ import DashboardPage from './pages/DashboardPage';
 import PodTopicDebuggerPage from './pages/PodTopicDebuggerPage';
 import MasterPodSyncMatrixPage from './pages/MasterPodSyncMatrixPage';
 import TncManagerPage from './pages/TncManagerPage';
+import UserManagerPage from './pages/UserManagerPage';
 import { useServers } from './hooks/useServers';
 import { useSocket } from './hooks/useSocket';
 import { fetchSettingsApi, saveSettingApi } from './api/vpsApi';
@@ -164,7 +165,19 @@ export default function App() {
     : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3'
     }`;
 
-  const isFullWidthView = isTvMode || ['pod-topic-debugger', 'pod-topics', 'master-pod-sync', 'master-sync', 'storage-manager', 'storage', 'content-manager', 'content'].includes(currentView);
+  const isFullWidthView = isTvMode || [
+    'pod-topic-debugger',
+    'pod-topics',
+    'master-pod-sync',
+    'master-sync',
+    'database-users',
+    'db-users',
+    'user-manager',
+    'storage-manager',
+    'storage',
+    'content-manager',
+    'content'
+  ].includes(currentView);
 
   return (
     <div className={`mx-auto pb-10 transition-all duration-300 ${isFullWidthView ? 'w-full max-w-[98%] 2xl:max-w-[1920px] px-2 sm:px-4 lg:px-6' : 'max-w-7xl px-4 sm:px-6'
@@ -186,7 +199,9 @@ export default function App() {
 
       {/* Render View: Dashboard, Server List, Installation, or Tools */}
       <ErrorBoundary title="Gagal Memuat Tampilan Halaman">
-      {currentView === 'tnc-sync-manager' ? (
+      {currentView === 'database-users' || currentView === 'db-users' || currentView === 'user-manager' ? (
+        <UserManagerPage onBack={() => setCurrentView('dashboard')} />
+      ) : currentView === 'tnc-sync-manager' ? (
         <TncManagerPage onBack={() => setCurrentView('dashboard')} />
       ) : currentView === 'master-pod-sync' || currentView === 'master-sync' ? (
         <MasterPodSyncMatrixPage onBack={() => setCurrentView('dashboard')} />

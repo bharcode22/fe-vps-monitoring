@@ -9,7 +9,8 @@ import {
   Volume2,
   FileCode,
   Shuffle,
-  Wrench
+  Wrench,
+  Users
 } from 'lucide-react';
 
 /**
@@ -50,6 +51,15 @@ export const NAV_DROPDOWN_GROUPS = [
         icon: Zap,
         colorClass: 'text-amber-400',
         bgActiveClass: 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+      },
+      {
+        id: 'database-users',
+        aliases: ['db-users', 'user-manager'],
+        label: 'Database Users',
+        desc: 'Kelola userLevel & akun di PostgreSQL Master',
+        icon: Users,
+        colorClass: 'text-indigo-400',
+        bgActiveClass: 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30'
       },
       {
         id: 'master-pod-sync',

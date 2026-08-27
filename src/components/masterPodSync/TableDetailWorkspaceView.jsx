@@ -38,6 +38,7 @@ export default function TableDetailWorkspaceView({
   onQuickSyncPod,
   onSyncPodToMaster,
   onBulkSync,
+  onUpdateMasterRow,
   onDeleteMasterRow,
   onDeletePodRow,
   onDeleteMultipleRows,
@@ -289,6 +290,7 @@ export default function TableDetailWorkspaceView({
           columns={matrixData?.columnsMatrix || []}
           dataMatrix={matrixData?.dataMatrix || []}
           rows={(matrixData?.dataMatrix || []).map(d => d.sampleData)}
+          onUpdateRow={onUpdateMasterRow}
           onDeleteRow={onDeleteMasterRow}
           onDeleteMultipleRows={onDeleteMultipleRows}
           onDeletePodRow={onDeletePodRow}

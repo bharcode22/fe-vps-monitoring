@@ -24,6 +24,7 @@ import {
   Code,
   Table
 } from 'lucide-react';
+import { USER_LEVEL_CONFIG } from './MasterDataViewer';
 
 export default function PodDataViewer({
   pod,
@@ -926,6 +927,10 @@ export default function PodDataViewer({
                                 <pre className="text-purple-300 bg-slate-900/80 p-2 rounded-lg border border-slate-800 overflow-x-auto whitespace-pre-wrap">
                                   {JSON.stringify(colVal, null, 2)}
                                 </pre>
+                              ) : colKey === 'userLevel' ? (
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${USER_LEVEL_CONFIG[colVal]?.badgeClass || 'bg-slate-800 text-slate-300 border-slate-700'}`}>
+                                  {String(colVal)}
+                                </span>
                               ) : (
                                 String(colVal)
                               )}
