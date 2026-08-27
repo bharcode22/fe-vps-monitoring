@@ -139,8 +139,8 @@ export default function DockerCleanupModal({
                       key={opt.id}
                       onClick={() => !isExecuting && onCleanTypeChange(opt.id)}
                       className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 ${isSelected
-                          ? 'bg-cyan-500/15 border-cyan-500/50 shadow-lg shadow-cyan-500/5'
-                          : 'bg-slate-900/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900'
+                        ? 'bg-cyan-500/15 border-cyan-500/50 shadow-lg shadow-cyan-500/5'
+                        : 'bg-slate-900/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900'
                         }`}
                     >
                       <div className={`p-2 rounded-xl border mt-0.5 shrink-0 ${isSelected ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' : 'bg-slate-800 text-slate-400 border-slate-700'
@@ -153,12 +153,12 @@ export default function DockerCleanupModal({
                             {opt.title}
                           </h4>
                           <span className={`text-[9.5px] font-bold px-2 py-0.2 rounded-full border ${opt.badgeColor === 'emerald'
-                              ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-                              : opt.badgeColor === 'purple'
-                                ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
-                                : opt.badgeColor === 'sky'
-                                  ? 'bg-sky-500/15 text-sky-300 border-sky-500/30'
-                                  : 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+                            ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                            : opt.badgeColor === 'purple'
+                              ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
+                              : opt.badgeColor === 'sky'
+                                ? 'bg-sky-500/15 text-sky-300 border-sky-500/30'
+                                : 'bg-rose-500/15 text-rose-300 border-rose-500/30'
                             }`}>
                             {opt.badge}
                           </span>

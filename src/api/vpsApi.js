@@ -962,6 +962,18 @@ export async function fetchPodsStorageSummaryApi(version = 'v3') {
 }
 
 /**
+ * Fetch real-time storage metrics for a single POD server
+ */
+export async function fetchSinglePodStorageSummaryApi(serverId) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/content/pods/storage?serverId=${encodeURIComponent(serverId)}`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memuat status storage POD');
+  return data.data?.pods?.[0] || null;
+}
+
+/**
  * Scan a single POD server for physical files and detect orphan/junk files
  */
 export async function scanPodJunkFilesApi(serverId, s3Code = '') {
@@ -1016,6 +1028,20 @@ export async function deleteS3FolderApi(code) {
 }
 
 /**
+ * Hard delete a single file from AWS S3
+ */
+export async function deleteS3FileApi(key) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/content/s3/file`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ key })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal menghapus file di AWS S3');
+  return data.data;
+}
+
+/**
  * Check file presence for a single S3 code across all or selected PODs (Lazy Matrix Row Check)
  */
 export async function checkCodeOnPodsApi(s3Code, filenames = [], serverIds = []) {
@@ -1039,8 +1065,36 @@ export async function deleteCodeOnPodApi(serverId, s3Code, filenames = []) {
     body: JSON.stringify({ serverId, s3Code, filenames })
   });
   const data = await res.json();
-  if (!data.success) throw new Error(data.error || `Gagal menghapus file #${s3Code} di POD`);
+  if (!data.success) throw new Error(data.error || `Gagal menghapus file di POD #${serverId}`);
   return data.data;
+}
+
+/**
+ * Download specific files (or all missing files) of an S3 code to a specific POD
+ */
+export async function downloadCodeFilesToPodApi(serverId, s3Code, filenames = []) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/content/pods/download-code`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ serverId, s3Code, filenames })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || `Gagal mendownload file ke POD #${serverId}`);
+  return data;
+}
+
+/**
+ * Download missing files of an S3 code to multiple PODs in batch
+ */
+export async function downloadCodeFilesToBatchPodsApi(serverIds = [], s3Code, filenames = []) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/content/pods/download-batch`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ serverIds, s3Code, filenames })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || `Gagal mendownload batch file ke ${serverIds.length} POD`);
+  return data;
 }
 
 /**

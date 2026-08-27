@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import {
   fetchPodsStorageSummaryApi,
+  fetchSinglePodStorageSummaryApi,
   inspectAllPodsDockerApi,
   inspectSinglePodDockerApi,
   cleanupSinglePodDockerApi,
@@ -22,9 +23,12 @@ import {
   fetchS3MediaFoldersApi,
   fetchS3FolderFilesApi,
   deleteS3FolderApi,
+  deleteS3FileApi,
   checkCodeOnPodsApi,
   deleteCodeOnPodApi,
-  batchDeleteCodeApi
+  batchDeleteCodeApi,
+  downloadCodeFilesToPodApi,
+  downloadCodeFilesToBatchPodsApi
 } from '../api/vpsApi';
 
 import DockerJunkManagerView from '../components/storage/DockerJunkManagerView';
@@ -33,6 +37,8 @@ import DockerCleanupModal from '../components/storage/DockerCleanupModal';
 import CatalogView from '../components/content/CatalogView';
 import CodeWorkspaceView from '../components/content/CodeWorkspaceView';
 import HardDeleteModal from '../components/content/HardDeleteModal';
+import io from 'socket.io-client';
+import { SOCKET_URL } from '../config';
 
 export default function StorageManagerPage({ onBack }) {
   // Main Tab Navigation: 'docker_storage' | 'media_catalog' | 'rogue_scanner'
@@ -83,6 +89,44 @@ export default function StorageManagerPage({ onBack }) {
   const [checkingSinglePodId, setCheckingSinglePodId] = useState(null);
   const [podStatusFilter, setPodStatusFilter] = useState('all');
   const [loadingActions, setLoadingActions] = useState({});
+  const [isDownloadingAllPods, setIsDownloadingAllPods] = useState(false);
+  const [downloadProgressMap, setDownloadProgressMap] = useState({}); // { [`${serverId}_${filename}`]: progressData }
+
+  // Listen for real-time S3 to POD download progress via WebSocket
+  useEffect(() => {
+    const socket = io(SOCKET_URL, {
+      transports: ['websocket', 'polling']
+    });
+
+    socket.on('s3_pod_download_progress', (data) => {
+      if (data?.serverId && data?.filename) {
+        const key = `${data.serverId}_${data.filename}`;
+        setDownloadProgressMap(prev => ({
+          ...prev,
+          [key]: data
+        }));
+      }
+    });
+
+    socket.on('s3_pod_download_complete', (data) => {
+      // Clear progress badge after 2.5 seconds to show completion
+      setTimeout(() => {
+        setDownloadProgressMap(prev => {
+          const next = { ...prev };
+          Object.keys(next).forEach(k => {
+            if (k.startsWith(`${data.serverId}_`)) {
+              delete next[k];
+            }
+          });
+          return next;
+        });
+      }, 2500);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
   // Hard Delete S3/Media Modal
   const [confirmModal, setConfirmModal] = useState({
@@ -93,9 +137,12 @@ export default function StorageManagerPage({ onBack }) {
     filenames: [],
     targetPodIds: [],
     deleteFromS3: false,
+    singleS3FileKey: null,
+    singleS3Filename: '',
     podNameLabel: ''
   });
   const [isExecutingDelete, setIsExecutingDelete] = useState(false);
+  const [deletingS3FileKey, setDeletingS3FileKey] = useState(null);
   const [successToast, setSuccessToast] = useState('');
 
   // Audio Preview Player
@@ -155,6 +202,25 @@ export default function StorageManagerPage({ onBack }) {
       console.error(`Error inspecting Docker storage for server ${serverId}:`, err.message);
     } finally {
       setInspectingSinglePodId(null);
+    }
+  };
+
+  const refreshSinglePodStorage = async (podServerId) => {
+    if (!podServerId) return;
+    try {
+      const updatedPodStorage = await fetchSinglePodStorageSummaryApi(podServerId);
+      if (updatedPodStorage) {
+        setStorageData(prev => {
+          if (!prev || !Array.isArray(prev.pods)) return prev;
+          const nextPods = prev.pods.map(p => (p.serverId === podServerId || p.id === podServerId) ? { ...p, ...updatedPodStorage } : p);
+          return {
+            ...prev,
+            pods: nextPods
+          };
+        });
+      }
+    } catch (err) {
+      console.warn(`Gagal memperbarui storage POD ${podServerId}:`, err.message);
     }
   };
 
@@ -271,9 +337,82 @@ export default function StorageManagerPage({ onBack }) {
     }
   };
 
-  const handlePromptDeleteOnSinglePod = (pod) => {
+  // 1. Download a single missing file to a specific POD
+  const handleDownloadSingleFileToPod = async (pod, filename) => {
     if (!activeCodeDetail) return;
     const s3Code = activeCodeDetail.code;
+    const podId = pod.serverId || pod.id;
+    const actionKey = `dl_${podId}_${filename}`;
+
+    setLoadingActions(prev => ({ ...prev, [actionKey]: true }));
+    try {
+      await downloadCodeFilesToPodApi(podId, s3Code, [filename]);
+      // Re-check this POD to immediately update UI to 'Ada'
+      await checkSinglePodForActiveCode(podId);
+    } catch (err) {
+      console.error(`Error downloading ${filename} to ${pod.serverName}:`, err.message);
+      alert(`Gagal mendownload ${filename} ke ${pod.serverName}: ${err.message}`);
+    } finally {
+      setLoadingActions(prev => ({ ...prev, [actionKey]: false }));
+    }
+  };
+
+  // 2. Download all missing files for a specific POD
+  const handleDownloadAllMissingForPod = async (pod) => {
+    if (!activeCodeDetail) return;
+    const s3Code = activeCodeDetail.code;
+    const podId = pod.serverId || pod.id;
+    const actionKey = `dl_all_${podId}`;
+
+    setLoadingActions(prev => ({ ...prev, [actionKey]: true }));
+    try {
+      const podStatus = detailPodsStatus[podId];
+      const missingFiles = (podStatus?.missingFiles || []).map(f => typeof f === 'string' ? f : f.filename);
+      await downloadCodeFilesToPodApi(podId, s3Code, missingFiles);
+      // Re-check this POD
+      await checkSinglePodForActiveCode(podId);
+    } catch (err) {
+      console.error(`Error downloading missing files to ${pod.serverName}:`, err.message);
+      alert(`Gagal mendownload file missing ke ${pod.serverName}: ${err.message}`);
+    } finally {
+      setLoadingActions(prev => ({ ...prev, [actionKey]: false }));
+    }
+  };
+
+  // 3. Download missing files to all PODs in batch
+  const handleDownloadMissingToAllPods = async () => {
+    if (!activeCodeDetail || !storageData?.pods) return;
+    const s3Code = activeCodeDetail.code;
+    const targetPods = storageData.pods.filter(p => p.isOnline !== false);
+    if (targetPods.length === 0) {
+      alert('Tidak ada POD online yang tersedia.');
+      return;
+    }
+
+    setIsDownloadingAllPods(true);
+    try {
+      const serverIds = targetPods.map(p => p.serverId);
+      await downloadCodeFilesToBatchPodsApi(serverIds, s3Code, []);
+      // Re-check all PODs
+      await checkPodsForActiveCode(s3Code);
+    } catch (err) {
+      console.error('Error batch downloading to all PODs:', err.message);
+      alert(`Gagal sync ke semua POD: ${err.message}`);
+    } finally {
+      setIsDownloadingAllPods(false);
+    }
+  };
+
+  const handlePromptDeleteOnSinglePod = (pod) => {
+    if (!activeCodeDetail || !pod) return;
+    const s3Code = activeCodeDetail.code;
+    const podId = pod.serverId || pod.id;
+
+    // Guard against duplicate prompt if already deleting
+    if (loadingActions[`pod_${s3Code}_${podId}`] || isExecutingDelete) {
+      return;
+    }
+
     const filenames = detailS3Files?.files?.map(f => f.filename) || [];
 
     setConfirmModal({
@@ -282,69 +421,190 @@ export default function StorageManagerPage({ onBack }) {
       description: `Apakah Anda yakin ingin menghapus semua file fisik untuk kode #${s3Code} di server ${pod.serverName}? File di /home/pod/sounds, /videos, /images akan dihapus permanen dan ruang disk langsung dibebaskan.`,
       s3Code,
       filenames,
-      targetPodIds: [pod.serverId],
+      targetPodIds: [podId],
       deleteFromS3: false,
       podNameLabel: pod.serverName
     });
   };
 
   const handlePromptDeleteOnS3 = () => {
-    if (!activeCodeDetail) return;
+    if (!activeCodeDetail || isExecutingDelete) return;
     const s3Code = activeCodeDetail.code;
     const totalFiles = detailS3Files?.totalFiles || activeCodeDetail.totalFiles;
     const totalSize = detailS3Files?.totalSizeFormatted || activeCodeDetail.totalSizeFormatted;
 
     setConfirmModal({
       isOpen: true,
-      title: `Hard Delete Master Folder #${s3Code} di AWS S3`,
-      description: `PERINGATAN KRUSIAL: Ini akan menghapus seluruh file (${totalFiles} file, ${totalSize}) pada prefix S3 media/${s3Code}/ secara PERMANEN dari AWS S3.`,
+      title: `Hard Delete Seluruh Folder #${s3Code} di AWS S3`,
+      description: `PERINGATAN KRUSIAL: Ini akan menghapus seluruh file (${totalFiles} file, ${totalSize}) pada prefix S3 media/${s3Code}/ secara PERMANEN dari AWS S3. Data tidak dapat dipulihkan.`,
       s3Code,
       filenames: [],
       targetPodIds: [],
       deleteFromS3: true,
+      singleS3FileKey: null,
+      singleS3Filename: '',
+      podNameLabel: 'Bucket AWS S3'
+    });
+  };
+
+  const handlePromptDeleteOnS3File = (file) => {
+    if (!activeCodeDetail || !file || isExecutingDelete) return;
+    setConfirmModal({
+      isOpen: true,
+      title: `Hard Delete File S3: ${file.filename}`,
+      description: `PERINGATAN: File "${file.filename}" (${file.sizeFormatted || '0 B'}) akan DIHAPUS PERMANEN dari AWS S3 pada prefix "${file.key}". File ini tidak dapat dipulihkan.`,
+      s3Code: activeCodeDetail.code,
+      filenames: [file.filename],
+      targetPodIds: [],
+      deleteFromS3: true,
+      singleS3FileKey: file.key,
+      singleS3Filename: file.filename,
       podNameLabel: 'Bucket AWS S3'
     });
   };
 
   const handleExecuteConfirmedDelete = async () => {
-    const { s3Code, filenames, targetPodIds, deleteFromS3 } = confirmModal;
+    if (isExecutingDelete) return; // Prevent duplicate trigger
+    const { s3Code, filenames, targetPodIds, deleteFromS3, singleS3FileKey, singleS3Filename } = confirmModal;
     setIsExecutingDelete(true);
 
-    const actionKey = deleteFromS3
-      ? `s3_${s3Code}`
-      : targetPodIds.length === 1
-        ? `pod_${s3Code}_${targetPodIds[0]}`
-        : `bulk_${s3Code}`;
+    const actionKey = singleS3FileKey
+      ? `s3_file_${singleS3FileKey}`
+      : deleteFromS3
+        ? `s3_${s3Code}`
+        : targetPodIds.length === 1
+          ? `pod_${s3Code}_${targetPodIds[0]}`
+          : `bulk_${s3Code}`;
 
+    if (singleS3FileKey) setDeletingS3FileKey(singleS3FileKey);
     setLoadingActions(prev => ({ ...prev, [actionKey]: true }));
 
+    // Optimistic UI: If single POD delete, immediately mark POD as isDeleting and close modal
+    if (!deleteFromS3 && targetPodIds.length === 1) {
+      const targetId = targetPodIds[0];
+      setDetailPodsStatus(prev => {
+        if (!prev || !prev[targetId]) return prev;
+        return {
+          ...prev,
+          [targetId]: {
+            ...prev[targetId],
+            isDeleting: true
+          }
+        };
+      });
+      setConfirmModal(prev => ({ ...prev, isOpen: false }));
+    } else if (!deleteFromS3 && targetPodIds.length > 1) {
+      setDetailPodsStatus(prev => {
+        if (!prev) return prev;
+        const next = { ...prev };
+        targetPodIds.forEach(id => {
+          if (next[id]) next[id] = { ...next[id], isDeleting: true };
+        });
+        return next;
+      });
+      setConfirmModal(prev => ({ ...prev, isOpen: false }));
+    }
+
     try {
-      if (deleteFromS3 && targetPodIds.length === 0) {
+      // 1. Single File deletion from AWS S3
+      if (deleteFromS3 && singleS3FileKey) {
+        await deleteS3FileApi(singleS3FileKey);
+        setSuccessToast(`Berhasil menghapus file "${singleS3Filename}" dari AWS S3`);
+
+        // Optimistically update file list in active workspace
+        setDetailS3Files(prev => {
+          if (!prev || !Array.isArray(prev.files)) return prev;
+          const updatedFiles = prev.files.filter(f => f.key !== singleS3FileKey);
+          return {
+            ...prev,
+            totalFiles: updatedFiles.length,
+            files: updatedFiles
+          };
+        });
+
+        // Re-check PODs for updated filenames
+        if (detailS3Files?.files) {
+          const remainingFilenames = detailS3Files.files
+            .filter(f => f.key !== singleS3FileKey)
+            .map(f => f.filename);
+          await checkPodsForActiveCode(s3Code, remainingFilenames);
+        }
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+      }
+      // 2. Entire S3 Folder Hard Delete
+      else if (deleteFromS3 && targetPodIds.length === 0) {
         const result = await deleteS3FolderApi(s3Code);
-        setSuccessToast(`Berhasil menghapus folder master S3 #${s3Code} (${result.deletedCount || 0} file terhapus, ${result.freedFormatted || '0 B'})`);
+        if (result.deletedCount === 0) {
+          alert(`Peringatan S3: Tidak ada file yang ditemukan pada prefix #${s3Code} (${result.message || '0 file'}).`);
+        } else {
+          setSuccessToast(`Berhasil menghapus folder master S3 #${s3Code} (${result.deletedCount || 0} file terhapus, ${result.freedFormatted || '0 B'})`);
+        }
+
+        // Optimistically remove folder from catalog immediately
+        setS3FoldersData(prev => {
+          if (!prev || !Array.isArray(prev.folders)) return prev;
+          const cleanCode = String(s3Code).replace(/^media\/?/i, '').replace(/\/+$/, '');
+          const nextFolders = prev.folders.filter(f => f.code !== s3Code && f.code !== cleanCode);
+          return {
+            ...prev,
+            totalFolders: nextFolders.length,
+            folders: nextFolders
+          };
+        });
+
         loadS3Folders();
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
         handleBackToCatalog();
-      } else if (targetPodIds.length === 1 && !deleteFromS3) {
-        const result = await deleteCodeOnPodApi(targetPodIds[0], s3Code, filenames);
+      }
+      // 3. Single POD Delete
+      else if (targetPodIds.length === 1 && !deleteFromS3) {
+        const podId = targetPodIds[0];
+        const result = await deleteCodeOnPodApi(podId, s3Code, filenames);
         setSuccessToast(`Berhasil menghapus file #${s3Code} di ${result.serverName} (${result.deletedCount} file, ${result.freedFormatted} dibebaskan)`);
-        checkSinglePodForActiveCode(targetPodIds[0]);
-        loadStorageAndDockerData();
-      } else {
+        
+        // Await re-check and storage refresh so the loading indicator persists until data is fully synced
+        await checkSinglePodForActiveCode(podId);
+        await refreshSinglePodStorage(podId);
+      }
+      // 4. Batch Delete
+      else {
         const result = await batchDeleteCodeApi(s3Code, filenames, targetPodIds, deleteFromS3);
         setSuccessToast(`Berhasil memproses batch delete untuk kode #${s3Code}`);
-        checkPodsForActiveCode(s3Code, filenames);
-        loadStorageAndDockerData();
+        
+        await checkPodsForActiveCode(s3Code, filenames);
+        await Promise.all(targetPodIds.map(id => refreshSinglePodStorage(id)));
         if (deleteFromS3) {
+          setS3FoldersData(prev => {
+            if (!prev || !Array.isArray(prev.folders)) return prev;
+            const cleanCode = String(s3Code).replace(/^media\/?/i, '').replace(/\/+$/, '');
+            const nextFolders = prev.folders.filter(f => f.code !== s3Code && f.code !== cleanCode);
+            return {
+              ...prev,
+              totalFolders: nextFolders.length,
+              folders: nextFolders
+            };
+          });
           loadS3Folders();
           handleBackToCatalog();
         }
       }
-      setConfirmModal(prev => ({ ...prev, isOpen: false }));
     } catch (err) {
       alert(`Gagal mengeksekusi penghapusan: ${err.message}`);
     } finally {
       setIsExecutingDelete(false);
+      setDeletingS3FileKey(null);
       setLoadingActions(prev => ({ ...prev, [actionKey]: false }));
+      // Clear optimistic isDeleting flag on pods
+      setDetailPodsStatus(prev => {
+        if (!prev) return prev;
+        const next = { ...prev };
+        targetPodIds.forEach(id => {
+          if (next[id]?.isDeleting) {
+            next[id] = { ...next[id], isDeleting: false };
+          }
+        });
+        return next;
+      });
     }
   };
 
@@ -363,10 +623,7 @@ export default function StorageManagerPage({ onBack }) {
   });
 
   const totalCatalogPages = Math.ceil(filteredFolders.length / catalogPageSize) || 1;
-  const currentCatalogFolders = filteredFolders.slice(
-    (catalogPage - 1) * catalogPageSize,
-    catalogPage * catalogPageSize
-  );
+  const currentCatalogFolders = filteredFolders.slice((catalogPage - 1) * catalogPageSize, catalogPage * catalogPageSize);
 
   const tabs = [
     { id: 'docker_storage', label: 'Sampah Docker & Disk 1 TB', icon: Zap, color: 'cyan', badge: `${storageData?.pods?.length || 0} POD` },
@@ -542,6 +799,8 @@ export default function StorageManagerPage({ onBack }) {
           playingAudioUrl={playingAudioUrl}
           onToggleAudioPreview={(url) => setPlayingAudioUrl(playingAudioUrl === url ? null : url)}
           onPromptDeleteS3={handlePromptDeleteOnS3}
+          onPromptDeleteS3File={handlePromptDeleteOnS3File}
+          deletingS3FileKey={deletingS3FileKey}
           isS3Deleting={!!loadingActions[`s3_${activeCodeDetail.code}`]}
           pods={storageData?.pods || []}
           detailPodsStatus={detailPodsStatus}
@@ -552,6 +811,11 @@ export default function StorageManagerPage({ onBack }) {
           onCheckAllPods={checkPodsForActiveCode}
           onCheckSinglePod={checkSinglePodForActiveCode}
           onPromptDeleteSinglePod={handlePromptDeleteOnSinglePod}
+          onDownloadSingleFile={handleDownloadSingleFileToPod}
+          onDownloadAllMissingForPod={handleDownloadAllMissingForPod}
+          onDownloadMissingToAllPods={handleDownloadMissingToAllPods}
+          isDownloadingAllPods={isDownloadingAllPods}
+          downloadProgressMap={downloadProgressMap}
           loadingActions={loadingActions}
         />
       )}

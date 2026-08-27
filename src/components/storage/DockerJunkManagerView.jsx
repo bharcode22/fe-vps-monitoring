@@ -259,11 +259,10 @@ export default function DockerJunkManagerView({
             <button
               key={tab.id}
               onClick={() => setFilterTab(tab.id)}
-              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-                filterTab === tab.id
-                  ? 'bg-cyan-500/25 text-cyan-300 border-cyan-500/40 shadow-sm'
-                  : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
-              }`}
+              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer border ${filterTab === tab.id
+                ? 'bg-cyan-500/25 text-cyan-300 border-cyan-500/40 shadow-sm'
+                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                }`}
             >
               <span>{tab.label}</span>
               {tab.count !== null && <span className="ml-1 text-[10px] opacity-70">({tab.count})</span>}
@@ -307,21 +306,19 @@ export default function DockerJunkManagerView({
           return (
             <div
               key={podId}
-              className={`glass-card p-5 sm:p-6 rounded-3xl border transition-all flex flex-col justify-between ${
-                !isOnline
-                  ? 'border-slate-800/80 bg-slate-950/40 opacity-75'
-                  : isHigh
-                    ? 'border-rose-500/40 bg-gradient-to-b from-rose-950/20 via-slate-900/80 to-slate-950 shadow-rose-950/20'
-                    : 'border-slate-800 hover:border-cyan-500/40 bg-slate-900/60 shadow-xl'
-              }`}
+              className={`glass-card p-5 sm:p-6 rounded-3xl border transition-all flex flex-col justify-between ${!isOnline
+                ? 'border-slate-800/80 bg-slate-950/40 opacity-75'
+                : isHigh
+                  ? 'border-rose-500/40 bg-gradient-to-b from-rose-950/20 via-slate-900/80 to-slate-950 shadow-rose-950/20'
+                  : 'border-slate-800 hover:border-cyan-500/40 bg-slate-900/60 shadow-xl'
+                }`}
             >
               <div>
                 {/* POD Header */}
                 <div className="flex items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-800/80">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className={`p-2 rounded-xl border shrink-0 ${
-                      isOnline ? 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30' : 'bg-slate-800 text-slate-500 border-slate-700'
-                    }`}>
+                    <div className={`p-2 rounded-xl border shrink-0 ${isOnline ? 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30' : 'bg-slate-800 text-slate-500 border-slate-700'
+                      }`}>
                       <Server size={16} />
                     </div>
                     <div className="min-w-0">
@@ -337,13 +334,12 @@ export default function DockerJunkManagerView({
                   </div>
 
                   {isOnline ? (
-                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border shrink-0 ${
-                      isHigh
-                        ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse'
-                        : isMedium
-                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                          : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                    }`}>
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border shrink-0 ${isHigh
+                      ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse'
+                      : isMedium
+                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                        : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                      }`}>
                       {percent}% Terpakai
                     </span>
                   ) : (
@@ -364,13 +360,12 @@ export default function DockerJunkManagerView({
                     </div>
                     <div className="w-full h-3 rounded-full bg-slate-950 border border-slate-800 overflow-hidden p-0.5">
                       <div
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          isHigh
-                            ? 'bg-gradient-to-r from-rose-500 to-red-600'
-                            : isMedium
-                              ? 'bg-gradient-to-r from-amber-500 to-orange-500'
-                              : 'bg-gradient-to-r from-cyan-400 to-blue-500'
-                        }`}
+                        className={`h-full rounded-full transition-all duration-500 ${isHigh
+                          ? 'bg-gradient-to-r from-rose-500 to-red-600'
+                          : isMedium
+                            ? 'bg-gradient-to-r from-amber-500 to-orange-500'
+                            : 'bg-gradient-to-r from-cyan-400 to-blue-500'
+                          }`}
                         style={{ width: `${Math.min(percent, 100)}%` }}
                       />
                     </div>
