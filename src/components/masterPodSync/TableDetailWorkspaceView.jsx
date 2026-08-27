@@ -290,6 +290,8 @@ export default function TableDetailWorkspaceView({
           columns={matrixData?.columnsMatrix || []}
           dataMatrix={matrixData?.dataMatrix || []}
           rows={(matrixData?.dataMatrix || []).map(d => d.sampleData)}
+          podUuidMap={matrixData?.podUuidMap || {}}
+          pods={matrixData?.pods || []}
           onUpdateRow={onUpdateMasterRow}
           onDeleteRow={onDeleteMasterRow}
           onDeleteMultipleRows={onDeleteMultipleRows}
@@ -325,6 +327,8 @@ export default function TableDetailWorkspaceView({
             isLoading={loadingPodId === activePod?.id}
             dataMatrix={matrixData?.dataMatrix || []}
             columnsMatrix={matrixData?.columnsMatrix || []}
+            podUuidMap={matrixData?.podUuidMap || {}}
+            pods={matrixData?.pods || []}
             onInspectPod={setActivePodId}
             onSyncPod={onQuickSyncPod}
             onSyncPodToMaster={onSyncPodToMaster}

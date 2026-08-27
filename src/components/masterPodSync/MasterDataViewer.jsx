@@ -21,7 +21,11 @@ import {
   Minimize2,
   Loader2,
   Eraser,
-  CheckCircle2
+  CheckCircle2,
+  Globe,
+  HelpCircle,
+  Copy,
+  Check
 } from 'lucide-react';
 
 export const USER_LEVEL_CONFIG = {
@@ -48,12 +52,12 @@ export const USER_LEVEL_CONFIG = {
   assistant: {
     label: 'assistant',
     desc: 'Asisten Operator',
-    badgeClass: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 hover:bg-cyan-500/30'
+    badgeClass: 'bg-slate-700/40 text-slate-300 border-slate-600/40 hover:bg-slate-700/60'
   },
   guest: {
     label: 'guest',
     desc: 'Tamu / Terbatas',
-    badgeClass: 'bg-slate-700/40 text-slate-300 border-slate-600/50 hover:bg-slate-700/60'
+    badgeClass: 'bg-slate-800/40 text-slate-400 border-slate-700/40 hover:bg-slate-800/60'
   }
 };
 export const USER_LEVEL_LIST = ['primary_user', 'full_admin', 'admin', 'operator', 'assistant', 'guest'];
@@ -63,6 +67,8 @@ export default function MasterDataViewer({
   columns = [],
   dataMatrix = [],
   rows = [],
+  podUuidMap = {},
+  pods = [],
   onUpdateRow,
   onDeleteRow,
   onDeleteMultipleRows,
@@ -88,10 +94,22 @@ export default function MasterDataViewer({
   // User Management State (Exclusive for table 'user' or tables with userLevel)
   const [updatingUserLevelKey, setUpdatingUserLevelKey] = useState(null);
   const [userLevelFilter, setUserLevelFilter] = useState('all');
+  const [registeredPodFilter, setRegisteredPodFilter] = useState('all'); // 'all' | 'master' | '<pod_uuid>'
   const [justUpdatedKeys, setJustUpdatedKeys] = useState(new Set());
   const [updateToast, setUpdateToast] = useState(null);
 
   const pkColumn = masterInfo?.pkColumn || columns.find(c => c.isPk)?.columnName || columns[0]?.columnName || 'id';
+
+  // Helper to map registerd_at UUID to Server / POD metadata
+  const getPodInfoByUuid = (uuid) => {
+    if (!uuid) return null;
+    if (podUuidMap && podUuidMap[uuid]) return podUuidMap[uuid];
+    if (Array.isArray(pods)) {
+      const found = pods.find(p => p.pod_uuid === uuid);
+      if (found) return found;
+    }
+    return null;
+  };
 
   // Combine rows from dataMatrix if available, otherwise fallback to rows
   const combinedRows = useMemo(() => {
@@ -116,8 +134,54 @@ export default function MasterDataViewer({
   const podOnlyRowsCount = useMemo(() => combinedRows.filter(r => r.__isPodOnly).length, [combinedRows]);
   const podOnlyRows = useMemo(() => combinedRows.filter(r => r.__isPodOnly), [combinedRows]);
 
+  // Prioritize registerd_at and key user identity columns to the front area of the table
+  const displayColumns = useMemo(() => {
+    if (!columns || columns.length === 0) return [];
 
-  // Filter rows by search, source filter, and userLevel filter
+    const hasRegisterdAt = columns.some(c => c.columnName === 'registerd_at' || c.columnName === 'registered_at');
+    if (!hasRegisterdAt && masterInfo?.tableName !== 'user') return columns;
+
+    // Ordered to the front:
+    // user_id / id -> username -> userLevel -> registerd_at (POD) -> full_names -> email -> rest...
+    const priorityFront = [
+      'user_id',
+      'id',
+      'username',
+      'userLevel',
+      'registerd_at',
+      'registered_at',
+      'full_names',
+      'email'
+    ];
+
+    const front = [];
+    for (const pName of priorityFront) {
+      const found = columns.find(c => c.columnName === pName);
+      if (found && !front.includes(found)) {
+        front.push(found);
+      }
+    }
+
+    const rest = columns.filter(c => !front.includes(c));
+    return [...front, ...rest];
+  }, [columns, masterInfo?.tableName]);
+
+  // List of distinct registered PODs present in the user table
+  const uniqueRegisteredPods = useMemo(() => {
+    const map = new Map();
+    combinedRows.forEach(r => {
+      const reg = r.registerd_at || r.registered_at;
+      if (reg) {
+        const podInfo = getPodInfoByUuid(reg);
+        if (podInfo && !map.has(reg)) {
+          map.set(reg, { ...podInfo, pod_uuid: reg });
+        }
+      }
+    });
+    return Array.from(map.values());
+  }, [combinedRows, podUuidMap, pods]);
+
+  // Filter rows by search, source filter, userLevel filter, and registeredPodFilter
   const filteredRows = useMemo(() => {
     return combinedRows.filter(r => {
       if (rowSourceFilter === 'master_only' && !r.__inMaster) return false;
@@ -128,16 +192,43 @@ export default function MasterDataViewer({
         if (r.userLevel !== userLevelFilter) return false;
       }
 
+      // Filter by registered POD location if active
+      if (masterInfo?.tableName === 'user' && registeredPodFilter !== 'all') {
+        const reg = r.registerd_at || r.registered_at;
+        if (registeredPodFilter === 'master') {
+          if (reg) return false;
+        } else {
+          if (reg !== registeredPodFilter) return false;
+        }
+      }
+
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        return Object.values(r).some(val =>
+        const matchesObj = Object.values(r).some(val =>
           String(val || '').toLowerCase().includes(q)
         );
+        if (matchesObj) return true;
+
+        // Also check if search query matches registered POD name, code, or host
+        const reg = r.registerd_at || r.registered_at;
+        if (reg) {
+          const podInfo = getPodInfoByUuid(reg);
+          if (podInfo) {
+            if (
+              podInfo.name?.toLowerCase().includes(q) ||
+              podInfo.host?.toLowerCase().includes(q) ||
+              String(podInfo.code || '').toLowerCase().includes(q)
+            ) {
+              return true;
+            }
+          }
+        }
+        return false;
       }
 
       return true;
     });
-  }, [combinedRows, rowSourceFilter, userLevelFilter, searchQuery, masterInfo?.tableName]);
+  }, [combinedRows, rowSourceFilter, userLevelFilter, registeredPodFilter, searchQuery, masterInfo?.tableName, podUuidMap, pods]);
 
   // Automatically prune selectedKeys if rows are deleted / removed from dataMatrix
   React.useEffect(() => {
@@ -442,44 +533,78 @@ export default function MasterDataViewer({
             </div>
           )}
 
-          {/* User Level Filter Sub-toolbar (Exclusive for table 'user') */}
+          {/* User Level & Registered POD Filter Sub-toolbar (Exclusive for table 'user') */}
           {activeTab === 'rows' && masterInfo?.tableName === 'user' && (
             <div className="flex flex-wrap items-center justify-between gap-2.5 p-3 bg-slate-950/70 rounded-2xl border border-slate-800/80 shadow-sm">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-bold text-slate-400">Filter userLevel:</span>
-                <div className="flex items-center gap-1.5 overflow-x-auto p-1 bg-slate-900/90 rounded-xl border border-slate-800 text-xs">
-                  <button
-                    onClick={() => setUserLevelFilter('all')}
-                    className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
-                      userLevelFilter === 'all'
-                        ? 'bg-slate-800 text-white shadow-sm'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    Semua Level ({combinedRows.length})
-                  </button>
-                  {USER_LEVEL_LIST.map(lvl => {
-                    const count = combinedRows.filter(r => r.userLevel === lvl).length;
-                    const cfg = USER_LEVEL_CONFIG[lvl];
-                    return (
-                      <button
-                        key={lvl}
-                        onClick={() => setUserLevelFilter(lvl)}
-                        className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 border ${
-                          userLevelFilter === lvl
-                            ? `${cfg.badgeClass} shadow-sm`
-                            : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                        }`}
-                      >
-                        <span>{lvl}</span>
-                        <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-950 font-mono text-slate-300">
-                          {count}
-                        </span>
-                      </button>
-                    );
-                  })}
+              <div className="flex items-center gap-3 flex-wrap">
+                {/* 1. Filter userLevel */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold text-slate-400">Filter userLevel:</span>
+                  <div className="flex items-center gap-1.5 overflow-x-auto p-1 bg-slate-900/90 rounded-xl border border-slate-800 text-xs">
+                    <button
+                      onClick={() => setUserLevelFilter('all')}
+                      className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
+                        userLevelFilter === 'all'
+                          ? 'bg-slate-800 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      Semua Level ({combinedRows.length})
+                    </button>
+                    {USER_LEVEL_LIST.map(lvl => {
+                      const count = combinedRows.filter(r => r.userLevel === lvl).length;
+                      const cfg = USER_LEVEL_CONFIG[lvl];
+                      return (
+                        <button
+                          key={lvl}
+                          onClick={() => setUserLevelFilter(lvl)}
+                          className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 border ${
+                            userLevelFilter === lvl
+                              ? `${cfg.badgeClass} shadow-sm`
+                              : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                          }`}
+                        >
+                          <span>{lvl}</span>
+                          <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-950 font-mono text-slate-300">
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. Filter Tempat Pendaftaran (Registered at POD / Master) */}
+                <div className="flex items-center gap-2 pl-2 border-l border-slate-800 flex-wrap">
+                  <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
+                    <Server size={13} className="text-purple-400" />
+                    <span>Tempat Daftar:</span>
+                  </span>
+                  <div className="relative inline-flex items-center">
+                    <select
+                      value={registeredPodFilter}
+                      onChange={(e) => setRegisteredPodFilter(e.target.value)}
+                      className="px-3 py-1 pr-7 rounded-xl text-xs font-bold font-sans bg-purple-950/40 text-purple-200 border border-purple-500/40 cursor-pointer outline-none appearance-none hover:bg-purple-900/40 transition-colors shadow-sm"
+                      title="Filter user berdasarkan unit POD tempat mereka mendaftar"
+                    >
+                      <option value="all" className="bg-slate-900 text-white">Semua Tempat ({combinedRows.length})</option>
+                      <option value="master" className="bg-slate-900 text-slate-300">
+                        🌐 Pusat / Master DB ({combinedRows.filter(r => !r.registerd_at && !r.registered_at).length})
+                      </option>
+                      {uniqueRegisteredPods.map(p => {
+                        const count = combinedRows.filter(r => (r.registerd_at || r.registered_at) === p.pod_uuid).length;
+                        return (
+                          <option key={p.pod_uuid} value={p.pod_uuid} className="bg-slate-900 text-purple-300">
+                            🖥️ {p.name} #{p.code || p.id} ({count} user)
+                          </option>
+                        );
+                      })}
+                    </select>
+                    <ChevronDown size={12} className="absolute right-2 pointer-events-none text-purple-400" />
+                  </div>
                 </div>
               </div>
+
               <div className="text-[11px] text-slate-500 font-mono">
                 Menampilkan {filteredRows.length} dari {combinedRows.length} user
               </div>
@@ -587,11 +712,16 @@ export default function MasterDataViewer({
                     </th>
                     <th className="p-3 font-bold w-28 text-center">Aksi</th>
                     <th className="p-3 font-bold text-center w-48">Status & Sumber Lokasi</th>
-                    {columns.map((col) => (
+                    {displayColumns.map((col) => (
                       <th key={col.columnName} className="p-3 font-bold whitespace-nowrap font-mono">
                         <div className="flex items-center gap-1">
                           {col.isPk && <Key size={12} className="text-amber-400" title="Primary Key" />}
                           <span className={col.isPk ? 'text-cyan-300' : 'text-slate-300'}>{col.columnName}</span>
+                          {(col.columnName === 'registerd_at' || col.columnName === 'registered_at') && (
+                            <span className="ml-1 px-1.5 py-0.2 rounded text-[10px] font-sans bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                              Unit POD
+                            </span>
+                          )}
                         </div>
                       </th>
                     ))}
@@ -600,7 +730,7 @@ export default function MasterDataViewer({
                 <tbody className="divide-y divide-slate-800/50 text-[11px]">
                   {filteredRows.length === 0 ? (
                     <tr>
-                      <td colSpan={(columns.length || 1) + 3} className="p-12 text-center text-slate-500 font-sans">
+                      <td colSpan={(displayColumns.length || 1) + 3} className="p-12 text-center text-slate-500 font-sans">
                         Tidak ada data yang cocok dengan filter atau pencarian.
                       </td>
                     </tr>
@@ -805,7 +935,7 @@ export default function MasterDataViewer({
                           </td>
 
                           {/* Data Columns */}
-                          {columns.map((col) => {
+                          {displayColumns.map((col) => {
                             const isUserLevelCol = col.columnName === 'userLevel' || (masterInfo?.tableName === 'user' && col.columnName === 'userLevel');
                             if (isUserLevelCol) {
                               const curLevel = row.userLevel || 'guest';
@@ -872,6 +1002,72 @@ export default function MasterDataViewer({
                                         <span>Sync ke POD</span>
                                       </button>
                                     )}
+                                  </div>
+                                </td>
+                              );
+                            }
+
+                            // Render POD Information for registerd_at / registered_at
+                            const isRegisteredAtCol = col.columnName === 'registerd_at' || col.columnName === 'registered_at';
+                            if (isRegisteredAtCol) {
+                              const uuidVal = row[col.columnName];
+                              const matchedPod = getPodInfoByUuid(uuidVal);
+
+                              if (matchedPod) {
+                                return (
+                                  <td key={col.columnName} className="p-3 whitespace-nowrap">
+                                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                      <div
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          navigator.clipboard.writeText(uuidVal);
+                                          setUpdateToast(`UUID POD "${matchedPod.name}" disalin: ${uuidVal}`);
+                                          setTimeout(() => setUpdateToast(null), 3000);
+                                        }}
+                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-purple-950/80 hover:bg-purple-900/90 text-purple-200 border border-purple-500/40 text-xs font-bold font-sans shadow-sm transition-all cursor-pointer group"
+                                        title={`POD UUID: ${uuidVal}\nHost: ${matchedPod.host}\nCode: #${matchedPod.code || matchedPod.id}\n(Klik untuk salin UUID)`}
+                                      >
+                                        <Server size={12} className="text-purple-400 shrink-0 group-hover:scale-110 transition-transform" />
+                                        <span className="font-semibold">{matchedPod.name}</span>
+                                        {matchedPod.code && (
+                                          <span className="px-1.5 py-0.2 rounded bg-purple-900/90 text-[10px] text-purple-300 font-mono">
+                                            #{matchedPod.code}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <span className="text-[11px] text-slate-400 font-mono hidden xl:inline" title={`IP Host: ${matchedPod.host}`}>
+                                        ({matchedPod.host})
+                                      </span>
+                                    </div>
+                                  </td>
+                                );
+                              }
+
+                              if (uuidVal) {
+                                return (
+                                  <td key={col.columnName} className="p-3 whitespace-nowrap">
+                                    <div
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigator.clipboard.writeText(uuidVal);
+                                        setUpdateToast(`UUID disalin: ${uuidVal}`);
+                                        setTimeout(() => setUpdateToast(null), 3000);
+                                      }}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-950/60 text-amber-300 border border-amber-500/30 text-xs font-mono cursor-pointer hover:bg-amber-900/60 transition-colors"
+                                      title={`UUID: ${uuidVal} (POD tidak terdaftar di daftar server - Klik untuk salin)`}
+                                    >
+                                      <HelpCircle size={12} className="text-amber-400 shrink-0" />
+                                      <span className="truncate max-w-[120px]">{uuidVal.slice(0, 8)}...</span>
+                                    </div>
+                                  </td>
+                                );
+                              }
+
+                              return (
+                                <td key={col.columnName} className="p-3 whitespace-nowrap">
+                                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900/80 text-slate-400 border border-slate-800 text-xs font-sans">
+                                    <Database size={11} className="text-slate-500" />
+                                    <span>Pusat / Master DB</span>
                                   </div>
                                 </td>
                               );

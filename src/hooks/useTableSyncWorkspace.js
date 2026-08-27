@@ -526,22 +526,93 @@ export function useTableSyncWorkspace({ tableName, selectedMasterId, masterDatab
     });
   };
 
-  const handleQuickSyncSingleRowToSpecificPod = async ({ rowData, pkColumn, pkValue, targetPodId }) => {
-    if (!selectedMasterId || !targetPodId) return;
+  const handleQuickSyncSingleRowToSpecificPod = async ({
+    rowData,
+    pkColumn: propPkCol,
+    pkValue,
+    targetPodId,
+    serverId,
+    serverName
+  }) => {
+    const finalTargetId = targetPodId || serverId;
+    const finalPkCol =
+      propPkCol ||
+      matrixData?.master?.pkColumn ||
+      (matrixData?.columnsMatrix || []).find((c) => c.isPk)?.columnName ||
+      'user_id';
+
+    if (!selectedMasterId || !finalTargetId || pkValue === undefined) {
+      console.warn('handleQuickSyncSingleRowToSpecificPod missing required args:', {
+        selectedMasterId,
+        finalTargetId,
+        pkValue
+      });
+      return;
+    }
+
+    setError('');
     try {
-      await syncSingleMasterRowApi({
+      const res = await syncSingleMasterRowApi({
         masterId: Number(selectedMasterId),
         tableName,
-        pkColumn: pkColumn || 'user_id',
+        pkColumn: finalPkCol,
         pkValue,
-        targetPodIds: [Number(targetPodId)],
+        targetPodIds: [Number(finalTargetId)],
         rowData
       });
-      setSuccessMsg(`Sukses! Data baris berhasil disinkronkan ke POD #${targetPodId}.`);
-      setTimeout(() => setSuccessMsg(''), 5000);
-      loadSinglePodComparison(selectedMasterId, targetPodId);
+
+      // Check if backend returned an individual failure in the data array
+      const podRes = Array.isArray(res) ? res[0] : res?.data ? res.data[0] : null;
+      if (podRes && podRes.success === false) {
+        throw new Error(podRes.error || `Gagal menyinkronkan baris data ke ${serverName || 'POD'}`);
+      }
+
+      const podLabel = serverName ? `POD "${serverName}"` : `POD #${finalTargetId}`;
+      setSuccessMsg(`Sukses! 1 baris data (${finalPkCol} = ${pkValue}) berhasil diunduh dan disinkronkan ke ${podLabel}.`);
+      setTimeout(() => setSuccessMsg(''), 6000);
+
+      // 🚀 Instant Soft UI Update (0ms) - Updates presence so "Download" button immediately turns into "Ada di POD"
+      setMatrixData((prev) => {
+        if (!prev) return prev;
+        const targetNum = Number(finalTargetId);
+        const strKey = String(pkValue);
+
+        const updatedDataMatrix = (prev.dataMatrix || []).map((item) => {
+          const itemPk =
+            item.sampleData?.[finalPkCol] !== undefined
+              ? item.sampleData[finalPkCol]
+              : item.rowKey;
+          if (String(itemPk) === strKey) {
+            const updatedPresence = { ...(item.presence || {}) };
+            let count = item.presentCount || 0;
+            if (!updatedPresence[targetNum] || !updatedPresence[targetNum].present) {
+              updatedPresence[targetNum] = { isOnline: true, present: true };
+              count++;
+            }
+            return {
+              ...item,
+              presence: updatedPresence,
+              presentCount: Math.min(count, prev.pods?.length || count)
+            };
+          }
+          return item;
+        });
+
+        return {
+          ...prev,
+          dataMatrix: updatedDataMatrix
+        };
+      });
+
+      // Also reload in background to ensure comparison hashes match
+      if (activePodId && String(activePodId) === String(finalTargetId)) {
+        loadSinglePodComparison(selectedMasterId, finalTargetId);
+      }
+      return res;
     } catch (err) {
-      setError(err.message || 'Gagal menyinkronkan data ke POD.');
+      console.error('Error syncing single row to POD:', err);
+      setError(err.message || 'Gagal menyinkronkan data ke POD: ' + err.message);
+      throw err;
     }
   };
 
