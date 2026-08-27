@@ -628,6 +628,88 @@ export default function TncPodDiffSyncView({
     }
   };
 
+  const triggerAllPodsToMasterSync = async () => {
+    setError('');
+    const onlinePods = (matrixData?.pods || []).filter(p => p.isOnline);
+    if (onlinePods.length === 0) {
+      setError('Tidak ada unit POD online yang tersedia.');
+      return;
+    }
+
+    setProgressModal({
+      isOpen: true,
+      direction: 'pod_to_master',
+      isProcessing: true,
+      title: `Tarik Seluruh Data: Semua POD ➔ Master DB`,
+      tableName: selectedTableName,
+      sourceName: `${onlinePods.length} Unit POD Online`,
+      targetName: matrixData?.master?.name || 'Master DB',
+      progressPercent: 10,
+      currentStatusText: `Menghubungkan ke ${onlinePods.length} unit POD...`,
+      report: null
+    });
+
+    let totalPulled = 0;
+    const results = [];
+    let failCount = 0;
+
+    for (let i = 0; i < onlinePods.length; i++) {
+      const pod = onlinePods[i];
+      const pct = Math.round(((i + 1) / onlinePods.length) * 90);
+      setProgressModal(prev => ({
+        ...prev,
+        progressPercent: pct,
+        currentStatusText: `[${i + 1}/${onlinePods.length}] Menarik data dari ${pod.name}...`
+      }));
+
+      try {
+        const res = await syncPodToMasterApi({
+          masterId: Number(masterId),
+          serverId: Number(pod.id),
+          tableName: selectedTableName,
+          dryRun: false
+        });
+        const pulled = res?.rowsProcessed || res?.data?.rowsProcessed || 0;
+        totalPulled += pulled;
+        results.push({
+          serverName: pod.name,
+          success: true,
+          rowsSynced: pulled,
+          logs: [`${pulled} baris berhasil ditarik ke Master DB.`]
+        });
+      } catch (err) {
+        failCount++;
+        results.push({
+          serverName: pod.name,
+          success: false,
+          rowsSynced: 0,
+          error: err.message,
+          logs: [`Gagal: ${err.message}`]
+        });
+      }
+    }
+
+    setProgressModal(prev => ({
+      ...prev,
+      isProcessing: false,
+      progressPercent: 100,
+      currentStatusText: 'Penarikan Data Selesai!',
+      report: {
+        success: failCount === 0,
+        totalRowsProcessed: totalPulled,
+        failedTargets: failCount,
+        results
+      }
+    }));
+
+    setSuccessMsg(`Sukses! Total ${totalPulled} baris data berhasil ditarik dari seluruh POD ke Master DB.`);
+    setTimeout(() => setSuccessMsg(''), 6000);
+
+    // Silent background soft refresh
+    loadComparison(selectedTableName, true);
+    if (onSyncCompleted) onSyncCompleted();
+  };
+
   const handleSyncSinglePodRowToMaster = async ({ serverId, serverIds, serverName, pkColumn, pkValue, rowData }) => {
     setError('');
     const targetIds = Array.isArray(serverIds) && serverIds.length > 0
@@ -681,44 +763,127 @@ export default function TncPodDiffSyncView({
     }
   };
 
-  const handleBulkSyncPodRowsToMaster = async ({ serverId, serverIds, serverName, pkColumn, pkValues }) => {
-    if (!Array.isArray(pkValues) || pkValues.length === 0) return;
+  const handleBulkSyncPodRowsToMaster = async (arg1, arg2) => {
+    let rowsToSync = [];
+    let pkCol = 'id';
+
+    if (Array.isArray(arg1)) {
+      rowsToSync = arg1;
+      pkCol = arg2 || 'id';
+    } else if (arg1 && typeof arg1 === 'object') {
+      const { serverId, serverIds, serverName, pkColumn, pkValues } = arg1;
+      pkCol = pkColumn || 'id';
+      if (Array.isArray(pkValues) && pkValues.length > 0) {
+        rowsToSync = pkValues.map(val => {
+          const item = (matrixData?.dataMatrix || []).find(r => {
+            const k = r.sampleData?.[pkCol] !== undefined ? String(r.sampleData[pkCol]) : String(r.rowKey);
+            return k === String(val);
+          });
+          return {
+            ...(item?.sampleData || {}),
+            __pkVal: val,
+            __originPodId: serverId || serverIds?.[0],
+            __originPodName: serverName,
+            __podIds: serverIds || (serverId ? [serverId] : [])
+          };
+        });
+      }
+    }
+
+    if (rowsToSync.length === 0) return;
     setError('');
 
-    const targetIds = Array.isArray(serverIds) && serverIds.length > 0
-      ? serverIds.map(Number)
-      : (serverId ? [Number(serverId)] : (matrixData?.pods || []).map(p => Number(p.id)));
+    const totalCount = rowsToSync.length;
 
-    try {
-      let successCount = 0;
-      for (const val of pkValues) {
-        const item = (matrixData?.dataMatrix || []).find(r => {
-          const k = r.sampleData?.[pkColumn || 'id'] !== undefined ? String(r.sampleData[pkColumn || 'id']) : String(r.rowKey);
-          return k === String(val);
-        });
+    setProgressModal({
+      isOpen: true,
+      direction: 'pod_to_master',
+      isProcessing: true,
+      title: `Upload ${totalCount} Baris Data: POD ➔ Master`,
+      tableName: selectedTableName,
+      sourceName: `${totalCount} Baris Terpilih`,
+      targetName: matrixData?.master?.name || 'Master DB',
+      progressPercent: 5,
+      currentStatusText: `Menyiapkan upload ${totalCount} baris data ke Master DB...`,
+      report: null
+    });
 
+    let successCount = 0;
+    let failCount = 0;
+    const syncedKeys = [];
+    const results = [];
+
+    for (let i = 0; i < totalCount; i++) {
+      const r = rowsToSync[i];
+      const pkVal = r.__pkVal !== undefined ? r.__pkVal : (r[pkCol] !== undefined ? r[pkCol] : r.__rowKey);
+      const sId = r.__podIds?.[0] || r.__originPodId || (matrixData?.pods || [])[0]?.id;
+      const sIds = r.__podIds || (r.__originPodId ? [r.__originPodId] : (matrixData?.pods || []).map(p => Number(p.id)));
+      const sName = r.__podSources?.join(', ') || r.__originPodName || 'POD';
+
+      const pct = Math.round(((i + 1) / totalCount) * 100);
+      setProgressModal(prev => ({
+        ...prev,
+        progressPercent: pct,
+        currentStatusText: `[${i + 1}/${totalCount}] Mengupload ${pkCol} = ${pkVal} dari ${sName}...`
+      }));
+
+      try {
         await syncSinglePodRowApi({
           masterId: Number(masterId),
-          serverId: targetIds[0],
-          serverIds: targetIds,
+          serverId: sId,
+          serverIds: sIds,
           tableName: selectedTableName,
-          pkColumn: pkColumn || 'id',
-          pkValue: val,
-          rowData: item?.sampleData
+          pkColumn: pkCol,
+          pkValue: pkVal,
+          rowData: r
         });
         successCount++;
+        if (pkVal !== undefined) syncedKeys.push(String(pkVal));
+        if (r.__rowKey !== undefined) syncedKeys.push(String(r.__rowKey));
+
+        results.push({
+          serverName: `${sName} (${pkCol}: ${pkVal})`,
+          success: true,
+          rowsSynced: 1,
+          logs: [`Baris ${pkVal} berhasil di-upload ke Master DB.`]
+        });
+      } catch (err) {
+        failCount++;
+        results.push({
+          serverName: `${sName} (${pkCol}: ${pkVal})`,
+          success: false,
+          rowsSynced: 0,
+          error: err.message,
+          logs: [`Gagal: ${err.message}`]
+        });
       }
+    }
 
-      setSuccessMsg(`Sukses! ${successCount} baris data dari ${serverName || 'POD'} berhasil disalin ke Master DB.`);
-      setTimeout(() => setSuccessMsg(''), 6000);
+    setProgressModal(prev => ({
+      ...prev,
+      isProcessing: false,
+      progressPercent: 100,
+      currentStatusText: failCount === 0 ? 'Upload Selesai!' : `Selesai dengan ${failCount} kegagalan.`,
+      report: {
+        success: failCount === 0,
+        totalRowsProcessed: successCount,
+        failedTargets: failCount,
+        results
+      }
+    }));
 
-      // 🚀 Instant Soft UI Update (0ms)
+    setSuccessMsg(`Sukses! ${successCount} baris data dari POD berhasil disinkronkan ke Master DB.`);
+    setTimeout(() => setSuccessMsg(''), 6000);
+
+    // 🚀 Instant Soft UI Update (0ms)
+    if (syncedKeys.length > 0) {
+      const syncedSet = new Set(syncedKeys.map(String));
       setMatrixData(prev => {
         if (!prev) return prev;
-        const valSet = new Set(pkValues.map(String));
         const updatedDataMatrix = (prev.dataMatrix || []).map(item => {
-          const pkVal = item.sampleData?.[pkColumn || 'id'] !== undefined ? String(item.sampleData[pkColumn || 'id']) : String(item.rowKey);
-          if (valSet.has(pkVal)) {
+          const itemKey = String(item.rowKey || '');
+          const samplePk = item.sampleData && pkCol && item.sampleData[pkCol] !== undefined ? String(item.sampleData[pkCol]) : '';
+          if (syncedSet.has(itemKey) || syncedSet.has(samplePk)) {
             return { ...item, inMaster: true, isPodOnly: false };
           }
           return item;
@@ -733,13 +898,11 @@ export default function TncPodDiffSyncView({
           dataMatrix: updatedDataMatrix
         };
       });
-
-      // Silent background soft refresh (no skeleton flashing)
-      loadComparison(selectedTableName, true);
-      if (onSyncCompleted) onSyncCompleted();
-    } catch (err) {
-      setError(err.message || 'Gagal melakukan bulk pull dari POD.');
     }
+
+    // Silent background soft refresh (no skeleton flashing)
+    loadComparison(selectedTableName, true);
+    if (onSyncCompleted) onSyncCompleted();
   };
 
   const handleTableChange = (tableName) => {
@@ -819,7 +982,7 @@ export default function TncPodDiffSyncView({
           activePodId={activePodId}
           setActivePodId={setActivePodId}
           onQuickSyncPod={triggerSinglePodSync}
-          onBulkSync={triggerBulkSync}
+          onBulkSync={direction === 'pod_to_master' ? triggerAllPodsToMasterSync : triggerBulkSync}
           onSyncPodToMaster={triggerPodToMasterSync}
           onDeleteMasterRow={handlePromptDeleteMasterRow}
           onDeleteMultipleRows={handlePromptDeleteMasterRow}
@@ -831,6 +994,7 @@ export default function TncPodDiffSyncView({
           onBulkSyncPodRowsToMaster={handleBulkSyncPodRowsToMaster}
           hideTopBanner={true}
           hideMasterViewer={direction === 'master_to_pod'}
+          direction={direction}
         />
       )}
 

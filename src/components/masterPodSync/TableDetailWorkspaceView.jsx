@@ -12,6 +12,7 @@ import {
   Eye,
   SlidersHorizontal,
   UploadCloud,
+  DownloadCloud,
   ShieldCheck,
   Activity,
   Filter,
@@ -45,8 +46,12 @@ export default function TableDetailWorkspaceView({
   onSyncSingleRowToPod,
   onSyncSinglePodRowToMaster,
   onBulkSyncPodRowsToMaster,
+  loadingPodId = null,
+  isComparingAll = false,
+  onCompareAllPods = null,
   hideTopBanner = false,
-  hideMasterViewer = false
+  hideMasterViewer = false,
+  direction = 'master_to_pod'
 }) {
   const [viewMode, setViewMode] = useState('per_pod'); // 'per_pod' | 'matrix_overview'
   const [matrixSubTab, setMatrixSubTab] = useState('data'); // 'data' | 'columns'
@@ -109,6 +114,18 @@ export default function TableDetailWorkspaceView({
                 >
                   <Zap size={14} className="fill-slate-950" />
                   <span>Kirim ke POD Selisih ({matrixData.summary.mismatchPods})</span>
+                </button>
+              )}
+
+              {onCompareAllPods && (
+                <button
+                  onClick={onCompareAllPods}
+                  disabled={isComparingAll}
+                  className="px-3.5 py-2 bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/30 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors disabled:opacity-50"
+                  title="Bandingkan data tabel ini ke seluruh armada server POD sekaligus"
+                >
+                  <Layers size={14} className={isComparingAll ? 'animate-spin' : ''} />
+                  <span>{isComparingAll ? 'Memindai Armada...' : 'Bandingkan Semua POD'}</span>
                 </button>
               )}
 
@@ -218,13 +235,24 @@ export default function TableDetailWorkspaceView({
             </div>
 
             {matrixData?.summary?.mismatchPods > 0 && (
-              <button
-                onClick={onBulkSync}
-                className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-amber-500/25 transition-all cursor-pointer"
-              >
-                <Zap size={13} className="fill-slate-950" />
-                <span>Kirim ke POD Selisih ({matrixData.summary.mismatchPods})</span>
-              </button>
+              direction === 'pod_to_master' ? (
+                <button
+                  onClick={onBulkSync}
+                  className="px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-purple-600/25 transition-all cursor-pointer"
+                  title="Tarik seluruh baris data dari semua unit POD ke Master Database"
+                >
+                  <DownloadCloud size={13} className="text-white" />
+                  <span>Tarik dari Seluruh POD ({matrixData.summary.mismatchPods})</span>
+                </button>
+              ) : (
+                <button
+                  onClick={onBulkSync}
+                  className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-amber-500/25 transition-all cursor-pointer"
+                >
+                  <Zap size={13} className="fill-slate-950" />
+                  <span>Kirim ke POD Selisih ({matrixData.summary.mismatchPods})</span>
+                </button>
+              )
             )}
 
             <button
@@ -274,6 +302,7 @@ export default function TableDetailWorkspaceView({
             pods={matrixData?.pods || []}
             masterInfo={masterInfo}
             activePodId={activePodId}
+            loadingPodId={loadingPodId}
             onSelectPod={setActivePodId}
             onQuickSyncPod={onQuickSyncPod}
             filterStatus={podStatusFilter}
@@ -284,8 +313,11 @@ export default function TableDetailWorkspaceView({
           <PodDataViewer
             pod={activePod}
             masterInfo={masterInfo}
+            loadingPodId={loadingPodId}
+            isLoading={loadingPodId === activePod?.id}
             dataMatrix={matrixData?.dataMatrix || []}
             columnsMatrix={matrixData?.columnsMatrix || []}
+            onInspectPod={setActivePodId}
             onSyncPod={onQuickSyncPod}
             onSyncPodToMaster={onSyncPodToMaster}
             onDeletePodRow={onDeletePodRow}

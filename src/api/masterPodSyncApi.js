@@ -52,6 +52,22 @@ export async function fetchMasterTablesApi(masterId) {
 }
 
 /**
+ * Fast Master Table Inspection (<50ms)
+ */
+export async function fetchMasterTableFastApi(masterId, tableName) {
+  const res = await safeFetchJson(`${BASE_URL}/master-table-fast?masterId=${masterId}&table=${encodeURIComponent(tableName)}`);
+  return res.data;
+}
+
+/**
+ * On-Demand Single POD Comparison against Master DB (~200ms)
+ */
+export async function fetchSinglePodComparisonApi(masterId, tableName, podId) {
+  const res = await safeFetchJson(`${BASE_URL}/compare-single-pod?masterId=${masterId}&table=${encodeURIComponent(tableName)}&podId=${podId}`);
+  return res.data;
+}
+
+/**
  * Compare Master Table schema & rows across all POD V3 instances
  */
 export async function fetchMasterTableMatrixApi(masterId, tableName) {

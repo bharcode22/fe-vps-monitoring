@@ -23,6 +23,9 @@ import {
 export default function PodDataViewer({
   pod,
   masterInfo,
+  loadingPodId = null,
+  isLoading = false,
+  onInspectPod = null,
   dataMatrix = [],
   columnsMatrix = [],
   onSyncPod,
@@ -174,6 +177,39 @@ export default function PodDataViewer({
       <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-10 text-center text-slate-500 font-sans text-xs flex flex-col items-center gap-2">
         <Server size={28} className="text-slate-600" />
         <span>Pilih salah satu unit POD v3 di atas untuk melihat data yang ada di database POD tersebut.</span>
+      </div>
+    );
+  }
+
+  if (isLoading || (loadingPodId && String(loadingPodId) === String(pod.id))) {
+    return (
+      <div className="bg-slate-900/60 border border-purple-500/30 rounded-3xl p-12 text-center text-slate-400 font-sans text-xs flex flex-col items-center justify-center gap-3 animate-in fade-in duration-200">
+        <Loader2 size={32} className="animate-spin text-purple-400" />
+        <span className="text-sm font-bold text-white">Memuat Data {pod.name}...</span>
+        <span className="text-slate-500 text-[11px]">Menghubungkan ke server {pod.host || ''} dan membandingkan baris data dengan Master Database.</span>
+      </div>
+    );
+  }
+
+  if (pod.status === 'NOT_LOADED') {
+    return (
+      <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-12 text-center text-slate-400 font-sans text-xs flex flex-col items-center justify-center gap-3.5 animate-in fade-in duration-200">
+        <div className="p-3.5 bg-slate-800/80 rounded-2xl text-slate-400 border border-slate-700">
+          <Server size={28} />
+        </div>
+        <div>
+          <h4 className="text-sm font-bold text-white">Data {pod.name} Belum Dimuat</h4>
+          <p className="text-slate-400 text-xs mt-1 max-w-md">
+            Data Master telah siap. Klik tombol di bawah untuk memeriksa isi database {pod.name} dan membandingkannya secara langsung.
+          </p>
+        </div>
+        <button
+          onClick={() => onInspectPod?.(pod.id)}
+          className="mt-1 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-xl text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-purple-500/25 transition-all hover:scale-105"
+        >
+          <Zap size={14} />
+          <span>Buka & Bandingkan Data {pod.name}</span>
+        </button>
       </div>
     );
   }

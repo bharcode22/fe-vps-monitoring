@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Eraser, AlertTriangle, X, Database, Info, Loader2, CheckCircle2, Search } from 'lucide-react';
+import { Eraser, AlertTriangle, X, Database, Info, Loader2, CheckCircle2, Search, ShieldCheck } from 'lucide-react';
 import { checkMasterDuplicatesApi, cleanMasterDuplicatesApi } from '../../api/masterPodSyncApi';
 
 export default function CleanMasterDuplicatesModal({
@@ -81,7 +81,7 @@ export default function CleanMasterDuplicatesModal({
       });
 
       if (res.success) {
-        alert(`Berhasil membersihkan ${res.data.deletedCount} baris data duplikat di Master!`);
+        alert(res.message || `Berhasil membersihkan ${res.data?.deletedCount} baris data duplikat di Master!`);
         onSuccess();
       } else {
         alert(`Gagal: ${res.error}`);
@@ -117,12 +117,20 @@ export default function CleanMasterDuplicatesModal({
               <span>Ditemukan Data Duplikat</span>
             </h4>
             <p className="text-amber-300/80 text-xs mt-0.5">
-              Total <strong>{checkResult.totalDuplicateRows} baris</strong> terindikasi ganda.
+              {checkResult.obsoleteCount > 0 ? (
+                <span>
+                  Termasuk <strong>{checkResult.obsoleteCount} baris</strong> dari pertanyaan nonaktif/usang, dan <strong>{checkResult.duplicateRowsToDelete || 0} baris</strong> duplikat jawaban pengguna.
+                </span>
+              ) : (
+                <span>
+                  Total <strong>{checkResult.totalDuplicateRows} baris</strong> terindikasi ganda.
+                </span>
+              )}
             </p>
           </div>
           <div className="text-right">
-            <span className="text-xs text-slate-400 block mb-0.5">Akan Dihapus</span>
-            <span className="text-lg font-black text-red-400">{checkResult.rowsToDelete} baris</span>
+            <span className="text-xs text-slate-400 block mb-0.5">Akan Diarsipkan & Dihapus</span>
+            <span className="text-lg font-black text-amber-400">{checkResult.rowsToDelete} baris</span>
           </div>
         </div>
 
@@ -154,12 +162,12 @@ export default function CleanMasterDuplicatesModal({
           </div>
         </div>
 
-        {/* Warning Alert */}
-        <div className="p-3.5 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3 mt-1">
-          <AlertTriangle size={18} className="text-red-500 shrink-0 mt-0.5" />
-          <div className="text-xs text-red-200/90 leading-relaxed">
-            <strong className="text-red-400 block mb-0.5">Perhatian: Tindakan ini permanen!</strong>
-            Sebanyak {checkResult.rowsToDelete} baris data sampah di Master Database akan dihapus. Hal ini penting agar sinkronisasi ke POD bisa berhasil 100%.
+        {/* Safety & Archiving Info */}
+        <div className="p-3.5 bg-blue-500/10 border border-blue-500/30 rounded-xl flex items-start gap-3 mt-1">
+          <ShieldCheck size={18} className="text-blue-400 shrink-0 mt-0.5" />
+          <div className="text-xs text-blue-200/90 leading-relaxed">
+            <strong className="text-blue-300 block mb-0.5 font-bold">Aman & Terarsip Otomatis:</strong>
+            Sebanyak <strong>{checkResult.rowsToDelete} baris</strong> data duplikat lama akan otomatis diarsipkan terlebih dahulu ke tabel riwayat (<strong>{tableName}_history</strong>) sebelum dihapus dari tabel utama. Hanya jawaban paling baru yang akan dipertahankan.
           </div>
         </div>
       </div>

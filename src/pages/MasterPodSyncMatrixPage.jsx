@@ -13,6 +13,8 @@ import {
 import {
   fetchMasterDatabasesApi,
   fetchMasterTablesApi,
+  fetchMasterTableFastApi,
+  fetchSinglePodComparisonApi,
   fetchMasterTableMatrixApi,
   fetchFleetAuditApi,
   performMasterSyncApi,
@@ -48,10 +50,12 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
 
   // Active POD for Level 2 inspection
   const [activePodId, setActivePodId] = useState(null);
+  const [loadingPodId, setLoadingPodId] = useState(null);
 
   // Matrix Comparison State
   const [matrixData, setMatrixData] = useState(null);
   const [isComparing, setIsComparing] = useState(false);
+  const [isComparingAll, setIsComparingAll] = useState(false);
 
   // Sync Modal State (Bulk/Table Sync)
   const [syncModalOpen, setSyncModalOpen] = useState(false);
@@ -158,7 +162,7 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
     }
   }, [selectedMasterId, viewMode]);
 
-  // 3. Open Detail Workspace for a specific Table
+  // 3. Open Detail Workspace for a specific Table (Fast Load < 50ms + 1 POD Option A)
   const handleOpenTableDetail = async (tableName) => {
     setSelectedTableName(tableName);
     setViewMode('detail');
@@ -167,19 +171,134 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
     setError('');
 
     try {
-      const data = await fetchMasterTableMatrixApi(selectedMasterId, tableName);
-      setMatrixData(data);
-      if (data?.pods?.length > 0) {
-        setActivePodId(data.pods[0].id);
+      // 1. Fast Load Master Table & POD List (<50ms)
+      const fastData = await fetchMasterTableFastApi(selectedMasterId, tableName);
+      setMatrixData(fastData);
+      setIsComparing(false);
+
+      // 2. Select 1st ONLINE POD (Option A) and compare ONLY that POD
+      if (fastData?.pods?.length > 0) {
+        const firstOnlinePod = fastData.pods.find(p => p.isOnline) || fastData.pods[0];
+        setActivePodId(firstOnlinePod.id);
+        if (firstOnlinePod.isOnline) {
+          loadSinglePodComparison(tableName, firstOnlinePod.id);
+        }
       }
     } catch (err) {
-      setError(err.message || 'Gagal membandingkan tabel across PODs.');
-    } finally {
+      setError(err.message || 'Gagal memuat data tabel master.');
       setIsComparing(false);
     }
   };
 
-  // 4. Refresh Current Matrix
+  // 3B. Load comparison on-demand for a single POD (~200ms)
+  const loadSinglePodComparison = async (tableName, podId) => {
+    if (!selectedMasterId || !tableName || !podId) return;
+    setLoadingPodId(podId);
+    try {
+      const result = await fetchSinglePodComparisonApi(selectedMasterId, tableName, podId);
+      if (result?.success && result.podSummary) {
+        setMatrixData(prev => {
+          if (!prev) return prev;
+
+          // Update pods array
+          const updatedPods = (prev.pods || []).map(p => {
+            if (String(p.id) === String(podId)) {
+              return { ...p, ...result.podSummary };
+            }
+            return p;
+          });
+
+          // Update columnsMatrix
+          const updatedColumns = (prev.columnsMatrix || []).map(col => {
+            const colPresence = result.columnPresenceMap?.[col.columnName];
+            if (colPresence) {
+              return {
+                ...col,
+                presence: {
+                  ...(col.presence || {}),
+                  [podId]: colPresence
+                }
+              };
+            }
+            return col;
+          });
+
+          // Update dataMatrix presence
+          const updatedDataMatrix = (prev.dataMatrix || []).map(item => {
+            const presence = result.dataPresenceMap?.[item.rowKey];
+            if (presence) {
+              return {
+                ...item,
+                presence: {
+                  ...(item.presence || {}),
+                  [podId]: presence
+                }
+              };
+            }
+            return item;
+          });
+
+          // Append any podOnlyRows if not already present
+          if (result.podOnlyRows && result.podOnlyRows.length > 0) {
+            const existingKeys = new Set(updatedDataMatrix.map(d => d.rowKey));
+            result.podOnlyRows.forEach(por => {
+              if (!existingKeys.has(por.rowKey)) {
+                updatedDataMatrix.push(por);
+              }
+            });
+          }
+
+          // Recalculate quick summary for loaded pods
+          const onlinePods = updatedPods.filter(p => p.isOnline).length;
+          const syncedPods = updatedPods.filter(p => p.status === 'SYNCED').length;
+          const mismatchPods = updatedPods.filter(p => p.isOnline && p.status !== 'SYNCED' && p.status !== 'NOT_LOADED').length;
+
+          return {
+            ...prev,
+            pods: updatedPods,
+            columnsMatrix: updatedColumns,
+            dataMatrix: updatedDataMatrix,
+            summary: {
+              ...prev.summary,
+              onlinePods,
+              syncedPods,
+              mismatchPods
+            }
+          };
+        });
+      }
+    } catch (err) {
+      console.error(`[Single POD Compare Error]:`, err);
+    } finally {
+      setLoadingPodId(null);
+    }
+  };
+
+  // 3C. Select POD handler (triggers on-demand load if NOT_LOADED)
+  const handleSelectPod = (podId) => {
+    setActivePodId(podId);
+    const targetPod = (matrixData?.pods || []).find(p => String(p.id) === String(podId));
+    if (targetPod && targetPod.status === 'NOT_LOADED') {
+      loadSinglePodComparison(selectedTableName, podId);
+    }
+  };
+
+  // 3D. Full fleet comparison across all PODs (opt-in)
+  const handleCompareAllPods = async () => {
+    if (!selectedMasterId || !selectedTableName) return;
+    setIsComparingAll(true);
+    setError('');
+    try {
+      const fullData = await fetchMasterTableMatrixApi(selectedMasterId, selectedTableName);
+      setMatrixData(fullData);
+    } catch (err) {
+      setError(err.message || 'Gagal membandingkan seluruh armada POD.');
+    } finally {
+      setIsComparingAll(false);
+    }
+  };
+
+  // 4. Refresh Current Matrix (reloads Master + active POD)
   const handleRefreshCurrentMatrix = async (isSoft = false) => {
     if (!selectedMasterId || !selectedTableName) return;
     if (!isSoft && !matrixData) {
@@ -187,11 +306,14 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
     }
     setError('');
     try {
-      const data = await fetchMasterTableMatrixApi(selectedMasterId, selectedTableName);
-      setMatrixData(data);
+      const fastData = await fetchMasterTableFastApi(selectedMasterId, selectedTableName);
+      setMatrixData(fastData);
+      if (activePodId) {
+        loadSinglePodComparison(selectedTableName, activePodId);
+      }
     } catch (err) {
       if (!isSoft) {
-        setError(err.message || 'Gagal memuat ulang matriks.');
+        setError(err.message || 'Gagal memuat ulang data.');
       }
     } finally {
       setIsComparing(false);
@@ -1128,10 +1250,13 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
             masterInfo={matrixData?.master}
             matrixData={matrixData}
             isComparing={isComparing}
+            loadingPodId={loadingPodId}
+            isComparingAll={isComparingAll}
+            onCompareAllPods={handleCompareAllPods}
             onRefresh={() => handleRefreshCurrentMatrix(false)}
             onBackToCatalog={() => setViewMode('catalog')}
             activePodId={activePodId}
-            setActivePodId={setActivePodId}
+            setActivePodId={handleSelectPod}
             onQuickSyncPod={triggerSinglePodSync}
             onBulkSync={triggerBulkSync}
             onDeleteMasterRow={handlePromptDeleteMasterRow}
