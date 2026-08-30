@@ -1112,6 +1112,20 @@ export async function batchDeleteCodeApi(s3Code, filenames = [], serverIds = [],
 }
 
 /**
+ * Check media file integrity using ffprobe & stat on remote POD
+ */
+export async function checkPodFileIntegrityApi(serverId, filePath) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/content/pods/check-file-integrity`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ serverId, filePath })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || `Gagal memeriksa integritas file di POD #${serverId}`);
+  return data.data;
+}
+
+/**
  * Helper to build media streaming URL directly from remote POD via SFTP proxy
  */
 export function getPodFileStreamUrl(serverId, filePath) {

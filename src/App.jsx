@@ -23,6 +23,7 @@ import MasterPodSyncMatrixPage from './pages/MasterPodSyncMatrixPage';
 import TncManagerPage from './pages/TncManagerPage';
 import UserManagerPage from './pages/UserManagerPage';
 import PodLogsSyncPage from './pages/PodLogsSyncPage';
+import PodActivityPage from './pages/PodActivityPage';
 import { useServers } from './hooks/useServers';
 import { useSocket } from './hooks/useSocket';
 import { fetchSettingsApi, saveSettingApi } from './api/vpsApi';
@@ -204,6 +205,8 @@ export default function App() {
       <ErrorBoundary title="Gagal Memuat Tampilan Halaman">
       {currentView === 'database-users' || currentView === 'db-users' || currentView === 'user-manager' ? (
         <UserManagerPage onBack={() => setCurrentView('dashboard')} />
+      ) : currentView === 'pod-activity' || currentView === 'pod-occupancy' ? (
+        <PodActivityPage onBack={() => setCurrentView('dashboard')} />
       ) : currentView === 'pod-logs-sync' || currentView === 'pod-logs' ? (
         <PodLogsSyncPage onBack={() => setCurrentView('dashboard')} />
       ) : currentView === 'tnc-sync-manager' ? (

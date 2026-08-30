@@ -28,7 +28,8 @@ import {
   deleteCodeOnPodApi,
   batchDeleteCodeApi,
   downloadCodeFilesToPodApi,
-  downloadCodeFilesToBatchPodsApi
+  downloadCodeFilesToBatchPodsApi,
+  checkPodFileIntegrityApi
 } from '../api/vpsApi';
 
 import DockerJunkManagerView from '../components/storage/DockerJunkManagerView';
@@ -37,6 +38,7 @@ import DockerCleanupModal from '../components/storage/DockerCleanupModal';
 import CatalogView from '../components/content/CatalogView';
 import CodeWorkspaceView from '../components/content/CodeWorkspaceView';
 import HardDeleteModal from '../components/content/HardDeleteModal';
+import FileIntegrityModal from '../components/content/FileIntegrityModal';
 import io from 'socket.io-client';
 import { SOCKET_URL } from '../config';
 
@@ -109,18 +111,46 @@ export default function StorageManagerPage({ onBack }) {
     });
 
     socket.on('s3_pod_download_complete', (data) => {
+      const serverId = data?.serverId;
+      const serverName = data?.serverName || `POD #${serverId}`;
+
       // Clear progress badge after 2.5 seconds to show completion
       setTimeout(() => {
         setDownloadProgressMap(prev => {
           const next = { ...prev };
           Object.keys(next).forEach(k => {
-            if (k.startsWith(`${data.serverId}_`)) {
+            if (k.startsWith(`${serverId}_`)) {
               delete next[k];
             }
           });
           return next;
         });
       }, 2500);
+
+      // Clear loading actions for this pod
+      setLoadingActions(prev => {
+        const next = { ...prev };
+        Object.keys(next).forEach(k => {
+          if (k.startsWith(`dl_${serverId}_`) || k === `dl_all_${serverId}`) {
+            delete next[k];
+          }
+        });
+        return next;
+      });
+
+      setIsDownloadingAllPods(false);
+
+      if (data?.success === false) {
+        alert(`Gagal mendownload file ke ${serverName}: ${data.error || 'Terjadi kesalahan'}`);
+      } else {
+        const sizeInfo = data?.totalDownloadedFormatted ? ` (${data.totalDownloadedFormatted})` : '';
+        setSuccessToast(`Download ke ${serverName} selesai${sizeInfo}! Status file diperbarui.`);
+        // Re-check this POD to immediately update UI to 'Ada'
+        if (serverId) {
+          checkSinglePodForActiveCode(serverId);
+          refreshSinglePodStorage(serverId);
+        }
+      }
     });
 
     return () => {
@@ -147,6 +177,51 @@ export default function StorageManagerPage({ onBack }) {
 
   // Audio Preview Player
   const [playingAudioUrl, setPlayingAudioUrl] = useState(null);
+
+  // File Integrity Diagnostic State
+  const [integrityMap, setIntegrityMap] = useState({});
+  const [integrityModal, setIntegrityModal] = useState({
+    isOpen: false,
+    data: null,
+    isLoading: false,
+    targetPod: null,
+    targetFilename: ''
+  });
+
+  const handleCheckFileIntegrity = async (pod, filePath, filename) => {
+    const podId = pod.serverId || pod.id;
+    const key = `${podId}_${filePath}`;
+    const actionKey = `integrity_${podId}_${filePath}`;
+
+    setLoadingActions(prev => ({ ...prev, [actionKey]: true }));
+    setIntegrityModal({
+      isOpen: true,
+      data: null,
+      isLoading: true,
+      targetPod: pod,
+      targetFilename: filename
+    });
+
+    try {
+      const data = await checkPodFileIntegrityApi(podId, filePath);
+      setIntegrityMap(prev => ({
+        ...prev,
+        [key]: data
+      }));
+      setIntegrityModal(prev => ({
+        ...prev,
+        isOpen: true,
+        data,
+        isLoading: false
+      }));
+    } catch (err) {
+      console.error(`Error checking integrity of ${filename}:`, err.message);
+      alert(`Gagal memeriksa integritas file: ${err.message}`);
+      setIntegrityModal(prev => ({ ...prev, isOpen: false, isLoading: false }));
+    } finally {
+      setLoadingActions(prev => ({ ...prev, [actionKey]: false }));
+    }
+  };
 
   // Load initial data on mount
   useEffect(() => {
@@ -347,14 +422,14 @@ export default function StorageManagerPage({ onBack }) {
     setLoadingActions(prev => ({ ...prev, [actionKey]: true }));
     try {
       await downloadCodeFilesToPodApi(podId, s3Code, [filename]);
-      // Re-check this POD to immediately update UI to 'Ada'
-      await checkSinglePodForActiveCode(podId);
+      setSuccessToast(`Memulai download "${filename}" ke ${pod.serverName} di latar belakang...`);
     } catch (err) {
-      console.error(`Error downloading ${filename} to ${pod.serverName}:`, err.message);
-      alert(`Gagal mendownload ${filename} ke ${pod.serverName}: ${err.message}`);
-    } finally {
+      console.error(`Error initiating download of ${filename} to ${pod.serverName}:`, err.message);
+      alert(`Gagal memulai download ${filename} ke ${pod.serverName}: ${err.message}`);
       setLoadingActions(prev => ({ ...prev, [actionKey]: false }));
     }
+    // Loading state is kept active while background task is downloading,
+    // and cleared upon WebSocket s3_pod_download_complete event.
   };
 
   // 2. Download all missing files for a specific POD
@@ -368,13 +443,16 @@ export default function StorageManagerPage({ onBack }) {
     try {
       const podStatus = detailPodsStatus[podId];
       const missingFiles = (podStatus?.missingFiles || []).map(f => typeof f === 'string' ? f : f.filename);
+      if (missingFiles.length === 0) {
+        alert(`Semua file sudah lengkap di ${pod.serverName}.`);
+        setLoadingActions(prev => ({ ...prev, [actionKey]: false }));
+        return;
+      }
       await downloadCodeFilesToPodApi(podId, s3Code, missingFiles);
-      // Re-check this POD
-      await checkSinglePodForActiveCode(podId);
+      setSuccessToast(`Memulai download ${missingFiles.length} file missing ke ${pod.serverName} di latar belakang...`);
     } catch (err) {
-      console.error(`Error downloading missing files to ${pod.serverName}:`, err.message);
-      alert(`Gagal mendownload file missing ke ${pod.serverName}: ${err.message}`);
-    } finally {
+      console.error(`Error initiating download of missing files to ${pod.serverName}:`, err.message);
+      alert(`Gagal memulai download file missing ke ${pod.serverName}: ${err.message}`);
       setLoadingActions(prev => ({ ...prev, [actionKey]: false }));
     }
   };
@@ -393,12 +471,10 @@ export default function StorageManagerPage({ onBack }) {
     try {
       const serverIds = targetPods.map(p => p.serverId);
       await downloadCodeFilesToBatchPodsApi(serverIds, s3Code, []);
-      // Re-check all PODs
-      await checkPodsForActiveCode(s3Code);
+      setSuccessToast(`Memulai batch download ke ${serverIds.length} unit POD di latar belakang...`);
     } catch (err) {
-      console.error('Error batch downloading to all PODs:', err.message);
-      alert(`Gagal sync ke semua POD: ${err.message}`);
-    } finally {
+      console.error('Error starting batch download to all PODs:', err.message);
+      alert(`Gagal memulai sync ke semua POD: ${err.message}`);
       setIsDownloadingAllPods(false);
     }
   };
@@ -817,6 +893,15 @@ export default function StorageManagerPage({ onBack }) {
           isDownloadingAllPods={isDownloadingAllPods}
           downloadProgressMap={downloadProgressMap}
           loadingActions={loadingActions}
+          integrityMap={integrityMap}
+          onCheckFileIntegrity={handleCheckFileIntegrity}
+          onViewIntegrityDetail={(data) => setIntegrityModal({
+            isOpen: true,
+            data,
+            isLoading: false,
+            targetPod: null,
+            targetFilename: data?.filename || ''
+          })}
         />
       )}
 
@@ -841,6 +926,19 @@ export default function StorageManagerPage({ onBack }) {
         title={confirmModal.title}
         description={confirmModal.description}
         podNameLabel={confirmModal.podNameLabel}
+      />
+
+      {/* Media File Integrity & ffprobe Diagnostic Modal */}
+      <FileIntegrityModal
+        isOpen={integrityModal.isOpen}
+        onClose={() => setIntegrityModal(prev => ({ ...prev, isOpen: false }))}
+        data={integrityModal.data}
+        isLoading={integrityModal.isLoading}
+        onRedownload={integrityModal.targetPod && integrityModal.targetFilename ? () => {
+          const { targetPod, targetFilename } = integrityModal;
+          setIntegrityModal(prev => ({ ...prev, isOpen: false }));
+          handleDownloadSingleFileToPod(targetPod, targetFilename);
+        } : null}
       />
 
       {/* Hidden Audio Player for Previews */}

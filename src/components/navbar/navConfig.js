@@ -10,7 +10,8 @@ import {
   FileCode,
   Shuffle,
   Wrench,
-  Users
+  Users,
+  UserCheck
 } from 'lucide-react';
 
 /**
@@ -121,6 +122,14 @@ export const NAV_DROPDOWN_GROUPS = [
     badge: 'Tools',
     color: 'cyan',
     items: [
+      {
+        id: 'pod-activity',
+        label: 'POD Activity',
+        desc: 'Monitoring Keterisian & Status POB (mod_chair/pob_state)',
+        icon: UserCheck,
+        colorClass: 'text-emerald-400',
+        bgActiveClass: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+      },
       {
         id: 'storage-manager',
         aliases: ['storage', 'content-manager', 'content'],

@@ -15,7 +15,12 @@ import {
   X,
   Eye,
   Download,
-  CloudDownload
+  CloudDownload,
+  Stethoscope,
+  ShieldCheck,
+  ShieldAlert,
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
 import MediaPreviewModal from './MediaPreviewModal';
 import { getPodFileStreamUrl } from '../../api/vpsApi';
@@ -45,7 +50,10 @@ export default function CodeWorkspaceView({
   onDownloadMissingToAllPods,
   isDownloadingAllPods,
   downloadProgressMap = {},
-  loadingActions
+  loadingActions,
+  integrityMap = {},
+  onCheckFileIntegrity,
+  onViewIntegrityDetail
 }) {
   const code = activeCodeDetail?.code;
   const totalFiles = detailS3Files?.totalFiles ?? activeCodeDetail?.totalFiles ?? 0;
@@ -398,47 +406,122 @@ export default function CodeWorkspaceView({
                       {podCheck.files?.map(f => {
                         const fileCategory = f.category || (f.folderType === 'sounds' ? 'audio' : f.folderType === 'videos' ? 'video' : 'image');
                         const streamUrl = getPodFileStreamUrl(pod.serverId, f.fullPath);
+                        const integrityKey = `${pod.serverId}_${f.fullPath}`;
+                        const isIntegrityChecking = !!loadingActions[`integrity_${pod.serverId}_${f.fullPath}`];
+                        const integrityData = integrityMap[integrityKey];
 
                         return (
                           <div
                             key={f.fullPath}
-                            onClick={() => handleOpenPreview({
-                              filename: f.filename,
-                              category: fileCategory,
-                              sizeFormatted: f.sizeFormatted,
-                              url: streamUrl,
-                              sourceLabel: `${pod.serverName} • /${f.folderType}`
-                            })}
-                            className="p-2 rounded-xl bg-emerald-950/20 hover:bg-emerald-950/40 border border-emerald-500/30 hover:border-emerald-500/60 flex items-center justify-between text-xs gap-2 cursor-pointer transition-all group"
-                            title="Klik untuk Preview Media langsung dari Server POD via Stream"
+                            className="p-2 rounded-xl bg-emerald-950/20 hover:bg-emerald-950/30 border border-emerald-500/30 hover:border-emerald-500/50 flex flex-col gap-1 text-xs transition-all group"
                           >
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <Check size={13} className="text-emerald-400 shrink-0" />
-                              <span className="font-bold text-white truncate text-[11px] group-hover:text-emerald-300 transition-colors" title={f.filename}>
-                                {f.filename}
-                              </span>
+                            <div
+                              onClick={() => handleOpenPreview({
+                                filename: f.filename,
+                                category: fileCategory,
+                                sizeFormatted: f.sizeFormatted,
+                                url: streamUrl,
+                                sourceLabel: `${pod.serverName} • /${f.folderType}`
+                              })}
+                              className="flex items-center justify-between gap-2 cursor-pointer"
+                              title="Klik untuk Preview Media langsung dari Server POD via Stream"
+                            >
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <Check size={13} className="text-emerald-400 shrink-0" />
+                                <span className="font-bold text-white truncate text-[11px] group-hover:text-emerald-300 transition-colors" title={f.filename}>
+                                  {f.filename}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <span className="text-[9.5px] font-mono text-emerald-300">
+                                  {f.sizeFormatted} &bull; /{f.folderType}
+                                </span>
+
+                                {/* Tombol Cek Integritas (ffprobe) */}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onCheckFileIntegrity?.(pod, f.fullPath, f.filename);
+                                  }}
+                                  disabled={isIntegrityChecking}
+                                  className={`p-1 rounded-lg border transition-all cursor-pointer ${
+                                    integrityData?.isCorrupt
+                                      ? 'bg-rose-500/25 text-rose-300 border-rose-500/40 hover:bg-rose-500/35'
+                                      : integrityData?.status === 'healthy'
+                                        ? 'bg-emerald-500/25 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/35'
+                                        : 'bg-slate-900 hover:bg-slate-800 text-cyan-400 hover:text-white border-slate-700'
+                                  }`}
+                                  title="Cek Integritas &amp; Validitas Media (ffprobe: codec, durasi, bitrate, kesehatan file)"
+                                >
+                                  {isIntegrityChecking ? (
+                                    <RefreshCw size={11} className="animate-spin text-cyan-400" />
+                                  ) : integrityData?.isCorrupt ? (
+                                    <ShieldAlert size={11} className="text-rose-400" />
+                                  ) : integrityData?.status === 'healthy' ? (
+                                    <ShieldCheck size={11} className="text-emerald-400" />
+                                  ) : (
+                                    <Stethoscope size={11} />
+                                  )}
+                                </button>
+
+                                {/* Tombol Buka Preview */}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenPreview({
+                                      filename: f.filename,
+                                      category: fileCategory,
+                                      sizeFormatted: f.sizeFormatted,
+                                      url: streamUrl,
+                                      sourceLabel: `${pod.serverName} • /${f.folderType}`
+                                    });
+                                  }}
+                                  className="p-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-emerald-400 hover:text-white border border-slate-700 transition-colors cursor-pointer"
+                                  title="Buka Preview Modal dari POD"
+                                >
+                                  <Eye size={11} />
+                                </button>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <span className="text-[9.5px] font-mono text-emerald-300">
-                                {f.sizeFormatted} &bull; /{f.folderType}
-                              </span>
-                              <button
+
+                            {/* Badge Diagnosa Integritas (Hasil ffprobe) */}
+                            {integrityData && (
+                              <div
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleOpenPreview({
-                                    filename: f.filename,
-                                    category: fileCategory,
-                                    sizeFormatted: f.sizeFormatted,
-                                    url: streamUrl,
-                                    sourceLabel: `${pod.serverName} • /${f.folderType}`
-                                  });
+                                  onViewIntegrityDetail?.(integrityData);
                                 }}
-                                className="p-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-emerald-400 hover:text-white border border-slate-700 transition-colors cursor-pointer"
-                                title="Buka Preview Modal dari POD"
+                                className={`mt-0.5 px-2 py-1 rounded-lg text-[10px] font-mono flex items-center justify-between gap-1 border cursor-pointer transition-all ${
+                                  integrityData.isCorrupt
+                                    ? 'bg-rose-950/50 text-rose-300 border-rose-500/40 hover:bg-rose-950/70'
+                                    : 'bg-emerald-950/40 text-emerald-300 border-emerald-500/40 hover:bg-emerald-950/60'
+                                }`}
+                                title="Klik untuk melihat laporan diagnostik ffprobe lengkap"
                               >
-                                <Eye size={11} />
-                              </button>
-                            </div>
+                                <span className="flex items-center gap-1.5 truncate">
+                                  {integrityData.isCorrupt ? (
+                                    <>
+                                      <AlertTriangle size={11} className="text-rose-400 shrink-0" />
+                                      <b className="text-rose-400">KORUP:</b> {integrityData.message}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <CheckCircle2 size={11} className="text-emerald-400 shrink-0" />
+                                      <span>
+                                        <b>Sehat &amp; Utuh</b>
+                                        {integrityData.durationFormatted ? ` • ${integrityData.durationFormatted}` : ''}
+                                        {integrityData.bitrateFormatted ? ` • ${integrityData.bitrateFormatted}` : ''}
+                                      </span>
+                                    </>
+                                  )}
+                                </span>
+                                <span className="text-[9px] underline text-cyan-300 shrink-0 font-sans font-bold">
+                                  Rincian &rsaquo;
+                                </span>
+                              </div>
+                            )}
                           </div>
                         );
                       })}

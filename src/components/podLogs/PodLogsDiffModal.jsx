@@ -89,6 +89,10 @@ export default function PodLogsDiffModal({
       const res = await executePullPodLogsApi({
         masterId,
         targetPodIds: [pod.id],
+        podIds: [pod.id],
+        mode: 'id_diff',
+        batchSize: 2000,
+        markSyncedOnPod: true,
         options: {
           mode: 'id_diff',
           batchSize: 2000,
@@ -139,6 +143,7 @@ export default function PodLogsDiffModal({
   const missingRows = diffData?.missingInMasterRows || [];
   const presentRows = diffData?.presentInMasterRows || [];
   const falseSyncedCount = counts.falseSyncedCount || 0;
+  const actualMissingCount = counts.actualMissingCount !== undefined ? counts.actualMissingCount : missingRows.length;
 
   return (
     <div className="fixed inset-0 z-[1150] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5">
@@ -220,16 +225,18 @@ export default function PodLogsDiffModal({
               </span>
               <div className="my-1.5">
                 <div className="text-xl font-mono font-bold text-amber-400">
-                  {isLoading ? '...' : missingRows.length.toLocaleString()}
+                  {isLoading ? '...' : actualMissingCount.toLocaleString()}
                 </div>
                 <span className="text-[10px] text-amber-300/80 font-medium">
-                  baris ID tidak ditemukan di Master (dari sampel)
+                  {actualMissingCount > 0
+                    ? `${actualMissingCount} baris fisik belum masuk ke Master RDS`
+                    : 'Seluruh baris log sudah sinkron di Master'}
                 </span>
               </div>
               {falseSyncedCount > 0 && (
                 <div className="text-[10px] text-rose-300 font-semibold bg-rose-500/20 px-2 py-0.5 rounded border border-rose-500/30 inline-flex items-center gap-1 mt-1">
                   <ShieldAlert size={12} className="text-rose-400 shrink-0" />
-                  <span>{falseSyncedCount} baris is_synced=true tapi belum di Master!</span>
+                  <span>{falseSyncedCount} baris is_synced=true tapi fisik belum di Master!</span>
                 </div>
               )}
             </div>
@@ -291,7 +298,7 @@ export default function PodLogsDiffModal({
                 }`}
             >
               <ArrowDownCircle size={14} />
-              <span>Belum Ada di Master RDS ({missingRows.length})</span>
+              <span>Belum Ada di Master RDS ({actualMissingCount})</span>
             </button>
 
             <button
@@ -322,7 +329,7 @@ export default function PodLogsDiffModal({
             <div className="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden flex flex-col">
               <div className="bg-slate-900/70 border-b border-slate-800 px-4 py-2.5 flex items-center justify-between text-xs text-slate-400">
                 <span>
-                  Daftar <b className="text-white">{missingRows.length} baris log di POD</b> yang <b className="text-rose-400">ID-nya tidak ditemukan</b> di Master RDS:
+                  Daftar <b className="text-white">{actualMissingCount} baris log di POD</b> yang <b className="text-rose-400">ID-nya tidak ditemukan</b> di Master RDS:
                 </span>
               </div>
 
@@ -336,11 +343,11 @@ export default function PodLogsDiffModal({
                   <AlertCircle size={22} className="mx-auto mb-2 text-rose-400" />
                   <span>{error}</span>
                 </div>
-              ) : missingRows.length === 0 ? (
+              ) : actualMissingCount === 0 ? (
                 <div className="p-12 text-center text-slate-500 text-xs flex flex-col items-center gap-1">
                   <CheckCircle2 size={24} className="text-emerald-400 opacity-60 mb-1" />
-                  <span className="font-bold text-slate-300">Semua baris sampel terverifikasi sudah ada di Master RDS!</span>
-                  <span className="text-[11px] text-slate-500">Tidak ada ID yang tertinggal pada sampel data terbaru unit {pod.name}.</span>
+                  <span className="font-bold text-slate-300">Semua baris terverifikasi sudah ada di Master RDS!</span>
+                  <span className="text-[11px] text-slate-500">Tidak ada ID yang tertinggal pada database unit {pod.name}.</span>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
