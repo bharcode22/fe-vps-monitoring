@@ -1,8 +1,8 @@
 /**
  * Centralized Application & Backend Configuration
- * - Development: automatically uses .env.development (http://localhost:5002)
- * - Production: automatically uses .env.production (Server #8 Workstation)
- * - Clean UI without exposing raw backend URLs
+ * - Development (npm run dev): uses .env.development (http://localhost:5002)
+ * - Production (npm run build): uses .env.production (Server #8 Workstation)
+ * - Localhost is completely stripped/hidden from production builds
  */
 
 export const BACKEND_PRESETS = [
@@ -12,7 +12,7 @@ export const BACKEND_PRESETS = [
     url: 'https://utilities-workstation-hide-economies.trycloudflare.com',
     desc: 'Server Monitoring Utama (Workstation #8)',
     badge: 'Server #8',
-    isDefault: !import.meta.env.DEV
+    isDefault: true
   },
   {
     id: 'server-aws',
@@ -22,14 +22,19 @@ export const BACKEND_PRESETS = [
     badge: 'Server AWS',
     isDefault: false
   },
-  {
-    id: 'local',
-    name: 'Localhost Development',
-    url: 'http://localhost:5002',
-    desc: 'Development Server Lokal (Port 5002)',
-    badge: 'Localhost',
-    isDefault: !!import.meta.env.DEV
-  }
+  // Only include Localhost preset when running in DEV mode (npm run dev)
+  ...(import.meta.env.DEV
+    ? [
+      {
+        id: 'local',
+        name: 'Localhost Development',
+        url: 'http://localhost:5002',
+        desc: 'Development Server Lokal (Port 5002)',
+        badge: 'Localhost',
+        isDefault: false
+      }
+    ]
+    : [])
 ];
 
 // Fallback to Server #8 if environment variable is not defined
@@ -41,8 +46,16 @@ function resolveBackendUrl() {
   if (typeof window !== 'undefined') {
     try {
       const saved = localStorage.getItem('vps_active_backend_url');
-      if (saved && saved.trim()) return saved.trim().replace(/\/+$/, '');
-    } catch (e) {}
+      if (saved && saved.trim()) {
+        const cleanSaved = saved.trim().replace(/\/+$/, '');
+        // In production build, purge and ignore any leftover localhost URL
+        if (import.meta.env.PROD && (cleanSaved.includes('localhost') || cleanSaved.includes('127.0.0.1'))) {
+          localStorage.removeItem('vps_active_backend_url');
+        } else {
+          return cleanSaved;
+        }
+      }
+    } catch (e) { }
   }
   return DEFAULT_BACKEND_URL;
 }
@@ -77,5 +90,5 @@ export function getActiveBackendInfo() {
   const current = BACKEND_URL;
   const found = BACKEND_PRESETS.find(p => p.url === current);
   if (found) return found;
-  return import.meta.env.DEV ? BACKEND_PRESETS[2] : BACKEND_PRESETS[0];
+  return BACKEND_PRESETS[0];
 }

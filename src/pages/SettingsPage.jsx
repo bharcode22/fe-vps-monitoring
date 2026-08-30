@@ -574,8 +574,8 @@ export default function SettingsPage({
               </div>
 
               {/* Preset Backend Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {BACKEND_PRESETS.map(preset => {
+              <div className={`grid grid-cols-1 ${BACKEND_PRESETS.length > 2 ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2'} gap-3.5`}>
+                {BACKEND_PRESETS.filter(p => import.meta.env.DEV || p.id !== 'local').map(preset => {
                   const isCurrent = BACKEND_URL === preset.url;
                   return (
                     <div
