@@ -22,6 +22,7 @@ import PodTopicDebuggerPage from './pages/PodTopicDebuggerPage';
 import MasterPodSyncMatrixPage from './pages/MasterPodSyncMatrixPage';
 import TncManagerPage from './pages/TncManagerPage';
 import UserManagerPage from './pages/UserManagerPage';
+import PodLogsSyncPage from './pages/PodLogsSyncPage';
 import { useServers } from './hooks/useServers';
 import { useSocket } from './hooks/useSocket';
 import { fetchSettingsApi, saveSettingApi } from './api/vpsApi';
@@ -176,7 +177,9 @@ export default function App() {
     'storage-manager',
     'storage',
     'content-manager',
-    'content'
+    'content',
+    'pod-logs-sync',
+    'pod-logs'
   ].includes(currentView);
 
   return (
@@ -201,6 +204,8 @@ export default function App() {
       <ErrorBoundary title="Gagal Memuat Tampilan Halaman">
       {currentView === 'database-users' || currentView === 'db-users' || currentView === 'user-manager' ? (
         <UserManagerPage onBack={() => setCurrentView('dashboard')} />
+      ) : currentView === 'pod-logs-sync' || currentView === 'pod-logs' ? (
+        <PodLogsSyncPage onBack={() => setCurrentView('dashboard')} />
       ) : currentView === 'tnc-sync-manager' ? (
         <TncManagerPage onBack={() => setCurrentView('dashboard')} />
       ) : currentView === 'master-pod-sync' || currentView === 'master-sync' ? (

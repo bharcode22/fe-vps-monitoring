@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Server, Box, Cpu, HardDrive, ArrowDown, ArrowUp, Zap, Clock, ShieldCheck, Edit3, Activity, FileCode, Music, Layers, Sliders, Tv, Eye, EyeOff, Package, Terminal as TerminalIcon, Radio } from 'lucide-react';
+import { X, Server, Box, Cpu, HardDrive, ArrowDown, ArrowUp, Zap, Clock, ShieldCheck, Edit3, Activity, FileCode, Music, Layers, Sliders, Tv, Eye, EyeOff, Package, Terminal as TerminalIcon, Radio, FileText } from 'lucide-react';
 import MetricsChart from '../MetricsChart';
 import { fetchServerHistoryApi } from '../../api/vpsApi';
 import { formatMbToGb } from '../../utils/formatters';
@@ -12,16 +12,16 @@ import ScriptExecTab from './ScriptExecTab';
 import SoundsTab from './SoundsTab';
 import PodConfigTab from './PodConfigTab';
 import InstalledVersionsTab from './InstalledVersionsTab';
-import SshTerminalModal from './SshTerminalModal';
+import SshTerminalTab from './SshTerminalTab';
 import PodTopicDiagnosticsTab from './PodTopicDiagnosticsTab';
+import RegenesisLogsTab from './RegenesisLogsTab';
 
 export default function ServerDetailModal({ server, onClose, onEdit }) {
   const { isAuthenticated } = useAuth();
   const [showHost, setShowHost] = useState(false);
-  const [viewMode, setViewMode] = useState('metrics'); // 'metrics' | 'docker' | 'scripts' | 'sounds'
+  const [viewMode, setViewMode] = useState('metrics'); // 'metrics' | 'terminal' | 'docker' | 'scripts' | 'sounds'
   const [activeTab, setActiveTab] = useState('bandwidth');
   const [historyData, setHistoryData] = useState([]);
-  const [isTerminalModalOpen, setIsTerminalModalOpen] = useState(false);
 
   const serverId = server?.id;
   const metrics = server?.currentMetrics || {};
@@ -146,17 +146,7 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
               <span>{isOnline ? 'ONLINE' : 'OFFLINE'}</span>
             </div>
 
-            {/* SSH Terminal Quick Launch Button (Admin Only) */}
-            {isAuthenticated && (
-              <button
-                onClick={() => setIsTerminalModalOpen(true)}
-                className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-emerald-500/20 cursor-pointer"
-                title="Buka Terminal SSH Interaktif"
-              >
-                <TerminalIcon size={16} />
-                <span>SSH Terminal</span>
-              </button>
-            )}
+
 
             {/* Edit Button (Admin Only) */}
             {isAuthenticated && server.is_local !== 1 && (
@@ -187,6 +177,16 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
                 }`}
             >
               <Activity size={16} /> Metrik & Grafik Real-time
+            </button>
+
+            <button
+              onClick={() => setViewMode('terminal')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${viewMode === 'terminal'
+                ? 'bg-gradient-to-r from-emerald-400 to-teal-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                : 'bg-white/5 text-slate-400 hover:text-slate-200'
+                }`}
+            >
+              <TerminalIcon size={16} /> Terminal SSH
             </button>
 
             <button
@@ -280,12 +280,26 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
                 <Radio size={16} /> Topic DB (regenesis)
               </button>
             )}
+
+            {isPod && podVersionText !== 'V2' && (
+              <button
+                onClick={() => setViewMode('regenesis-logs')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${viewMode === 'regenesis-logs'
+                  ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md shadow-indigo-500/20'
+                  : 'bg-white/5 text-slate-400 hover:text-slate-200'
+                  }`}
+              >
+                <FileText size={16} /> Regenesis Logs
+              </button>
+            )}
           </div>
         )}
 
         {/* Dynamic Content View with Error Boundary Protection */}
         <ErrorBoundary title="Gagal Memuat Tab Detail Server">
-          {viewMode === 'docker' && isAuthenticated ? (
+          {viewMode === 'terminal' && isAuthenticated ? (
+            <SshTerminalTab server={server} />
+          ) : viewMode === 'docker' && isAuthenticated ? (
             <DockerContainerTab serverId={server.id} />
           ) : viewMode === 'screen' && isAuthenticated ? (
             <ScreenAppsTab serverId={server.id} />
@@ -301,6 +315,8 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
             <InstalledVersionsTab server={server} />
           ) : viewMode === 'pod-topics' && isAuthenticated ? (
             <PodTopicDiagnosticsTab serverId={server.id} />
+          ) : viewMode === 'regenesis-logs' && isAuthenticated ? (
+            <RegenesisLogsTab serverId={server.id} />
           ) : (
             <div>
               {/* Real-time Current Metrics Grid */}
@@ -468,15 +484,6 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
           )}
         </ErrorBoundary>
       </div>
-
-      {/* Interactive Web SSH Terminal Modal */}
-      {isTerminalModalOpen && (
-        <SshTerminalModal
-          isOpen={isTerminalModalOpen}
-          onClose={() => setIsTerminalModalOpen(false)}
-          server={server}
-        />
-      )}
     </div>
   );
 }

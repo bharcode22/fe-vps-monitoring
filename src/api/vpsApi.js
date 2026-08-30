@@ -1199,4 +1199,92 @@ export async function cleanupRogueFilesApi(serverId, filePaths, isDryRun = true)
   return data;
 }
 
+/**
+ * Fetch list of all log files in /home/pod/Documents/RegenesisLogs on a POD V3
+ */
+export async function fetchRegenesisLogsApi(serverId) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/${serverId}/regenesis-logs`, {
+    method: 'GET',
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal mengambil daftar Regenesis Logs');
+  return data;
+}
+
+/**
+ * Fetch content of a specific log file with line limit and search keyword
+ */
+export async function fetchRegenesisLogContentApi(serverId, filename, options = {}) {
+  const params = new URLSearchParams({
+    file: filename,
+    lines: options.lines || 500,
+    search: options.search || '',
+    direction: options.direction || 'tail'
+  });
+
+  const res = await fetch(`${BACKEND_URL}/api/vps/${serverId}/regenesis-logs/content?${params.toString()}`, {
+    method: 'GET',
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal membaca isi file log');
+  return data.data;
+}
+
+/**
+ * Generate direct download URL for a log file
+ */
+export function getRegenesisLogDownloadUrl(serverId, filename) {
+  const token = localStorage.getItem('vps_monitoring_token') || '';
+  return `${BACKEND_URL}/api/vps/${serverId}/regenesis-logs/download?file=${encodeURIComponent(filename)}&token=${encodeURIComponent(token)}`;
+}
+
+/**
+ * Trigger browser file download directly via fetch & blob (with auth header)
+ */
+export async function downloadRegenesisLogApi(serverId, filename) {
+  const token = localStorage.getItem('vps_monitoring_token') || '';
+  const url = `${BACKEND_URL}/api/vps/${serverId}/regenesis-logs/download?file=${encodeURIComponent(filename)}`;
+
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    }
+  });
+
+  if (!res.ok) {
+    let errMsg = `Gagal mengunduh file (${res.status})`;
+    try {
+      const errJson = await res.json();
+      if (errJson.error) errMsg = errJson.error;
+    } catch (_) {}
+    throw new Error(errMsg);
+  }
+
+  const blob = await res.blob();
+  const blobUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(blobUrl);
+  document.body.removeChild(a);
+}
+
+/**
+ * Delete a log file from POD server
+ */
+export async function deleteRegenesisLogApi(serverId, filename) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/${serverId}/regenesis-logs?file=${encodeURIComponent(filename)}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal menghapus file log');
+  return data;
+}
+
 

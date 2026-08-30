@@ -79,6 +79,15 @@ export const NAV_DROPDOWN_GROUPS = [
         bgActiveClass: 'bg-blue-500/15 text-blue-300 border-blue-500/30'
       },
       {
+        id: 'pod-logs-sync',
+        aliases: ['pod-logs'],
+        label: 'POD Logs Sync',
+        desc: 'Tarik pod_logs skala besar dari POD V3 ke Master DB',
+        icon: Database,
+        colorClass: 'text-rose-400',
+        bgActiveClass: 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+      },
+      {
         id: 'pod-topic-debugger',
         aliases: ['pod-topics'],
         label: 'POD Topic Matrix',
