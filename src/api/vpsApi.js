@@ -1301,4 +1301,72 @@ export async function deleteRegenesisLogApi(serverId, filename) {
   return data;
 }
 
+// ============================================================================
+// Flow Editor Media Storage APIs (Master RDS, S3 images/, POD V3)
+// ============================================================================
+
+export async function getFlowEditorFilesApi() {
+  const res = await fetch(`${BACKEND_URL}/api/vps/flow-editor/files`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memuat daftar file Flow Editor');
+  return data.data;
+}
+
+export async function checkFlowEditorPodsApi(serverIds = []) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/flow-editor/pods/check`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ serverIds })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memeriksa file Flow Editor di POD');
+  return data.data;
+}
+
+export async function downloadFlowFilesToPodApi(serverId, filenames = []) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/flow-editor/pods/download`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ serverId, filenames })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || `Gagal mendownload flow file ke POD #${serverId}`);
+  return data;
+}
+
+export async function downloadFlowFilesToBatchPodsApi(serverIds = [], filenames = []) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/flow-editor/pods/download-batch`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ serverIds, filenames })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal mendownload batch flow file ke POD');
+  return data;
+}
+
+export async function deleteFlowFileFromPodApi(serverId, filename, folderType = 'images') {
+  const res = await fetch(`${BACKEND_URL}/api/vps/flow-editor/pods/delete`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ serverId, filename, folderType })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal menghapus flow file dari POD');
+  return data.data;
+}
+
+export async function deleteFlowFileFromS3Api(filename) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/flow-editor/s3/delete`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ filename })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal menghapus file dari S3');
+  return data.data;
+}
+
 

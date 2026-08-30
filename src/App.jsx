@@ -24,6 +24,7 @@ import TncManagerPage from './pages/TncManagerPage';
 import UserManagerPage from './pages/UserManagerPage';
 import PodLogsSyncPage from './pages/PodLogsSyncPage';
 import PodActivityPage from './pages/PodActivityPage';
+import SettingsPage from './pages/SettingsPage';
 import { useServers } from './hooks/useServers';
 import { useSocket } from './hooks/useSocket';
 import { fetchSettingsApi, saveSettingApi } from './api/vpsApi';
@@ -49,7 +50,7 @@ export default function App() {
 
   // Auto switch back to dashboard when user logs out (wait until auth initialization completes)
   useEffect(() => {
-    const protectedViews = ['sync', 'sounds-comparison', 'metadata-comparison', 'rabbitmq', 'installation', 'instalation', 'content-manager', 'content', 'pod-topic-debugger', 'pod-topics'];
+    const protectedViews = ['sync', 'sounds-comparison', 'metadata-comparison', 'rabbitmq', 'installation', 'instalation', 'content-manager', 'content', 'pod-topic-debugger', 'pod-topics', 'settings'];
     if (!loading && !isAuthenticated && protectedViews.includes(currentView)) {
       setCurrentView('dashboard');
     }
@@ -203,7 +204,14 @@ export default function App() {
 
       {/* Render View: Dashboard, Server List, Installation, or Tools */}
       <ErrorBoundary title="Gagal Memuat Tampilan Halaman">
-      {currentView === 'database-users' || currentView === 'db-users' || currentView === 'user-manager' ? (
+      {currentView === 'settings' ? (
+        <SettingsPage
+          onBack={() => setCurrentView('dashboard')}
+          onOpenUserModal={() => setIsUserModalOpen(true)}
+          isTvMode={isTvMode}
+          onToggleTvMode={handleToggleTvMode}
+        />
+      ) : currentView === 'database-users' || currentView === 'db-users' || currentView === 'user-manager' ? (
         <UserManagerPage onBack={() => setCurrentView('dashboard')} />
       ) : currentView === 'pod-activity' || currentView === 'pod-occupancy' ? (
         <PodActivityPage onBack={() => setCurrentView('dashboard')} />

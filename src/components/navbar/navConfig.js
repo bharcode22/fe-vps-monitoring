@@ -133,7 +133,7 @@ export const NAV_DROPDOWN_GROUPS = [
       {
         id: 'storage-manager',
         aliases: ['storage', 'content-manager', 'content'],
-        label: 'Storage & Docker Manager',
+        label: 'Storage Manager',
         desc: 'Pembersih Docker Junk & Media Disk 1TB',
         icon: HardDrive,
         colorClass: 'text-cyan-400',

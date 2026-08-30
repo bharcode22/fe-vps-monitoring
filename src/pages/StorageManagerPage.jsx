@@ -11,7 +11,9 @@ import {
   Folder,
   Layers,
   Sparkles,
-  Search
+  Search,
+  LayoutGrid,
+  Server
 } from 'lucide-react';
 import {
   fetchPodsStorageSummaryApi,
@@ -39,6 +41,7 @@ import CatalogView from '../components/content/CatalogView';
 import CodeWorkspaceView from '../components/content/CodeWorkspaceView';
 import HardDeleteModal from '../components/content/HardDeleteModal';
 import FileIntegrityModal from '../components/content/FileIntegrityModal';
+import FlowEditorStorageView from '../components/storage/FlowEditorStorageView';
 import io from 'socket.io-client';
 import { SOCKET_URL } from '../config';
 
@@ -704,6 +707,8 @@ export default function StorageManagerPage({ onBack }) {
   const tabs = [
     { id: 'docker_storage', label: 'Sampah Docker & Disk 1 TB', icon: Zap, color: 'cyan', badge: `${storageData?.pods?.length || 0} POD` },
     { id: 'media_catalog', label: 'Direktori Media & S3', icon: Cloud, color: 'rose', badge: `${allFolders.length} Kode S3` },
+    { id: 'flow_pods', label: 'Unit POD Flow Editor', icon: Server, color: 'indigo', badge: `${storageData?.pods?.length || 0} POD` },
+    { id: 'flow_catalog', label: 'Katalog File Flow Editor', icon: LayoutGrid, color: 'purple', badge: '49 File' },
     { id: 'rogue_scanner', label: 'Rogue Media Scanner', icon: Search, color: 'emerald' }
   ];
 
@@ -726,7 +731,7 @@ export default function StorageManagerPage({ onBack }) {
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                  <span>Storage &amp; Docker Manager</span>
+                  <span>Storage Manager</span>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
                     POD v3 Volume Hub
                   </span>
@@ -804,6 +809,12 @@ export default function StorageManagerPage({ onBack }) {
               emerald: isActive
                 ? 'bg-gradient-to-r from-emerald-500/25 to-teal-500/25 text-emerald-300 border-emerald-500/40 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60',
+              purple: isActive
+                ? 'bg-gradient-to-r from-purple-500/25 to-pink-500/25 text-purple-300 border-purple-500/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60',
+              indigo: isActive
+                ? 'bg-gradient-to-r from-indigo-500/25 to-blue-500/25 text-indigo-300 border-indigo-500/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60',
             }[tab.color];
 
             return (
@@ -845,6 +856,28 @@ export default function StorageManagerPage({ onBack }) {
       {/* TAB 3: Rogue Media Scanner */}
       {activeTab === 'rogue_scanner' && !activeCodeDetail && (
         <RogueMediaScannerView />
+      )}
+
+      {/* TAB 3: Unit POD Flow Editor Manager */}
+      {activeTab === 'flow_pods' && !activeCodeDetail && (
+        <FlowEditorStorageView
+          viewMode="pods"
+          pods={storageData?.pods || []}
+          downloadProgressMap={downloadProgressMap}
+          onCheckIntegrity={handleCheckFileIntegrity}
+          onSwitchViewMode={(m) => setActiveTab(m === 'files' ? 'flow_catalog' : 'flow_pods')}
+        />
+      )}
+
+      {/* TAB 4: Katalog File Flow Editor */}
+      {activeTab === 'flow_catalog' && !activeCodeDetail && (
+        <FlowEditorStorageView
+          viewMode="files"
+          pods={storageData?.pods || []}
+          downloadProgressMap={downloadProgressMap}
+          onCheckIntegrity={handleCheckFileIntegrity}
+          onSwitchViewMode={(m) => setActiveTab(m === 'pods' ? 'flow_pods' : 'flow_catalog')}
+        />
       )}
 
       {/* TAB 2: Level 1 Media & S3 Catalog */}

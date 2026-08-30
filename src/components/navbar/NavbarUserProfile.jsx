@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { ChevronDown, Users, LogOut, Lock } from 'lucide-react';
+import { ChevronDown, Users, LogOut, Lock, Settings } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../../context/AuthContext';
 
@@ -8,6 +8,7 @@ export default function NavbarUserProfile({
   onToggle,
   onClose,
   onOpenUserModal,
+  onOpenSettings,
   onNavigateHome
 }) {
   const userMenuRef = useRef(null);
@@ -126,6 +127,23 @@ export default function NavbarUserProfile({
               </div>
             </div>
           </div>
+
+          {/* Settings & Profile Navigation */}
+          <button
+            onClick={() => {
+              if (onOpenSettings) onOpenSettings();
+              onClose();
+            }}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs font-bold text-slate-200 hover:bg-slate-800 hover:text-cyan-300 transition-colors cursor-pointer mb-1"
+          >
+            <div className="flex items-center gap-2.5">
+              <Settings size={15} className="text-cyan-400" />
+              <span>Pengaturan &amp; Profil</span>
+            </div>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300">
+              Settings
+            </span>
+          </button>
 
           {/* Super Admin Control: Manage Users */}
           {isSuperAdmin && (

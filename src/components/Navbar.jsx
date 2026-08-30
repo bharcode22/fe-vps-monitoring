@@ -136,6 +136,7 @@ export default function Navbar({
             onToggle={handleToggleUserMenu}
             onClose={() => setIsUserMenuOpen(false)}
             onOpenUserModal={onOpenUserModal}
+            onOpenSettings={() => onNavigateView && onNavigateView('settings')}
             onNavigateHome={() => onNavigateView && onNavigateView('dashboard')}
           />
         </div>

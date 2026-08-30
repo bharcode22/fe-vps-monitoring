@@ -6,7 +6,8 @@ import {
   Plus,
   Tv,
   LogOut,
-  Users
+  Users,
+  Settings
 } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { useLanguage } from '../../context/LanguageContext';
@@ -190,6 +191,17 @@ export default function NavbarMobileDrawer({
                 </button>
               )}
             </div>
+
+            <button
+              onClick={() => {
+                onNavigateView('settings');
+                onClose();
+              }}
+              className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-cyan-300 rounded-xl border border-cyan-500/30 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer mb-2"
+            >
+              <Settings size={14} />
+              <span>Pengaturan &amp; Profil</span>
+            </button>
 
             <button
               onClick={() => {
