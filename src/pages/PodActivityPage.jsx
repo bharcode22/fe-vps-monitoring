@@ -31,7 +31,22 @@ export default function PodActivityPage({ onBack }) {
   const [showSimulator, setShowSimulator] = useState(false);
   const [showMqttFeed, setShowMqttFeed] = useState(false);
   const [recentFlashPodId, setRecentFlashPodId] = useState(null);
-  const [selectedPodForTopicModal, setSelectedPodForTopicModal] = useState(null);
+  const [selectedPodForTopicModal, setSelectedPodForTopicModal] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('vps_monitoring_selected_pod');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    if (selectedPodForTopicModal) {
+      sessionStorage.setItem('vps_monitoring_selected_pod', JSON.stringify(selectedPodForTopicModal));
+    } else {
+      sessionStorage.removeItem('vps_monitoring_selected_pod');
+    }
+  }, [selectedPodForTopicModal]);
 
   // Live raw MQTT log feed
   const [mqttActivityFeed, setMqttActivityFeed] = useState([]);

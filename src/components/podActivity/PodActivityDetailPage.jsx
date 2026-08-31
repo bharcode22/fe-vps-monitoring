@@ -41,7 +41,7 @@ export default function PodActivityDetailPage({ pod, onBack }) {
         }
       }
 
-      console.log('Received MQTT Packet:', packet.topic, packet.payload);
+      // console.log('Received MQTT Packet:', packet.topic, packet.payload);
 
       // Format the packet to match what PodActivityTopicCards expects:
       // { topic: string, payload: string, timestamp: number, serverId: number, serverName: string }
