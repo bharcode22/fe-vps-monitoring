@@ -23,11 +23,10 @@ export default function PipelineStageMatrix({
     <div className="glass-card p-5 sm:p-6 rounded-2xl border border-cyan-500/30 bg-slate-950/80 backdrop-blur-md shadow-2xl overflow-hidden">
       <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-800">
         <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-xl border ${
-            activeTab === 'backend' || activeTab === 'bundle_deploy'
-              ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40'
-              : 'bg-purple-500/20 text-purple-400 border-purple-500/40'
-          }`}>
+          <div className={`p-2 rounded-xl border ${activeTab === 'backend' || activeTab === 'bundle_deploy'
+            ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40'
+            : 'bg-purple-500/20 text-purple-400 border-purple-500/40'
+            }`}>
             <Layers size={20} />
           </div>
           <div>
@@ -44,11 +43,10 @@ export default function PipelineStageMatrix({
         </div>
 
         {isDeploying && (
-          <div className={`flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-xl border animate-pulse ${
-            activeTab === 'backend' || activeTab === 'bundle_deploy'
-              ? 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30'
-              : 'text-purple-400 bg-purple-500/10 border-purple-500/30'
-          }`}>
+          <div className={`flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-xl border animate-pulse ${activeTab === 'backend' || activeTab === 'bundle_deploy'
+            ? 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30'
+            : 'text-purple-400 bg-purple-500/10 border-purple-500/30'
+            }`}>
             <RotateCw size={14} className="animate-spin" />
             <span>Pipeline Running...</span>
           </div>
@@ -73,11 +71,10 @@ export default function PipelineStageMatrix({
                     <span className="text-xs font-extrabold text-white">{srv.name}</span>
                     <span className="text-[10px] font-mono text-slate-400">({srv.host})</span>
                   </div>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
-                    activeTab === 'frontend'
-                      ? 'bg-purple-500/15 text-purple-400 border-purple-500/30'
-                      : 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30'
-                  }`}>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${activeTab === 'frontend'
+                    ? 'bg-purple-500/15 text-purple-400 border-purple-500/30'
+                    : 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30'
+                    }`}>
                     {currentAppIds.length} Apps Target
                   </span>
                 </div>
@@ -97,13 +94,13 @@ export default function PipelineStageMatrix({
                       cardStyle = activeTab === 'frontend'
                         ? 'bg-gradient-to-b from-purple-500/25 via-slate-950 to-pink-950/30 border-purple-500 text-white shadow-lg shadow-purple-500/20 ring-1 ring-purple-500/50'
                         : 'bg-gradient-to-b from-cyan-500/25 via-slate-950 to-blue-950/30 border-cyan-400 text-white shadow-lg shadow-cyan-500/20 ring-1 ring-cyan-400/50';
-                      
+
                       badgeStyle = activeTab === 'frontend'
                         ? 'bg-purple-500/30 text-purple-200 border border-purple-400/50 shadow-sm'
                         : 'bg-cyan-500/30 text-cyan-200 border border-cyan-400/50 shadow-sm';
-                      
+
                       badgeLabel = stage.id === 1 ? 'DOWNLOADING' : 'RUNNING';
-                      iconElement = stage.id === 1 
+                      iconElement = stage.id === 1
                         ? <RotateCw size={13} className="animate-spin text-cyan-300" />
                         : <RotateCw size={13} className="animate-spin" />;
                     } else if (status === 'completed') {
@@ -126,13 +123,21 @@ export default function PipelineStageMatrix({
                         title={`Klik untuk melihat log terminal ${srv.name}`}
                       >
                         {/* Shimmer / Progress bar on running state */}
-                        {status === 'running' && (
-                          <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-800 overflow-hidden">
-                            <div className={`h-full animate-pulse w-full ${
-                              activeTab === 'frontend'
-                                ? 'bg-gradient-to-r from-purple-500 via-pink-400 to-purple-600'
-                                : 'bg-gradient-to-r from-cyan-500 via-sky-300 to-blue-500'
-                            }`} />
+                        {(status === 'running' || status === 'completed') && (
+                          <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-slate-800 overflow-hidden">
+                            <div
+                              className={`h-full ${status === 'completed'
+                                ? 'w-full transition-all duration-300 ease-out bg-emerald-400'
+                                : stage.id === 1
+                                  ? 'animate-[progress-sim_15s_ease-out_forwards]'
+                                  : 'animate-pulse w-full'
+                                } ${status === 'running' && activeTab === 'frontend'
+                                  ? 'bg-gradient-to-r from-purple-500 via-pink-400 to-purple-600'
+                                  : status === 'running'
+                                    ? 'bg-gradient-to-r from-cyan-500 via-sky-300 to-emerald-400 shadow-sm shadow-cyan-400/50'
+                                    : ''
+                                }`}
+                            />
                           </div>
                         )}
 

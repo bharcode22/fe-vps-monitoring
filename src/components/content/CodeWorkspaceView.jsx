@@ -320,17 +320,16 @@ export default function CodeWorkspaceView({
             return (
               <div
                 key={podId}
-                className={`glass-card p-4 sm:p-5 rounded-3xl border transition-all flex flex-col justify-between ${
-                  isPodDeleting
-                    ? 'border-rose-500/50 bg-rose-950/15 shadow-xl shadow-rose-950/30 ring-1 ring-rose-500/30'
-                    : !isOnline
-                      ? 'border-slate-800/80 bg-slate-950/40 opacity-75'
-                      : podCheck?.fileStatus === 'all'
-                        ? 'border-emerald-500/30 bg-slate-900/70 shadow-lg shadow-emerald-500/5'
-                        : podCheck?.foundCount > 0
-                          ? 'border-amber-500/30 bg-slate-900/70 shadow-lg shadow-amber-500/5'
-                          : 'border-slate-800 bg-slate-900/50'
-                }`}
+                className={`glass-card p-4 sm:p-5 rounded-3xl border transition-all flex flex-col justify-between ${isPodDeleting
+                  ? 'border-rose-500/50 bg-rose-950/15 shadow-xl shadow-rose-950/30 ring-1 ring-rose-500/30'
+                  : !isOnline
+                    ? 'border-slate-800/80 bg-slate-950/40 opacity-75'
+                    : podCheck?.fileStatus === 'all'
+                      ? 'border-emerald-500/30 bg-slate-900/70 shadow-lg shadow-emerald-500/5'
+                      : podCheck?.foundCount > 0
+                        ? 'border-amber-500/30 bg-slate-900/70 shadow-lg shadow-amber-500/5'
+                        : 'border-slate-800 bg-slate-900/50'
+                  }`}
               >
                 <div>
                   {/* POD Header */}
@@ -417,11 +416,10 @@ export default function CodeWorkspaceView({
                         return (
                           <div
                             key={f.fullPath}
-                            className={`p-2 rounded-xl border flex flex-col gap-1 text-xs transition-all group ${
-                              progress || isFileDownloading
-                                ? 'border-sky-500/60 bg-sky-950/30 shadow-lg shadow-sky-950/50'
-                                : 'bg-emerald-950/20 hover:bg-emerald-950/30 border-emerald-500/30 hover:border-emerald-500/50'
-                            }`}
+                            className={`p-2 rounded-xl border flex flex-col gap-1 text-xs transition-all group ${progress || isFileDownloading
+                              ? 'border-sky-500/60 bg-sky-950/30 shadow-lg shadow-sky-950/50'
+                              : 'bg-emerald-950/20 hover:bg-emerald-950/30 border-emerald-500/30 hover:border-emerald-500/50'
+                              }`}
                           >
                             <div
                               onClick={() => handleOpenPreview({
@@ -453,13 +451,12 @@ export default function CodeWorkspaceView({
                                     onCheckFileIntegrity?.(pod, f.fullPath, f.filename);
                                   }}
                                   disabled={isIntegrityChecking}
-                                  className={`p-1 rounded-lg border transition-all cursor-pointer ${
-                                    integrityData?.isCorrupt
-                                      ? 'bg-rose-500/25 text-rose-300 border-rose-500/40 hover:bg-rose-500/35'
-                                      : integrityData?.status === 'healthy'
-                                        ? 'bg-emerald-500/25 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/35'
-                                        : 'bg-slate-900 hover:bg-slate-800 text-cyan-400 hover:text-white border-slate-700'
-                                  }`}
+                                  className={`p-1 rounded-lg border transition-all cursor-pointer ${integrityData?.isCorrupt
+                                    ? 'bg-rose-500/25 text-rose-300 border-rose-500/40 hover:bg-rose-500/35'
+                                    : integrityData?.status === 'healthy'
+                                      ? 'bg-emerald-500/25 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/35'
+                                      : 'bg-slate-900 hover:bg-slate-800 text-cyan-400 hover:text-white border-slate-700'
+                                    }`}
                                   title="Cek Integritas &amp; Validitas Media (ffprobe: codec, durasi, bitrate, kesehatan file)"
                                 >
                                   {isIntegrityChecking ? (
@@ -501,11 +498,10 @@ export default function CodeWorkspaceView({
                                   e.stopPropagation();
                                   onViewIntegrityDetail?.(integrityData);
                                 }}
-                                className={`mt-0.5 px-2 py-1.5 rounded-lg text-[10px] font-mono flex flex-col gap-1 border cursor-pointer transition-all ${
-                                  integrityData.isCorrupt
-                                    ? 'bg-rose-950/50 text-rose-300 border-rose-500/40 hover:bg-rose-950/70'
-                                    : 'bg-emerald-950/40 text-emerald-300 border-emerald-500/40 hover:bg-emerald-950/60'
-                                }`}
+                                className={`mt-0.5 px-2 py-1.5 rounded-lg text-[10px] font-mono flex flex-col gap-1 border cursor-pointer transition-all ${integrityData.isCorrupt
+                                  ? 'bg-rose-950/50 text-rose-300 border-rose-500/40 hover:bg-rose-950/70'
+                                  : 'bg-emerald-950/40 text-emerald-300 border-emerald-500/40 hover:bg-emerald-950/60'
+                                  }`}
                                 title="Klik untuk melihat laporan diagnostik ffprobe lengkap"
                               >
                                 <div className="flex items-center justify-between gap-1 w-full">
@@ -530,7 +526,7 @@ export default function CodeWorkspaceView({
                                     Rincian &rsaquo;
                                   </span>
                                 </div>
-                                
+
                                 {integrityData.isCorrupt && (
                                   <div className="flex items-center gap-1.5 mt-1 pt-1.5 border-t border-rose-500/30">
                                     <button
@@ -600,11 +596,10 @@ export default function CodeWorkspaceView({
                         return (
                           <div
                             key={filename}
-                            className={`p-2.5 rounded-xl border text-xs transition-all ${
-                              progress || isFileDownloading
-                                ? 'border-sky-500/60 bg-sky-950/30 shadow-lg shadow-sky-950/50'
-                                : 'border-slate-800/80 bg-slate-950/60 group hover:border-slate-700'
-                            }`}
+                            className={`p-2.5 rounded-xl border text-xs transition-all ${progress || isFileDownloading
+                              ? 'border-sky-500/60 bg-sky-950/30 shadow-lg shadow-sky-950/50'
+                              : 'border-slate-800/80 bg-slate-950/60 group hover:border-slate-700'
+                              }`}
                           >
                             <div className="flex items-center justify-between gap-2">
                               <div className="flex items-center gap-1.5 min-w-0">
@@ -706,11 +701,10 @@ export default function CodeWorkspaceView({
                     <button
                       onClick={() => onPromptDeleteSinglePod(pod)}
                       disabled={isPodDeleting}
-                      className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all disabled:opacity-70 ${
-                        isPodDeleting
-                          ? 'bg-rose-950/60 text-rose-300 border-rose-500/50 cursor-wait shadow-sm shadow-rose-950/80'
-                          : 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 hover:text-white border-rose-500/30 cursor-pointer'
-                      }`}
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all disabled:opacity-70 ${isPodDeleting
+                        ? 'bg-rose-950/60 text-rose-300 border-rose-500/50 cursor-wait shadow-sm shadow-rose-950/80'
+                        : 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 hover:text-white border-rose-500/30 cursor-pointer'
+                        }`}
                       title={isPodDeleting ? 'Sedang memproses penghapusan di backend...' : `Hapus file #${code} di ${pod.serverName}`}
                     >
                       {isPodDeleting ? (
