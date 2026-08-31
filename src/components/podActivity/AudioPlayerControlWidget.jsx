@@ -1,7 +1,35 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Volume2 } from 'lucide-react';
+import { Volume2, Sun, Activity, Play, Pause, Square, Power, SkipForward, Wind } from 'lucide-react';
 
-const AudioPlayerControlWidget = ({ seekData, playAudioData, stateData, trackListData, ambienceDurData, trackCmdData, mediaInfo, sessionData }) => {
+const MiniCircle = ({ label, value, icon: Icon, percentage, colorClass, strokeClass }) => {
+  const r = 52;
+  const strk = 8;
+  const nR = r - strk;
+  const circ = nR * 2 * Math.PI;
+  const offset = circ - (Math.min(100, Math.max(0, percentage)) / 100) * circ;
+
+  return (
+    <div className="flex flex-col items-center justify-center relative transition-all hover:scale-105 z-30 group">
+      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2.5">{label}</span>
+      <div className="relative flex items-center justify-center w-28 h-28 bg-slate-950/80 backdrop-blur-md rounded-full border border-slate-700/50 shadow-xl group-hover:bg-slate-800/80">
+        <svg height={r * 2} width={r * 2} className="transform -rotate-90 drop-shadow-md absolute inset-0 m-auto pointer-events-none">
+          <circle stroke="rgba(30, 41, 59, 0.4)" fill="transparent" strokeWidth={strk} r={nR} cx={r} cy={r} />
+          <circle 
+            stroke="currentColor" fill="transparent" strokeWidth={strk} 
+            strokeDasharray={`${circ} ${circ}`} style={{ strokeDashoffset: offset, transition: 'stroke-dashoffset 1s ease-in-out' }} 
+            strokeLinecap="round" r={nR} cx={r} cy={r} className={strokeClass} 
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-0.5 gap-1">
+          <Icon size={20} className={`${colorClass} opacity-90`} />
+          <span className="text-sm font-black text-white leading-none">{value}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const AudioPlayerControlWidget = ({ seekData, playAudioData, stateData, trackListData, ambienceDurData, trackCmdData, mediaInfo, sessionData, stroboData, audioLevelData, vibrationData, olfactoryData, onPublish }) => {
   let durVal = 0;
   let posVal = 0;
 
@@ -217,7 +245,6 @@ const AudioPlayerControlWidget = ({ seekData, playAudioData, stateData, trackLis
   };
 
 
-  const lampStr = mediaInfo?.lamp ? ` • Lamp: ${mediaInfo.lamp}` : '';
   const timestampStr = playAudioData?.timestamp
     ? new Date(playAudioData.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
     : '16.26.58';
@@ -266,64 +293,136 @@ const AudioPlayerControlWidget = ({ seekData, playAudioData, stateData, trackLis
   const remainingSec = isPlaying && effectiveDur > 0 ? Math.max(0, effectiveDur - localPos) : 0;
   const progressPercent = effectiveDur > 0 ? Math.min(100, (localPos / effectiveDur) * 100) : 0;
 
-  if (title === 'Idle') {
-    return (
-      <div className="col-span-full bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 shadow-xl ring-1 ring-slate-500/20 min-h-[120px]">
-        <Volume2 size={28} className="text-slate-600 opacity-50" />
-        <span className="text-xs font-semibold text-slate-500 italic">Menunggu sesi aktif...</span>
-      </div>
-    );
-  }
+  // Removed Idle return block to show empty dashboard
+
+  // Helpers for SVG Circle
+  const radius = 120;
+  const stroke = 12;
+  const normalizedRadius = radius - stroke * 2;
+  const circumference = normalizedRadius * 2 * Math.PI;
+  const strokeDashoffset = circumference - (progressPercent / 100) * circumference;
+
+  const stroboVal = stroboData?.payload || '0';
+  const audioVal = audioLevelData?.payload || '0';
+  const vibrationVal = vibrationData?.payload || '0';
+
+  const [scentProgress, setScentProgress] = useState(0);
+  let scentLabel = '-';
+  let scentWidthMs = 0;
+  try {
+    if (olfactoryData?.payload && typeof olfactoryData.payload === 'string') {
+      const p = JSON.parse(olfactoryData.payload);
+      if (p.scent !== undefined) scentLabel = String(p.scent);
+      if (p.width !== undefined) scentWidthMs = Number(p.width);
+    }
+  } catch (_) {}
+
+  useEffect(() => {
+    if (scentWidthMs > 0 && olfactoryData?.timestamp) {
+      const interval = setInterval(() => {
+        const elapsed = Date.now() - olfactoryData.timestamp;
+        const left = Math.max(0, scentWidthMs - elapsed);
+        setScentProgress(Math.max(0, Math.min(100, (left / scentWidthMs) * 100)));
+        if (left === 0) clearInterval(interval);
+      }, 100);
+      return () => clearInterval(interval);
+    } else {
+      setScentProgress(0);
+    }
+  }, [olfactoryData?.timestamp, scentWidthMs]);
 
   return (
-    <div className="col-span-full bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-3 shadow-xl ring-1 ring-cyan-500/20">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-cyan-500/20 text-cyan-400 rounded-xl border border-cyan-500/30 shrink-0">
-            <Volume2 size={24} />
+    <div className="col-span-full bg-slate-900/85 backdrop-blur-xl border border-slate-800/90 rounded-3xl p-6 md:p-8 flex flex-col gap-6 shadow-2xl ring-1 ring-cyan-500/20 relative overflow-hidden">
+      {/* Background glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[650px] bg-cyan-500/5 rounded-full blur-3xl pointer-events-none"></div>
+
+      {/* Top Header Row inside the Card: Track Info & Controls */}
+      <div className="flex flex-wrap items-center justify-between gap-4 z-10 border-b border-slate-800/60 pb-4">
+        {/* Left: Active Track Info */}
+        <div className="flex items-center gap-3.5">
+          <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
+            <Volume2 size={20} />
           </div>
-          <div>
-            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Active Audio Track</span>
-            <h3 className="text-sm sm:text-base font-bold text-white leading-tight mt-0.5">{title}</h3>
-            <span className="text-[10px] text-cyan-400 font-semibold mt-0.5 block">
-              ID: {rawPayload}{lampStr}
+          <div className="flex flex-col">
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
+              Active Track
             </span>
-            <span className="text-[10px] font-mono text-slate-400 mt-0.5 block">{timestampStr}</span>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-sm md:text-base font-bold text-white font-mono break-all">
+                <span className="text-slate-400 font-sans text-xs font-semibold mr-1.5">Song:</span>
+                {mediaInfo?.lamp || mediaInfo?.song || mediaInfo?.song_name || mediaInfo?.title || title}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Digital Elapsed Timer Badge */}
-        <div className="flex items-center gap-3 bg-slate-950/90 px-3.5 py-2 rounded-xl border border-cyan-500/30 shrink-0">
-          <div className="flex flex-col items-end">
-            <span className="text-[9px] uppercase font-bold text-slate-400">Durasi Berjalan (Posisi)</span>
-            <span className="font-mono text-lg font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400">
-              {formatMinSec(localPos)}
-            </span>
-          </div>
-          <span className={`px-2.5 py-1 rounded-full text-xs font-bold shrink-0 ${isPlaying
-            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-            : 'bg-slate-800 text-slate-400'
-            }`}>
-            {stateText}
-          </span>
+        {/* Right: Audio State Pill */}
+        <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-950/70 border border-slate-800 text-xs font-mono text-slate-300 shadow-sm">
+          <span className={`w-2 h-2 rounded-full ${isPlaying ? 'bg-cyan-400 animate-pulse' : 'bg-slate-500'}`}></span>
+          <span className="font-bold tracking-wider">{stateText.toUpperCase()}</span>
         </div>
       </div>
 
-      <div className="flex flex-col gap-1.5 mt-1 bg-slate-950/80 p-3 rounded-xl border border-slate-800">
-        <div className="flex items-center justify-between text-xs font-mono text-slate-300">
-          <span className="font-bold text-cyan-400">Posisi: {formatMinSec(localPos)}</span>
-          <span className="text-slate-500">Total: {formatMinSec(effectiveDur)}</span>
+      {/* Main Center Area: Symmetrical 5-Dial Cockpit Cluster */}
+      <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 md:gap-14 py-2 z-10">
+        
+        {/* Left Side Dials */}
+        <div className="flex flex-col gap-6 sm:gap-8">
+          <MiniCircle label="Strobo" value={stroboVal+"%"} percentage={Number(stroboVal)||0} icon={Sun} colorClass="text-amber-400" strokeClass="text-amber-500" />
+          <MiniCircle label="Audio" value={audioVal+"%"} percentage={Number(audioVal)||0} icon={Volume2} colorClass="text-cyan-400" strokeClass="text-cyan-500" />
         </div>
-        <div className="relative w-full h-3 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
-          <div
-            className={`absolute top-0 left-0 h-full transition-all duration-1000 ease-linear ${isPlaying ? 'bg-gradient-to-r from-cyan-500 to-teal-400' : 'bg-slate-600'
-              }`}
-            style={{ width: `${progressPercent}%` }}
-          ></div>
+
+        {/* Central Circular Progress */}
+        <div className="relative flex items-center justify-center w-64 h-64 md:w-72 md:h-72 z-20 pointer-events-none drop-shadow-2xl mx-2">
+          <svg
+            height={radius * 2}
+            width={radius * 2}
+            className="transform -rotate-90 drop-shadow-2xl scale-100 md:scale-105 transition-transform"
+          >
+            {/* Background track */}
+            <circle
+              stroke="rgba(30, 41, 59, 0.4)"
+              fill="transparent"
+              strokeWidth={stroke}
+              r={normalizedRadius}
+              cx={radius}
+              cy={radius}
+            />
+            {/* Progress track */}
+            <circle
+              stroke="currentColor"
+              fill="transparent"
+              strokeWidth={stroke}
+              strokeDasharray={circumference + ' ' + circumference}
+              style={{ strokeDashoffset, transition: 'stroke-dashoffset 1s linear' }}
+              strokeLinecap="round"
+              r={normalizedRadius}
+              cx={radius}
+              cy={radius}
+              className={isPlaying ? "text-cyan-400" : "text-slate-500"}
+            />
+          </svg>
+
+          {/* Center Content */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+            <span className={`px-3 py-0.5 rounded-full text-[10px] font-extrabold tracking-widest mb-2 ${
+              isPlaying ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-slate-800/90 text-slate-400 border border-slate-700'
+            }`}>
+              {stateText.toUpperCase()}
+            </span>
+            <span className="font-mono text-4xl md:text-5xl font-black text-white tracking-tight drop-shadow-md">
+              {formatMinSec(localPos)}
+            </span>
+            <span className="text-xs font-mono text-slate-500 mt-1 font-semibold">
+              / {formatMinSec(effectiveDur)}
+            </span>
+          </div>
         </div>
-        <div className="flex items-center justify-between text-[9px] font-mono text-slate-600 mt-0.5">
-          <span>Position: {localPos}s</span>
-          <span>Total: {effectiveDur}s</span>
+
+        {/* Right Side Dials */}
+        <div className="flex flex-col gap-6 sm:gap-8">
+          <MiniCircle label="Vibration" value={vibrationVal+"%"} percentage={Number(vibrationVal)||0} icon={Activity} colorClass="text-rose-400" strokeClass="text-rose-500" />
+          <MiniCircle label="Scent" value={scentLabel} percentage={scentProgress} icon={Wind} colorClass="text-emerald-400" strokeClass="text-emerald-500" />
         </div>
       </div>
     </div>

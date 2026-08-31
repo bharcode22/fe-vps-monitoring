@@ -71,47 +71,74 @@ export default function PodActivityDetailPage({ pod, onBack }) {
     };
   }, [pod]);
 
+  const handlePublish = (subTopic, payload) => {
+    if (!socketRef.current || !pod?.id) return;
+    const token = localStorage.getItem('vps_monitoring_token');
+    const prefix = detectedPrefixRef.current || `pod/${pod.mac || pod.id}/2.0/`;
+    const fullTopic = subTopic.startsWith('pod/') ? subTopic : `${prefix}${subTopic}`;
+
+    socketRef.current.emit('mqtt:inject-packet', {
+      token,
+      serverId: pod.id,
+      brokerHost: pod.host,
+      brokerUrl: `tcp://${pod.host}:1883`,
+      topic: fullTopic,
+      payload: String(payload)
+    });
+  };
+
   if (!pod) return null;
 
   return (
-    <div className="flex flex-col h-full space-y-4">
+    <div className="flex flex-col h-full space-y-6 pb-12">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/60 p-4 rounded-2xl border border-slate-800 backdrop-blur-md">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/80 p-5 rounded-2xl border border-slate-800 backdrop-blur-md shadow-xl">
         <div className="flex items-center gap-4">
           <button
             onClick={onBack}
-            className="p-2 hover:bg-slate-800 rounded-xl transition-colors text-slate-400 hover:text-white"
+            className="p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition-all text-slate-300 hover:text-white border border-slate-700/60 shadow"
             title="Kembali ke Dashboard Activity"
           >
-            <ArrowLeft size={20} />
+            <ArrowLeft size={18} />
           </button>
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-fuchsia-500/20 text-fuchsia-400 rounded-xl border border-fuchsia-500/30">
+          <div className="flex items-center gap-3.5">
+            <div className="p-3 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 text-cyan-400 rounded-2xl border border-cyan-500/30 shadow-lg shadow-cyan-500/10">
               <Activity size={24} />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white flex items-center gap-2">
-                Topik MQTT & Live Sniffer: {pod.name}
-              </h1>
-              <p className="text-sm text-slate-400 flex items-center gap-1.5 mt-0.5">
-                <Server size={14} />
-                Host: <span className="font-mono text-slate-300">{pod.host}:1883</span>
-                <span className="mx-2">•</span>
-                Status:
-                <span className={`ml-1 font-bold ${mqttStatus.connected ? 'text-green-400' : 'text-rose-400'}`}>
-                  {mqttStatus.connected ? 'Connected' : 'Disconnected'}
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-xl font-black text-white tracking-wide">
+                  {pod.name}
+                </h1>
+                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                  MQTT 2.0
                 </span>
-              </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 mt-1 font-medium">
+                <span className="flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${mqttStatus.connected ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'}`} />
+                  Status:
+                  <span className={`font-bold ${mqttStatus.connected ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {mqttStatus.connected ? 'Connected' : 'Disconnected'}
+                  </span>
+                </span>
+                <span className="text-slate-600">•</span>
+                <span className="flex items-center gap-1.5 font-mono text-[11px] text-slate-400 bg-slate-950/60 px-2 py-0.5 rounded-lg border border-slate-800">
+                  <Radio size={11} className="text-cyan-400 animate-pulse" />
+                  {mqttActivityFeed.length} Paket Diterima
+                </span>
+              </div>
             </div>
           </div>
         </div>
-        </div>
+      </div>
 
       {/* Main Content: MQTT Cards */}
       <PodActivityTopicCards
         show={true}
         feed={mqttActivityFeed}
         pods={[pod]}
+        onPublish={handlePublish}
       />
     </div>
   );

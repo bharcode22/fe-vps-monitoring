@@ -4,10 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "NODE_OPTIONS=--max-http-header-size=65536 vite",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "NODE_OPTIONS=--max-http-header-size=65536 vite preview"
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.5",
