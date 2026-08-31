@@ -482,6 +482,27 @@ export default function StorageManagerPage({ onBack }) {
     }
   };
 
+  const handleDeleteSingleFileOnPod = (pod, filename) => {
+    if (!activeCodeDetail || !pod || !filename) return;
+    const s3Code = activeCodeDetail.code;
+    const podId = pod.serverId || pod.id;
+
+    if (loadingActions[`pod_${s3Code}_${podId}`] || isExecutingDelete) {
+      return;
+    }
+
+    setConfirmModal({
+      isOpen: true,
+      title: `Hapus ${filename} di ${pod.serverName}`,
+      description: `Apakah Anda yakin ingin menghapus file fisik ${filename} (kode #${s3Code}) di server ${pod.serverName}? File harus diunduh ulang jika masih dibutuhkan.`,
+      s3Code,
+      filenames: [filename],
+      targetPodIds: [podId],
+      deleteFromS3: false,
+      podNameLabel: pod.serverName
+    });
+  };
+
   const handlePromptDeleteOnSinglePod = (pod) => {
     if (!activeCodeDetail || !pod) return;
     const s3Code = activeCodeDetail.code;
@@ -920,6 +941,7 @@ export default function StorageManagerPage({ onBack }) {
           onCheckAllPods={checkPodsForActiveCode}
           onCheckSinglePod={checkSinglePodForActiveCode}
           onPromptDeleteSinglePod={handlePromptDeleteOnSinglePod}
+          onDeleteSingleFileOnPod={handleDeleteSingleFileOnPod}
           onDownloadSingleFile={handleDownloadSingleFileToPod}
           onDownloadAllMissingForPod={handleDownloadAllMissingForPod}
           onDownloadMissingToAllPods={handleDownloadMissingToAllPods}

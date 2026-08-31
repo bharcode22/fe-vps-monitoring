@@ -45,6 +45,7 @@ export default function CodeWorkspaceView({
   onCheckAllPods,
   onCheckSinglePod,
   onPromptDeleteSinglePod,
+  onDeleteSingleFileOnPod,
   onDownloadSingleFile,
   onDownloadAllMissingForPod,
   onDownloadMissingToAllPods,
@@ -409,11 +410,18 @@ export default function CodeWorkspaceView({
                         const integrityKey = `${pod.serverId}_${f.fullPath}`;
                         const isIntegrityChecking = !!loadingActions[`integrity_${pod.serverId}_${f.fullPath}`];
                         const integrityData = integrityMap[integrityKey];
+                        const isFileDownloading = !!loadingActions[`dl_${podId}_${f.filename}`];
+                        const progKey = `${podId}_${f.filename}`;
+                        const progress = downloadProgressMap[progKey];
 
                         return (
                           <div
                             key={f.fullPath}
-                            className="p-2 rounded-xl bg-emerald-950/20 hover:bg-emerald-950/30 border border-emerald-500/30 hover:border-emerald-500/50 flex flex-col gap-1 text-xs transition-all group"
+                            className={`p-2 rounded-xl border flex flex-col gap-1 text-xs transition-all group ${
+                              progress || isFileDownloading
+                                ? 'border-sky-500/60 bg-sky-950/30 shadow-lg shadow-sky-950/50'
+                                : 'bg-emerald-950/20 hover:bg-emerald-950/30 border-emerald-500/30 hover:border-emerald-500/50'
+                            }`}
                           >
                             <div
                               onClick={() => handleOpenPreview({
@@ -493,33 +501,88 @@ export default function CodeWorkspaceView({
                                   e.stopPropagation();
                                   onViewIntegrityDetail?.(integrityData);
                                 }}
-                                className={`mt-0.5 px-2 py-1 rounded-lg text-[10px] font-mono flex items-center justify-between gap-1 border cursor-pointer transition-all ${
+                                className={`mt-0.5 px-2 py-1.5 rounded-lg text-[10px] font-mono flex flex-col gap-1 border cursor-pointer transition-all ${
                                   integrityData.isCorrupt
                                     ? 'bg-rose-950/50 text-rose-300 border-rose-500/40 hover:bg-rose-950/70'
                                     : 'bg-emerald-950/40 text-emerald-300 border-emerald-500/40 hover:bg-emerald-950/60'
                                 }`}
                                 title="Klik untuk melihat laporan diagnostik ffprobe lengkap"
                               >
-                                <span className="flex items-center gap-1.5 truncate">
-                                  {integrityData.isCorrupt ? (
-                                    <>
-                                      <AlertTriangle size={11} className="text-rose-400 shrink-0" />
-                                      <b className="text-rose-400">KORUP:</b> {integrityData.message}
-                                    </>
-                                  ) : (
-                                    <>
-                                      <CheckCircle2 size={11} className="text-emerald-400 shrink-0" />
-                                      <span>
-                                        <b>Sehat &amp; Utuh</b>
-                                        {integrityData.durationFormatted ? ` • ${integrityData.durationFormatted}` : ''}
-                                        {integrityData.bitrateFormatted ? ` • ${integrityData.bitrateFormatted}` : ''}
-                                      </span>
-                                    </>
-                                  )}
-                                </span>
-                                <span className="text-[9px] underline text-cyan-300 shrink-0 font-sans font-bold">
-                                  Rincian &rsaquo;
-                                </span>
+                                <div className="flex items-center justify-between gap-1 w-full">
+                                  <span className="flex items-center gap-1.5 truncate">
+                                    {integrityData.isCorrupt ? (
+                                      <>
+                                        <AlertTriangle size={11} className="text-rose-400 shrink-0" />
+                                        <b className="text-rose-400">KORUP:</b> {integrityData.message}
+                                      </>
+                                    ) : (
+                                      <>
+                                        <CheckCircle2 size={11} className="text-emerald-400 shrink-0" />
+                                        <span>
+                                          <b>Sehat &amp; Utuh</b>
+                                          {integrityData.durationFormatted ? ` • ${integrityData.durationFormatted}` : ''}
+                                          {integrityData.bitrateFormatted ? ` • ${integrityData.bitrateFormatted}` : ''}
+                                        </span>
+                                      </>
+                                    )}
+                                  </span>
+                                  <span className="text-[9px] underline text-cyan-300 shrink-0 font-sans font-bold">
+                                    Rincian &rsaquo;
+                                  </span>
+                                </div>
+                                
+                                {integrityData.isCorrupt && (
+                                  <div className="flex items-center gap-1.5 mt-1 pt-1.5 border-t border-rose-500/30">
+                                    <button
+                                      type="button"
+                                      disabled={isFileDownloading}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onDownloadSingleFile?.(pod, f.filename);
+                                      }}
+                                      className="flex items-center gap-1 px-1.5 py-0.5 bg-rose-500/20 hover:bg-rose-500/40 border border-rose-500/40 rounded text-[9px] text-rose-200 font-bold transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      {isFileDownloading ? <RefreshCw size={10} className="animate-spin" /> : <Download size={10} />}
+                                      {isFileDownloading ? 'Mendownload...' : 'Download Ulang'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={isFileDownloading}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onDeleteSingleFileOnPod?.(pod, f.filename);
+                                      }}
+                                      className="flex items-center gap-1 px-1.5 py-0.5 bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 rounded text-[9px] text-rose-400 font-bold transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      <Trash2 size={10} />
+                                      Hapus
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Live Progress Bar for Re-download */}
+                            {(progress || isFileDownloading) && (
+                              <div className="mt-1 pt-1.5 border-t border-sky-500/20 animate-in fade-in duration-200">
+                                {progress ? (
+                                  <>
+                                    <div className="w-full bg-slate-900/90 rounded-full h-1.5 overflow-hidden border border-slate-800">
+                                      <div
+                                        className="bg-gradient-to-r from-sky-500 via-cyan-400 to-emerald-400 h-1.5 rounded-full transition-all duration-300 ease-out shadow-sm shadow-cyan-400/50"
+                                        style={{ width: `${Math.min(100, Math.max(0, progress.percent))}%` }}
+                                      />
+                                    </div>
+                                    <div className="flex items-center justify-between text-[9.5px] text-slate-400 font-mono mt-1">
+                                      <span>{progress.downloadedFormatted || '0 B'} / {progress.totalFormatted || '...'}</span>
+                                      <span className="text-cyan-300 font-semibold">{progress.speed || '0 KB/s'}</span>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="flex items-center gap-1.5 text-[10px] text-sky-400 font-mono animate-pulse">
+                                    <RefreshCw size={10} className="animate-spin" /> Menyiapkan download...
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
