@@ -14,7 +14,7 @@ import PodActivitySimulatorPanel from '../components/podActivity/PodActivitySimu
 import PodActivityToolbar from '../components/podActivity/PodActivityToolbar';
 import PodActivityCardGrid from '../components/podActivity/PodActivityCardGrid';
 import PodActivityTableView from '../components/podActivity/PodActivityTableView';
-import PodMqttTopicModal from '../components/podActivity/PodMqttTopicModal';
+import PodActivityDetailPage from '../components/podActivity/PodActivityDetailPage';
 
 export default function PodActivityPage({ onBack }) {
   const [data, setData] = useState({ summary: {}, pods: [], recentLogs: [] });
@@ -29,8 +29,12 @@ export default function PodActivityPage({ onBack }) {
   const [activeTab, setActiveTab] = useState('ALL'); // 'ALL' | 'OCCUPIED' | 'VACANT'
   const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'table'
   const [showSimulator, setShowSimulator] = useState(false);
+  const [showMqttFeed, setShowMqttFeed] = useState(false);
   const [recentFlashPodId, setRecentFlashPodId] = useState(null);
   const [selectedPodForTopicModal, setSelectedPodForTopicModal] = useState(null);
+
+  // Live raw MQTT log feed
+  const [mqttActivityFeed, setMqttActivityFeed] = useState([]);
 
   // Live timer tick for real-time elapsed seconds update
   const [nowTimestamp, setNowTimestamp] = useState(Date.now());
@@ -108,6 +112,11 @@ export default function PodActivityPage({ onBack }) {
         );
         return { ...prev, pods };
       });
+    });
+
+    // When raw MQTT log stream is received
+    socket.on('pod-activity:mqtt-log', (logEntry) => {
+      setMqttActivityFeed((prev) => [logEntry, ...prev].slice(0, 200));
     });
 
     return () => {
@@ -206,6 +215,15 @@ export default function PodActivityPage({ onBack }) {
       ? summary.brokersConnected
       : (data.pods || []).filter((p) => p.brokerConnected).length;
 
+  if (selectedPodForTopicModal) {
+    return (
+      <PodActivityDetailPage 
+        pod={selectedPodForTopicModal}
+        onBack={() => setSelectedPodForTopicModal(null)}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6 w-full max-w-[1700px] mx-auto px-2 sm:px-4 lg:px-6 py-4 animate-in fade-in duration-200">
       {/* 1. Header & Actions */}
@@ -247,6 +265,8 @@ export default function PodActivityPage({ onBack }) {
         totalPods={totalPods}
         occupiedCount={occupiedCount}
         vacantCount={vacantCount}
+        showMqttFeed={showMqttFeed}
+        onToggleMqttFeed={() => setShowMqttFeed(!showMqttFeed)}
       />
 
       {/* 5. Main View: Live Cards Grid or Table */}
@@ -265,16 +285,6 @@ export default function PodActivityPage({ onBack }) {
           formatDuration={formatDuration}
           onSelectPod={setSelectedPodForTopicModal}
           onSimulate={handleSimulate}
-        />
-      )}
-
-      {/* 6. MODAL: Topic Inspector & Live Sniffer */}
-      {selectedPodForTopicModal && (
-        <PodMqttTopicModal
-          isOpen={Boolean(selectedPodForTopicModal)}
-          pod={selectedPodForTopicModal}
-          onClose={() => setSelectedPodForTopicModal(null)}
-          onOccupancyUpdated={loadStatus}
         />
       )}
     </div>

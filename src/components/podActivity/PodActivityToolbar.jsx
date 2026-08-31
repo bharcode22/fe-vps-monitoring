@@ -10,7 +10,9 @@ export default function PodActivityToolbar({
   onViewModeChange,
   totalPods = 0,
   occupiedCount = 0,
-  vacantCount = 0
+  vacantCount = 0,
+  showMqttFeed,
+  onToggleMqttFeed
 }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-900/60 border border-slate-800 p-3 rounded-2xl">
@@ -87,6 +89,20 @@ export default function PodActivityToolbar({
             <History size={14} />
           </button>
         </div>
+
+        {/* Live MQTT Feed Toggle */}
+        <button
+          onClick={onToggleMqttFeed}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-colors border flex items-center gap-1.5 ${
+            showMqttFeed
+              ? 'bg-fuchsia-500/20 text-fuchsia-400 border-fuchsia-500/40 shadow-sm shadow-fuchsia-500/20'
+              : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
+          }`}
+          title="Tampilkan Live Topic Dashboard"
+        >
+          <span className={`w-2 h-2 rounded-full ${showMqttFeed ? 'bg-fuchsia-400 animate-pulse' : 'bg-slate-600'}`} />
+          Live Dashboards
+        </button>
       </div>
     </div>
   );
