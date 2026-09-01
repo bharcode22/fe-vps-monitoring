@@ -95,6 +95,13 @@ export default function PodActivityPage({ onBack }) {
       setRecentFlashPodId(pod.id);
       setTimeout(() => setRecentFlashPodId(null), 3000);
 
+      setSelectedPodForTopicModal((prevSelected) => {
+        if (prevSelected && prevSelected.id === pod.id) {
+          return { ...prevSelected, ...pod };
+        }
+        return prevSelected;
+      });
+
       setData((prev) => {
         const existingPods = prev.pods || [];
         const index = existingPods.findIndex((p) => p.id === pod.id);
@@ -232,7 +239,7 @@ export default function PodActivityPage({ onBack }) {
 
   if (selectedPodForTopicModal) {
     return (
-      <PodActivityDetailPage 
+      <PodActivityDetailPage
         pod={selectedPodForTopicModal}
         onBack={() => setSelectedPodForTopicModal(null)}
       />
@@ -292,14 +299,12 @@ export default function PodActivityPage({ onBack }) {
           recentFlashPodId={recentFlashPodId}
           formatDuration={formatDuration}
           onSelectPod={setSelectedPodForTopicModal}
-          onSimulate={handleSimulate}
         />
       ) : (
         <PodActivityTableView
           filteredPods={filteredPods}
           formatDuration={formatDuration}
           onSelectPod={setSelectedPodForTopicModal}
-          onSimulate={handleSimulate}
         />
       )}
     </div>

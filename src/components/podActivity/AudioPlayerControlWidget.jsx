@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Volume2, Sun, Activity, Play, Pause, Square, Power, SkipForward, Wind } from 'lucide-react';
+import { Volume2, Sun, Activity, Wind } from 'lucide-react';
 
 const MiniCircle = ({ label, value, icon: Icon, percentage, colorClass, strokeClass }) => {
   const r = 52;
@@ -10,14 +10,14 @@ const MiniCircle = ({ label, value, icon: Icon, percentage, colorClass, strokeCl
 
   return (
     <div className="flex flex-col items-center justify-center relative transition-all hover:scale-105 z-30 group">
-      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2.5">{label}</span>
+      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">{label}</span>
       <div className="relative flex items-center justify-center w-28 h-28 bg-slate-950/80 backdrop-blur-md rounded-full border border-slate-700/50 shadow-xl group-hover:bg-slate-800/80">
         <svg height={r * 2} width={r * 2} className="transform -rotate-90 drop-shadow-md absolute inset-0 m-auto pointer-events-none">
           <circle stroke="rgba(30, 41, 59, 0.4)" fill="transparent" strokeWidth={strk} r={nR} cx={r} cy={r} />
-          <circle 
-            stroke="currentColor" fill="transparent" strokeWidth={strk} 
-            strokeDasharray={`${circ} ${circ}`} style={{ strokeDashoffset: offset, transition: 'stroke-dashoffset 1s ease-in-out' }} 
-            strokeLinecap="round" r={nR} cx={r} cy={r} className={strokeClass} 
+          <circle
+            stroke="currentColor" fill="transparent" strokeWidth={strk}
+            strokeDasharray={`${circ} ${circ}`} style={{ strokeDashoffset: offset, transition: 'stroke-dashoffset 1s ease-in-out' }}
+            strokeLinecap="round" r={nR} cx={r} cy={r} className={strokeClass}
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-0.5 gap-1">
@@ -42,12 +42,8 @@ const AudioPlayerControlWidget = ({ seekData, playAudioData, stateData, trackLis
 
       const cmdTs = trackCmdData?.timestamp || 0;
       const cmdStr = trackCmdData?.payload ? String(trackCmdData.payload).trim().toLowerCase() : '';
-      
-      // Code 3 is Resume. 
-      const isResume = (cmdStr === '3' || cmdStr.includes('resume')) && Math.abs(trackStartTs - cmdTs) < 5000;
 
-      // Stale seek prevention: if seek is older than track start, ignore its position
-      // EXCEPTION: if we just issued a RESUME command (3), keep the old seek data!
+      const isResume = (cmdStr === '3' || cmdStr.includes('resume')) && Math.abs(trackStartTs - cmdTs) < 5000;
       const isStale = seekTs < trackStartTs && trackStartTs > 0 && !isResume;
 
       let parsedPayload = null;
@@ -56,12 +52,8 @@ const AudioPlayerControlWidget = ({ seekData, playAudioData, stateData, trackLis
       } catch (_) { }
 
       if (parsedPayload && typeof parsedPayload === 'object' && !isStale) {
-        if (parsedPayload.position !== undefined) {
-          posVal = Number(parsedPayload.position);
-        }
-        if (parsedPayload.duration !== undefined) {
-          durVal = Number(parsedPayload.duration);
-        }
+        if (parsedPayload.position !== undefined) posVal = Number(parsedPayload.position);
+        if (parsedPayload.duration !== undefined) durVal = Number(parsedPayload.duration);
         posTimestamp = seekTs;
       } else if (seekDataState && seekDataState.payload && !isStale && typeof parsedPayload !== 'object') {
         posVal = Number(seekDataState.payload);
@@ -75,185 +67,178 @@ const AudioPlayerControlWidget = ({ seekData, playAudioData, stateData, trackLis
     } catch (_) { }
   }
 
+  const isVoiceGuideTrack = (trackName) => {
+    if (!trackName) return false;
+    const s = String(trackName).toLowerCase();
+    return s.includes('voice') || s.includes('guide') || s.includes('prompt') || s.includes('intro') || s.includes('outro') || s.includes('announcement');
+  };
+
   let isPlaying = false;
   let stateText = 'Idle';
+  let title = 'Idle';
 
-  // State is accurately provided by mod_audio/track/state
+  // 1. Prioritize real session data from session-data topic
+  if (sessionData?.payload) {
+    try {
+      const sObj = typeof sessionData.payload === 'string' ? JSON.parse(sessionData.payload) : sessionData.payload;
+      if (sObj.title && !isVoiceGuideTrack(sObj.title)) title = sObj.title;
+      else if (sObj.name && !isVoiceGuideTrack(sObj.name)) title = sObj.name;
+      else if (sObj.soundscape && !isVoiceGuideTrack(sObj.soundscape)) title = sObj.soundscape;
+      else if (sObj.session_id && !isVoiceGuideTrack(sObj.session_id)) title = sObj.session_id;
+    } catch (_) { }
+  }
+
+  // 2. Next check playAudioData (soundscape ID or audio payload)
+  if (title === 'Idle' && playAudioData?.payload) {
+    try {
+      const p = typeof playAudioData.payload === 'string' ? JSON.parse(playAudioData.payload) : playAudioData.payload;
+      const rawTitle = p.title || p.name || p.id || (typeof p === 'string' || typeof p === 'number' ? String(p) : '');
+      if (rawTitle && !isVoiceGuideTrack(rawTitle)) {
+        title = rawTitle;
+      }
+    } catch (_) {
+      const rawStr = String(playAudioData.payload);
+      if (!isVoiceGuideTrack(rawStr)) {
+        title = rawStr;
+      }
+    }
+  }
+
+  // 3. Check mediaInfo database resolution (only if not a voice guide)
+  if (mediaInfo) {
+    const resolved = mediaInfo.lamp || mediaInfo.song || mediaInfo.song_name || mediaInfo.title || mediaInfo.sound_scape;
+    if (resolved && !isVoiceGuideTrack(resolved)) {
+      title = resolved;
+    }
+  }
+
+  // Check stateData for Voice Guide vs Session play state
+  let voiceGuideTrack = null;
+  let isVoicePlaying = false;
+
   if (stateData?.payload) {
     try {
       const parsed = typeof stateData.payload === 'string' ? JSON.parse(stateData.payload) : stateData.payload;
-      isPlaying = (parsed.state === "1" || parsed.state === 1) && !String(parsed.state).includes('0');
-      stateText = isPlaying ? 'Playing' : 'Paused';
+      const stateActive = (parsed.state === "1" || parsed.state === 1) && !String(parsed.state).includes('0');
 
-      // If the track explicitly says it's empty, it's STOPPED!
-      if (parsed.track === 'null' || parsed.track === 'undefined' || parsed.track === 'Idle' || parsed.track === '') {
-        stateText = 'Stopped';
+      if (parsed.track && isVoiceGuideTrack(parsed.track)) {
+        voiceGuideTrack = parsed.track;
+        isVoicePlaying = stateActive;
+      } else if (parsed.track && parsed.track !== 'null' && parsed.track !== 'undefined' && parsed.track !== 'Idle' && parsed.track !== '') {
+        // If track is a real session track, use it
+        if (title === 'Idle') title = parsed.track;
       }
-    } catch (_) {
-      // Fallback
-    }
+
+      // If it's a non-voice track state, update session playing state
+      if (!isVoiceGuideTrack(parsed.track)) {
+        isPlaying = stateActive;
+        stateText = isPlaying ? 'Playing' : 'Paused';
+        if (parsed.track === 'null' || parsed.track === 'undefined' || parsed.track === 'Idle' || parsed.track === '') {
+          stateText = 'Stopped';
+        }
+      }
+    } catch (_) { }
   } else if (seekDataState?.timestamp) {
     const elapsedSinceSeek = Date.now() - seekDataState.timestamp;
     isPlaying = elapsedSinceSeek < 10000;
     stateText = isPlaying ? 'Playing' : 'Paused';
-  } else if (playAudioData?.payload) {
+  } else if (playAudioData?.payload && !isVoiceGuideTrack(playAudioData.payload)) {
     isPlaying = true;
     stateText = 'Playing';
   }
 
-  const rawPayload = playAudioData?.payload || '927773';
-  let title = mediaInfo
-    ? (mediaInfo.title || mediaInfo.name || mediaInfo.sound_scape || rawPayload)
-    : rawPayload;
-
-  // If session-data is newer than play_audio, prioritize session-data!
-  const playTs = playAudioData?.timestamp || 0;
-  const sessionTs = sessionData?.timestamp || 0;
-  if (sessionData && sessionData.payload && sessionTs >= playTs) {
-    try {
-      const parsedSess = typeof sessionData.payload === 'string' ? JSON.parse(sessionData.payload) : sessionData.payload;
-      if (parsedSess.session_id) {
-        title = parsedSess.session_id;
-      }
-    } catch (_) { }
+  // If title is a voice guide or still idle, keep it as Idle
+  if (isVoiceGuideTrack(title) || title === 'Idle' || title === 'null' || title === 'undefined') {
+    title = 'Idle';
+    if (!seekDataState?.payload && !playAudioData?.payload) {
+      isPlaying = false;
+      stateText = 'Stopped';
+    }
   }
 
-  // Fallback title to track/state only if still idle (so Voice Guide doesn't overwrite Session)
-  if ((title === 'Idle' || title === '927773' || !playAudioData) && stateData?.payload) {
-    try {
-      const parsed = typeof stateData.payload === 'string' ? JSON.parse(stateData.payload) : stateData.payload;
-      if (parsed.track && parsed.track !== 'undefined' && parsed.track !== 'null' && parsed.track !== 'Idle' && parsed.track !== '') {
-        title = parsed.track;
-      }
-    } catch (_) { }
-  }
+  let isPaused = false;
+  let isStopped = false;
 
-  let isStopped = stateText.toLowerCase().includes('stop') || stateText.toLowerCase().includes('idle');
-  if (trackCmdData?.payload) {
-    const cmdTs = trackCmdData.timestamp || 0;
-    const trackTs = playAudioData?.timestamp || 0;
-    const stateTs = stateData?.timestamp || 0;
-    
-    if (cmdTs >= trackTs) {
-      const cmdStr = String(trackCmdData.payload).trim().toLowerCase();
-      
-      // If command was PAUSE ('2')
-      if (cmdStr === '2' || cmdStr.includes('pause')) {
-        // Ensure it doesn't get marked as stopped if we recently paused it
-        if (cmdTs >= stateTs - 5000) {
-          isStopped = false;
-          stateText = 'Paused';
-          isPlaying = false;
-        }
-      }
-      // If command was RESUME ('3')
-      else if (cmdStr === '3' || cmdStr.includes('resume')) {
-        if (cmdTs >= stateTs - 5000) {
-          isStopped = false;
+  if (trackCmdData?.timestamp) {
+    const timeDiff = Date.now() - trackCmdData.timestamp;
+    if (timeDiff < 30000) {
+      const cmd = String(trackCmdData.payload).trim().toLowerCase();
+
+      if (cmd === '1' || cmd.includes('pause')) {
+        isPaused = true;
+        isPlaying = false;
+        stateText = 'Paused';
+      } else if (cmd === '2' || cmd.includes('stop')) {
+        isStopped = true;
+        isPlaying = false;
+        stateText = 'Stopped';
+      } else if (cmd === '3' || cmd.includes('resume')) {
+        isPaused = false;
+        isStopped = false;
+        if (stateText !== 'Stopped') {
           stateText = 'Playing';
           isPlaying = true;
         }
       }
-      // If command was PLAY/STOP Toggle ('0')
-      // We do not force isStopped = true here because it could be PLAY. 
-      // We will let the stateData dictate the true state for command '0'.
     }
   }
 
-  // If explicitly stopped, clear ghost metadata!
-  if (isStopped) {
-    title = 'Idle';
-    durVal = 0;
-    posVal = 0;
+  if (durVal <= 0 && ambienceDurData?.payload) {
+    const rawAmb = Number(ambienceDurData.payload);
+    if (!isNaN(rawAmb) && rawAmb > 0) {
+      durVal = rawAmb > 10000 ? Math.floor(rawAmb / 1000) : rawAmb;
+    }
   }
 
-  const lowerTitle = String(title).toLowerCase();
-  const lowerRaw = String(rawPayload).toLowerCase();
-  const isInvalid = lowerTitle.includes('voice') || lowerRaw.includes('voice') ||
-    lowerTitle.includes('undefined') || lowerRaw.includes('undefined');
-
-  if (isInvalid || title === 'Idle') {
-    title = 'Idle';
-    isPlaying = false;
-    stateText = 'Stopped';
-  }
-
-  // Attempt to override duration from track/list if missing
-  if (trackListData && trackListData.payload && title && title !== 'Idle' && durVal === 0) {
+  if (durVal <= 0 && sessionData?.payload) {
     try {
-      const parsedList = typeof trackListData.payload === 'string' ? JSON.parse(trackListData.payload) : trackListData.payload;
-      if (Array.isArray(parsedList)) {
-        const track = parsedList.find(t =>
-          t.display === title ||
-          String(t.id) === String(title) ||
-          t.details?.title === title ||
-          String(t.scent) === title
-        );
-        if (track && track.duration) {
-          const tDur = Number(track.duration);
-          durVal = tDur > 20000 ? Math.floor(tDur / 1000) : tDur;
+      const sObj = typeof sessionData.payload === 'string' ? JSON.parse(sessionData.payload) : sessionData.payload;
+      if (sObj.total_duration) durVal = Math.floor(Number(sObj.total_duration) / 1000);
+      else if (sObj.duration) durVal = Math.floor(Number(sObj.duration) / 1000);
+    } catch (_) { }
+  }
+
+  if (mediaInfo && mediaInfo.duration) {
+    const parsedMediaDur = Number(mediaInfo.duration);
+    if (!isNaN(parsedMediaDur) && parsedMediaDur > 0) {
+      durVal = parsedMediaDur > 10000 ? Math.floor(parsedMediaDur / 1000) : parsedMediaDur;
+    }
+  }
+
+  if (durVal <= 0 && trackListData?.payload) {
+    try {
+      let tList = typeof trackListData.payload === 'string' ? JSON.parse(trackListData.payload) : trackListData.payload;
+      if (Array.isArray(tList)) {
+        const found = tList.find(t => {
+          const tId = String(t.id || t.track || '').toLowerCase();
+          const pPayload = String(playAudioData?.payload || '').toLowerCase();
+          const curTitle = String(title).toLowerCase();
+          return (pPayload && tId.includes(pPayload) && !isVoiceGuideTrack(tId)) || (curTitle && tId.includes(curTitle) && !isVoiceGuideTrack(tId)) || (t.title && curTitle.includes(String(t.title).toLowerCase()));
+        });
+        if (found) {
+          if (found.duration) {
+            const d = Number(found.duration);
+            durVal = d > 10000 ? Math.floor(d / 1000) : d;
+          }
+          if (title === 'Idle' || !title) {
+            title = found.display || found.title || found.name || title;
+          }
         }
       }
     } catch (_) { }
   }
 
-  // LAST RESORT: Check mediaInfo or sessionData for duration
-  if (durVal === 0) {
-    if (mediaInfo?.duration) {
-      const mDur = Number(mediaInfo.duration);
-      if (!isNaN(mDur) && mDur > 0) durVal = mDur > 20000 ? Math.floor(mDur / 1000) : mDur;
-    } else if (mediaInfo?.length) {
-      const mDur = Number(mediaInfo.length);
-      if (!isNaN(mDur) && mDur > 0) durVal = mDur > 20000 ? Math.floor(mDur / 1000) : mDur;
-    } else if (sessionData?.payload) {
-      try {
-        const parsedSess = typeof sessionData.payload === 'string' ? JSON.parse(sessionData.payload) : sessionData.payload;
-        if (parsedSess.duration) {
-          const sDur = Number(parsedSess.duration);
-          if (!isNaN(sDur) && sDur > 0) durVal = sDur > 20000 ? Math.floor(sDur / 1000) : sDur;
-        }
-      } catch (_) { }
-    }
-  }
-
-  // ULTRA LAST RESORT: Check LocalStorage for previously saved duration
-  if (durVal === 0 && title && title !== 'Idle') {
-    try {
-      const cachedDur = localStorage.getItem(`pod_duration_${title}`);
-      if (cachedDur) {
-        const parsed = Number(cachedDur);
-        // If parsed duration is ridiculously large (e.g. 5000000ms for a voice guide), ignore it (corrupted from old bug)
-        if (!isNaN(parsed) && parsed > 0 && parsed < 100000) durVal = parsed;
-      }
-    } catch (_) { }
-  }
-
-  // Save successful duration to LocalStorage to remember it across page reloads
-  useEffect(() => {
-    if (durVal > 0 && title && title !== 'Idle') {
-      try {
-        localStorage.setItem(`pod_duration_${title}`, durVal.toString());
-      } catch (_) { }
-    }
-  }, [durVal, title]);
-
-  const formatMinSec = (sec) => {
-    const total = sec > 10000 ? Math.floor(sec / 1000) : sec;
-    const m = Math.floor(total / 60);
-    const s = Math.floor(total % 60);
+  const formatMinSec = (totalSeconds) => {
+    if (!totalSeconds || isNaN(totalSeconds) || totalSeconds <= 0) return '00:00';
+    const m = Math.floor(totalSeconds / 60);
+    const s = Math.floor(totalSeconds % 60);
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
-
-
-  const timestampStr = playAudioData?.timestamp
-    ? new Date(playAudioData.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-    : '16.26.58';
 
   const rawPos = posVal;
   const rawDur = durVal;
 
   const [localPos, setLocalPos] = useState(rawPos);
-
   const effectiveDur = rawDur > 0 ? rawDur : 0;
   const lastSyncTs = useRef(0);
 
@@ -263,7 +248,6 @@ const AudioPlayerControlWidget = ({ seekData, playAudioData, stateData, trackLis
       lastSyncTs.current = posTimestamp;
       return;
     }
-
     if (posTimestamp > lastSyncTs.current) {
       let compensatedPos = rawPos;
       if (isPlaying) {
@@ -271,7 +255,6 @@ const AudioPlayerControlWidget = ({ seekData, playAudioData, stateData, trackLis
         const compensation = elapsedSincePacket > 2 ? elapsedSincePacket : 0;
         compensatedPos += compensation;
       }
-
       setLocalPos(effectiveDur > 0 ? Math.min(effectiveDur, compensatedPos) : compensatedPos);
       lastSyncTs.current = posTimestamp;
     }
@@ -281,21 +264,15 @@ const AudioPlayerControlWidget = ({ seekData, playAudioData, stateData, trackLis
     if (!isPlaying) return;
     const interval = setInterval(() => {
       setLocalPos(prev => {
-        if (effectiveDur > 0) {
-          return prev < effectiveDur ? prev + 1 : prev;
-        }
+        if (effectiveDur > 0) return prev < effectiveDur ? prev + 1 : prev;
         return prev + 1;
       });
     }, 1000);
     return () => clearInterval(interval);
   }, [isPlaying, effectiveDur]);
 
-  const remainingSec = isPlaying && effectiveDur > 0 ? Math.max(0, effectiveDur - localPos) : 0;
   const progressPercent = effectiveDur > 0 ? Math.min(100, (localPos / effectiveDur) * 100) : 0;
 
-  // Removed Idle return block to show empty dashboard
-
-  // Helpers for SVG Circle
   const radius = 120;
   const stroke = 12;
   const normalizedRadius = radius - stroke * 2;
@@ -315,7 +292,7 @@ const AudioPlayerControlWidget = ({ seekData, playAudioData, stateData, trackLis
       if (p.scent !== undefined) scentLabel = String(p.scent);
       if (p.width !== undefined) scentWidthMs = Number(p.width);
     }
-  } catch (_) {}
+  } catch (_) { }
 
   useEffect(() => {
     if (scentWidthMs > 0 && olfactoryData?.timestamp) {
@@ -332,13 +309,10 @@ const AudioPlayerControlWidget = ({ seekData, playAudioData, stateData, trackLis
   }, [olfactoryData?.timestamp, scentWidthMs]);
 
   return (
-    <div className="col-span-full bg-slate-900/85 backdrop-blur-xl border border-slate-800/90 rounded-3xl p-6 md:p-8 flex flex-col gap-6 shadow-2xl ring-1 ring-cyan-500/20 relative overflow-hidden">
-      {/* Background glow */}
+    <div className="col-span-full bg-slate-900/85 backdrop-blur-xl border border-slate-800/90 rounded-3xl md:px-8 md:py-5 flex flex-col gap-4 shadow-2xl ring-1 ring-cyan-500/20 relative overflow-hidden">
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[650px] bg-cyan-500/5 rounded-full blur-3xl pointer-events-none"></div>
 
-      {/* Top Header Row inside the Card: Track Info & Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-4 z-10 border-b border-slate-800/60 pb-4">
-        {/* Left: Active Track Info */}
+      <div className="flex flex-wrap items-center justify-between gap-3 z-10 border-b border-slate-800/60 pb-3">
         <div className="flex items-center gap-3.5">
           <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
             <Volume2 size={20} />
@@ -347,39 +321,51 @@ const AudioPlayerControlWidget = ({ seekData, playAudioData, stateData, trackLis
             <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
               Active Track
             </span>
-            <div className="flex items-center gap-1.5 mt-0.5">
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
               <span className="text-sm md:text-base font-bold text-white font-mono break-all">
                 <span className="text-slate-400 font-sans text-xs font-semibold mr-1.5">Song:</span>
-                {mediaInfo?.lamp || mediaInfo?.song || mediaInfo?.song_name || mediaInfo?.title || title}
+                {title !== 'Idle' ? (mediaInfo?.lamp || mediaInfo?.song || mediaInfo?.song_name || mediaInfo?.title || title) : 'Idle (Standby)'}
               </span>
+              {voiceGuideTrack && isVoicePlaying && (
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold inline-flex items-center gap-1">
+                  Voice Guide: {voiceGuideTrack}
+                </span>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Right: Audio State Pill */}
         <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-950/70 border border-slate-800 text-xs font-mono text-slate-300 shadow-sm">
           <span className={`w-2 h-2 rounded-full ${isPlaying ? 'bg-cyan-400 animate-pulse' : 'bg-slate-500'}`}></span>
           <span className="font-bold tracking-wider">{stateText.toUpperCase()}</span>
         </div>
       </div>
 
-      {/* Main Center Area: Symmetrical 5-Dial Cockpit Cluster */}
-      <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 md:gap-14 py-2 z-10">
-        
-        {/* Left Side Dials */}
-        <div className="flex flex-col gap-6 sm:gap-8">
-          <MiniCircle label="Strobo" value={stroboVal+"%"} percentage={Number(stroboVal)||0} icon={Sun} colorClass="text-amber-400" strokeClass="text-amber-500" />
-          <MiniCircle label="Audio" value={audioVal+"%"} percentage={Number(audioVal)||0} icon={Volume2} colorClass="text-cyan-400" strokeClass="text-cyan-500" />
-        </div>
+      <div className="flex items-center justify-center md:justify-around xl:justify-center gap-4 sm:gap-6 md:gap-8 lg:gap-10 xl:gap-12 flex-wrap py-2 z-10 w-full">
+        <MiniCircle
+          label="Strobo"
+          value={stroboVal + "%"}
+          percentage={Number(stroboVal) || 0}
+          icon={Sun}
+          colorClass="text-amber-400"
+          strokeClass="text-amber-500"
+        />
 
-        {/* Central Circular Progress */}
+        <MiniCircle
+          label="Audio"
+          value={audioVal + "%"}
+          percentage={Number(audioVal) || 0}
+          icon={Volume2}
+          colorClass="text-cyan-400"
+          strokeClass="text-cyan-500"
+        />
+
         <div className="relative flex items-center justify-center w-64 h-64 md:w-72 md:h-72 z-20 pointer-events-none drop-shadow-2xl mx-2">
           <svg
             height={radius * 2}
             width={radius * 2}
             className="transform -rotate-90 drop-shadow-2xl scale-100 md:scale-105 transition-transform"
           >
-            {/* Background track */}
             <circle
               stroke="rgba(30, 41, 59, 0.4)"
               fill="transparent"
@@ -388,7 +374,6 @@ const AudioPlayerControlWidget = ({ seekData, playAudioData, stateData, trackLis
               cx={radius}
               cy={radius}
             />
-            {/* Progress track */}
             <circle
               stroke="currentColor"
               fill="transparent"
@@ -403,11 +388,9 @@ const AudioPlayerControlWidget = ({ seekData, playAudioData, stateData, trackLis
             />
           </svg>
 
-          {/* Center Content */}
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
-            <span className={`px-3 py-0.5 rounded-full text-[10px] font-extrabold tracking-widest mb-2 ${
-              isPlaying ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-slate-800/90 text-slate-400 border border-slate-700'
-            }`}>
+            <span className={`px-3 py-0.5 rounded-full text-[10px] font-extrabold tracking-widest mb-2 ${isPlaying ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-slate-800/90 text-slate-400 border border-slate-700'
+              }`}>
               {stateText.toUpperCase()}
             </span>
             <span className="font-mono text-4xl md:text-5xl font-black text-white tracking-tight drop-shadow-md">
@@ -419,11 +402,23 @@ const AudioPlayerControlWidget = ({ seekData, playAudioData, stateData, trackLis
           </div>
         </div>
 
-        {/* Right Side Dials */}
-        <div className="flex flex-col gap-6 sm:gap-8">
-          <MiniCircle label="Vibration" value={vibrationVal+"%"} percentage={Number(vibrationVal)||0} icon={Activity} colorClass="text-rose-400" strokeClass="text-rose-500" />
-          <MiniCircle label="Scent" value={scentLabel} percentage={scentProgress} icon={Wind} colorClass="text-emerald-400" strokeClass="text-emerald-500" />
-        </div>
+        <MiniCircle
+          label="Vibration"
+          value={vibrationVal + "%"}
+          percentage={Number(vibrationVal) || 0}
+          icon={Activity}
+          colorClass="text-rose-400"
+          strokeClass="text-rose-500"
+        />
+
+        <MiniCircle
+          label="Scent"
+          value={scentLabel}
+          percentage={scentProgress}
+          icon={Wind}
+          colorClass="text-emerald-400"
+          strokeClass="text-emerald-500"
+        />
       </div>
     </div>
   );

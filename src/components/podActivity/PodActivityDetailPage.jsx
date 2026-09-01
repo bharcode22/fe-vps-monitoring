@@ -4,9 +4,30 @@ import io from 'socket.io-client';
 import { SOCKET_URL } from '../../config';
 import PodActivityTopicCards from './PodActivityTopicCards';
 
+function parseOccupancy(payload) {
+  if (payload === null || payload === undefined) return null;
+  const str = String(payload).trim();
+  if (str === '1' || str.toLowerCase() === 'true' || str.toLowerCase() === 'occupied' || str.toLowerCase() === 'active' || str.toLowerCase() === 'on' || str.toLowerCase() === 'pob') return 1;
+  if (str === '0' || str.toLowerCase() === 'false' || str.toLowerCase() === 'vacant' || str.toLowerCase() === 'empty' || str.toLowerCase() === 'off') return 0;
+  try {
+    const json = typeof payload === 'object' ? payload : JSON.parse(str);
+    if (json.pob_state !== undefined) return parseOccupancy(json.pob_state);
+    if (json.pod_state !== undefined) return parseOccupancy(json.pod_state);
+    if (json.pob !== undefined) return parseOccupancy(json.pob);
+    if (json.state !== undefined) return parseOccupancy(json.state);
+    if (json.value !== undefined) return parseOccupancy(json.value);
+    if (json.status !== undefined) return parseOccupancy(json.status);
+    if (json.occupied !== undefined) return parseOccupancy(json.occupied);
+  } catch (_) { }
+  const num = Number(str);
+  if (!isNaN(num)) return num >= 1 ? 1 : 0;
+  return null;
+}
+
 export default function PodActivityDetailPage({ pod, onBack }) {
   const [mqttActivityFeed, setMqttActivityFeed] = useState([]);
   const [mqttStatus, setMqttStatus] = useState({ connected: false });
+  const [occupancyState, setOccupancyState] = useState(pod?.stateValue ?? null);
   const socketRef = useRef(null);
   const detectedPrefixRef = useRef(null);
 
@@ -35,13 +56,17 @@ export default function PodActivityDetailPage({ pod, onBack }) {
 
     socket.on('mqtt:packet', (packet) => {
       if (packet.topic) {
-        const match = packet.topic.match(/^(pod\/[^/]+\/2\.0\/)/);
+        const match = packet.topic.match(/^(pod\/[^/]+\/(?:2\.0\/)?)/);
         if (match) {
           detectedPrefixRef.current = match[1];
         }
-      }
 
-      // console.log('Received MQTT Packet:', packet.topic, packet.payload);
+        // Track occupancy from either mod_chair/pob_state or mod_ambience/pod_state
+        if (packet.topic.includes('pob_state') || packet.topic.includes('pod_state')) {
+          const occ = parseOccupancy(packet.payload);
+          if (occ !== null) setOccupancyState(occ);
+        }
+      }
 
       // Format the packet to match what PodActivityTopicCards expects:
       // { topic: string, payload: string, timestamp: number, serverId: number, serverName: string }
@@ -55,6 +80,48 @@ export default function PodActivityDetailPage({ pod, onBack }) {
         };
         return [newLog, ...prev].slice(0, 500); // Keep last 500 logs
       });
+    });
+
+    // Listen to background pod activity state change events
+    socket.on('pod-activity:state-changed', (eventPayload) => {
+      const { pod: updatedPod } = eventPayload || {};
+      if (updatedPod && updatedPod.id === pod.id) {
+        if (updatedPod.stateValue !== undefined && updatedPod.stateValue !== null) {
+          setOccupancyState(updatedPod.stateValue);
+        }
+        if (updatedPod.lastTopic && updatedPod.lastPayload !== undefined) {
+          setMqttActivityFeed((prev) => {
+            const newLog = {
+              topic: updatedPod.lastTopic,
+              payload: updatedPod.lastPayload,
+              timestamp: Date.now(),
+              serverId: pod.id,
+              serverName: pod.name
+            };
+            return [newLog, ...prev].slice(0, 500);
+          });
+        }
+      }
+    });
+
+    // Listen to raw background MQTT log events for this pod
+    socket.on('pod-activity:mqtt-log', (logEntry) => {
+      if (logEntry && logEntry.serverId === pod.id) {
+        if (logEntry.topic && (logEntry.topic.includes('pob_state') || logEntry.topic.includes('pod_state'))) {
+          const occ = parseOccupancy(logEntry.payload);
+          if (occ !== null) setOccupancyState(occ);
+        }
+        setMqttActivityFeed((prev) => {
+          const newLog = {
+            topic: logEntry.topic,
+            payload: logEntry.payload,
+            timestamp: logEntry.timestamp ? new Date(logEntry.timestamp).getTime() : Date.now(),
+            serverId: pod.id,
+            serverName: pod.name
+          };
+          return [newLog, ...prev].slice(0, 500);
+        });
+      }
     });
 
     socket.on('mqtt:inject-success', (res) => {
@@ -122,6 +189,18 @@ export default function PodActivityDetailPage({ pod, onBack }) {
                     {mqttStatus.connected ? 'Connected' : 'Disconnected'}
                   </span>
                 </span>
+                {occupancyState !== null && (
+                  <>
+                    <span className="text-slate-600">•</span>
+                    <span className={`inline-flex items-center gap-1.5 text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-md border ${occupancyState === 1
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                        : 'bg-slate-800/90 text-slate-300 border-slate-700'
+                      }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${occupancyState === 1 ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+                      {occupancyState === 1 ? 'OCCUPIED (1)' : 'AVAILABLE (0)'}
+                    </span>
+                  </>
+                )}
                 <span className="text-slate-600">•</span>
                 <span className="flex items-center gap-1.5 font-mono text-[11px] text-slate-400 bg-slate-950/60 px-2 py-0.5 rounded-lg border border-slate-800">
                   <Radio size={11} className="text-cyan-400 animate-pulse" />

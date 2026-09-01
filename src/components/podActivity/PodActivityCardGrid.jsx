@@ -7,8 +7,7 @@ export default function PodActivityCardGrid({
   filteredPods = [],
   recentFlashPodId,
   formatDuration,
-  onSelectPod,
-  onSimulate
+  onSelectPod
 }) {
   if (isLoading) {
     return (
@@ -46,7 +45,6 @@ export default function PodActivityCardGrid({
           isFlashing={recentFlashPodId === pod.id}
           formatDuration={formatDuration}
           onSelectPod={onSelectPod}
-          onSimulate={onSimulate}
         />
       ))}
     </div>

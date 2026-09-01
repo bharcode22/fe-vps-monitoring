@@ -1,5 +1,5 @@
 import React from 'react';
-import { UserCheck, Radio, Play, RotateCw, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
+import { UserCheck, Radio, RotateCw, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function PodActivityHeader({
   isSocketConnected,
@@ -21,7 +21,7 @@ export default function PodActivityHeader({
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
               <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                POD Activity &amp; Occupancy Monitor
+                POD Activity MQTT Monitor
               </h1>
               <span className="text-xs font-mono px-2.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full font-bold inline-flex items-center gap-1.5">
                 <Radio size={12} className={isSocketConnected ? 'animate-pulse text-emerald-400' : 'text-slate-400'} />
@@ -32,30 +32,15 @@ export default function PodActivityHeader({
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-1 flex items-center gap-2 flex-wrap">
-              <span>Topic: <code className="text-cyan-300 font-mono font-semibold">mod_chair/pob_state</code></span>
+              <span>Topik: <code className="text-cyan-300 font-mono font-semibold">mod_chair/pob_state</code> | <code className="text-cyan-300 font-mono font-semibold">mod_ambience/pod_state</code></span>
               <span>•</span>
-              <span>Status POB: <b className="text-emerald-400 font-mono">1 = OCCUPIED</b>, <b className="text-slate-300 font-mono">0 = AVAILABLE (STANDBY)</b></span>
-              <span>•</span>
-              <span>Broker: <code className="text-indigo-300 font-mono">LAN Port :1883</code></span>
+              <span>Status: <b className="text-emerald-400 font-mono">1 = OCCUPIED</b>, <b className="text-slate-300 font-mono">0 = AVAILABLE (STANDBY)</b></span>
             </p>
           </div>
         </div>
 
         {/* Header Actions */}
         <div className="flex items-center gap-2.5 flex-wrap self-end lg:self-center">
-          <button
-            onClick={onToggleSimulator}
-            className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
-              showSimulator
-                ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
-            }`}
-            title="Buka Panel Uji Simulasi Payload"
-          >
-            <Play size={13} />
-            <span>{showSimulator ? 'Tutup Simulator' : 'Simulator Uji Coba'}</span>
-          </button>
-
           <button
             onClick={onReconnectMqtt}
             disabled={isRefreshing}

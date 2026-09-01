@@ -1,12 +1,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
+import {
   X, Activity, Volume2, Sun, DoorOpen, Wind, Filter,
-  Palette, Lightbulb, Sparkles, Clock, Sliders, Zap, 
-  Flame, Radio, Power, Play, Pause, Layers, CheckCircle2
+  Palette, Lightbulb, Sparkles, Clock, Sliders, Zap,
+  Flame, Radio, Power, Play, Pause, Layers, CheckCircle2,
+  Thermometer, Droplets, UserCheck
 } from 'lucide-react';
 import AudioPlayerControlWidget from './AudioPlayerControlWidget';
 
 const TOPIC_DEFINITIONS = [
+  // CHAIR
+  { key: 'mod_chair/pob_state', module: 'Chair', label: 'POB State', icon: UserCheck },
+  { key: 'mod_chair/set_pemf', module: 'Chair', label: 'PEMF Setting', icon: Zap },
+  { key: 'mod_chair/set_schumann', module: 'Chair', label: 'Schumann Resonance', icon: Radio },
+  { key: 'mod_chair/set_pob_threshold', module: 'Chair', label: 'POB Threshold', icon: Sliders },
+  { key: 'mod_chair/temperature', module: 'Chair', label: 'Temperature', icon: Thermometer },
+  { key: 'mod_chair/humidity', module: 'Chair', label: 'Humidity', icon: Droplets },
+
   // AUDIO
   { key: 'mod_audio/strobo/set_level', module: 'Audio', label: 'Strobo Level', icon: Sun, defaultVal: 76 },
   { key: 'mod_audio/audio/set_level', module: 'Audio', label: 'Audio Level', icon: Volume2, defaultVal: 89 },
@@ -53,6 +62,13 @@ const INTEGRATED_TOPICS = [
 ];
 
 const MODULE_THEMES = {
+  Chair: {
+    accentColor: 'text-indigo-400',
+    bgColor: 'bg-indigo-500/10',
+    borderColor: 'border-indigo-500/30',
+    gradient: 'from-indigo-500 to-purple-500',
+    badge: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
+  },
   Audio: {
     accentColor: 'text-cyan-400',
     bgColor: 'bg-cyan-500/10',
@@ -76,10 +92,67 @@ const MODULE_THEMES = {
   }
 };
 
+function parseOccupancy(payload) {
+  if (payload === null || payload === undefined) return null;
+  const str = String(payload).trim();
+  if (str === '1' || str.toLowerCase() === 'true' || str.toLowerCase() === 'occupied' || str.toLowerCase() === 'active' || str.toLowerCase() === 'on' || str.toLowerCase() === 'pob') return 1;
+  if (str === '0' || str.toLowerCase() === 'false' || str.toLowerCase() === 'vacant' || str.toLowerCase() === 'empty' || str.toLowerCase() === 'off') return 0;
+  try {
+    const json = typeof payload === 'object' ? payload : JSON.parse(str);
+    if (json.pob_state !== undefined) return parseOccupancy(json.pob_state);
+    if (json.pod_state !== undefined) return parseOccupancy(json.pod_state);
+    if (json.pob !== undefined) return parseOccupancy(json.pob);
+    if (json.state !== undefined) return parseOccupancy(json.state);
+    if (json.value !== undefined) return parseOccupancy(json.value);
+    if (json.status !== undefined) return parseOccupancy(json.status);
+    if (json.occupied !== undefined) return parseOccupancy(json.occupied);
+  } catch (_) { }
+  const num = Number(str);
+  if (!isNaN(num)) return num >= 1 ? 1 : 0;
+  return null;
+}
+
 export default function PodActivityTopicCards({ show, onClose, feed = [], pods = [], onPublish }) {
-  const [topicStates, setTopicStates] = useState({});
+  const [topicStates, setTopicStates] = useState(() => {
+    const init = {};
+    if (pods && pods[0]) {
+      const p = pods[0];
+      if (p.stateValue !== null && p.stateValue !== undefined) {
+        const valStr = String(p.stateValue);
+        const entry = {
+          payload: p.lastPayload !== undefined && p.lastPayload !== null ? String(p.lastPayload) : valStr,
+          timestamp: p.lastSeenAt ? new Date(p.lastSeenAt).getTime() : Date.now(),
+          serverName: p.name,
+          isFlashing: false
+        };
+        init['mod_chair/pob_state'] = entry;
+        init['mod_ambience/pod_state'] = entry;
+      }
+    }
+    return init;
+  });
   const [selectedServerId, setSelectedServerId] = useState('ALL');
   const [multimediaMap, setMultimediaMap] = useState({});
+
+  useEffect(() => {
+    if (pods && pods[0]) {
+      const p = pods[0];
+      if (p.stateValue !== null && p.stateValue !== undefined) {
+        const valStr = String(p.stateValue);
+        const entry = {
+          payload: p.lastPayload !== undefined && p.lastPayload !== null ? String(p.lastPayload) : valStr,
+          timestamp: p.lastSeenAt ? new Date(p.lastSeenAt).getTime() : Date.now(),
+          serverName: p.name,
+          isFlashing: false
+        };
+        setTopicStates((prev) => ({
+          ...prev,
+          'mod_chair/pob_state': entry,
+          'mod_ambience/pod_state': entry
+        }));
+      }
+    }
+  }, [pods]);
 
   const fetchMultimediaInfo = async (payloadVal) => {
     const soundScapeId = String(payloadVal).trim();
@@ -110,28 +183,34 @@ export default function PodActivityTopicCards({ show, onClose, feed = [], pods =
       if (selectedServerId !== 'ALL' && logItem.serverId !== selectedServerId) continue;
 
       let topicKey = logItem.topic;
-      const match = logItem.topic.match(/pod\/[^/]+\/2\.0\/(.*)/);
-      if (match && match[1]) topicKey = match[1];
+      const cleanKey = topicKey.replace(/^pod\/[^/]+\/(?:2\.0\/)?/, '').replace(/^\//, '');
+      if (cleanKey) topicKey = cleanKey;
 
       if (topicKey.includes('track') || topicKey.includes('audio') || topicKey.includes('play')) {
         fetchMultimediaInfo(logItem.payload);
       }
 
-      updatedStates[topicKey] = {
+      const stateEntry = {
         payload: logItem.payload,
         timestamp: logItem.timestamp,
         serverName: logItem.serverName,
         isFlashing: i === 0
       };
+
+      updatedStates[topicKey] = stateEntry;
+
+      // Synchronize pob_state between mod_chair and mod_ambience if either arrives
+      if (topicKey === 'mod_chair/pob_state' || topicKey === 'mod_ambience/pod_state') {
+        updatedStates['mod_chair/pob_state'] = stateEntry;
+        updatedStates['mod_ambience/pod_state'] = stateEntry;
+      }
     }
 
     setTopicStates(prev => ({ ...prev, ...updatedStates }));
 
     const latestTopic = feed[0]?.topic;
     if (latestTopic) {
-      let key = latestTopic;
-      const m = latestTopic.match(/pod\/[^/]+\/2\.0\/(.*)/);
-      if (m && m[1]) key = m[1];
+      let key = latestTopic.replace(/^pod\/[^/]+\/(?:2\.0\/)?/, '').replace(/^\//, '');
       setTimeout(() => {
         setTopicStates(prev => ({ ...prev, [key]: { ...prev[key], isFlashing: false } }));
       }, 800);
@@ -148,80 +227,92 @@ export default function PodActivityTopicCards({ show, onClose, feed = [], pods =
 
   return (
     <div className="flex flex-col w-full gap-8 animate-in fade-in duration-200">
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-        {Object.entries(groupedModules).map(([moduleName, moduleDefs]) => {
-          const theme = MODULE_THEMES[moduleName] || MODULE_THEMES.Audio;
-          const isAudio = moduleName === 'Audio';
-          const isAmbience = moduleName === 'Ambience';
-          let colSpan = 'col-span-12';
-          if (isAudio) colSpan = 'col-span-12 xl:col-span-8';
-          if (isAmbience) colSpan = 'col-span-12 xl:col-span-4';
-          const visibleCount = isAudio ? 1 : moduleDefs.filter(d => !INTEGRATED_TOPICS.includes(d.key)).length;
+      {Object.entries(groupedModules).map(([moduleName, moduleDefs]) => {
+        const theme = MODULE_THEMES[moduleName] || MODULE_THEMES.Audio;
+        const isAudio = moduleName === 'Audio';
+        const isAmbience = moduleName === 'Ambience';
+        const visibleCount = isAudio ? 1 : moduleDefs.filter(d => !INTEGRATED_TOPICS.includes(d.key)).length;
 
-          return (
-            <div key={moduleName} className={`flex flex-col gap-4 ${colSpan}`}>
-              <div className="flex items-center justify-between px-1">
-                <div className="flex items-center gap-2.5">
-                  <div className={`h-4 w-1.5 rounded-full bg-gradient-to-b ${theme.gradient}`}></div>
-                  <h3 className="text-sm font-extrabold text-slate-100 uppercase tracking-wider">{moduleName}</h3>
-                </div>
-                <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${theme.badge}`}>
-                  {visibleCount} Topik
-                </span>
+        return (
+          <div key={moduleName} className="flex flex-col gap-4 w-full">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2.5">
+                <div className={`h-4 w-1.5 rounded-full bg-gradient-to-b ${theme.gradient}`}></div>
+                <h3 className="text-sm font-extrabold text-slate-100 uppercase tracking-wider">{moduleName}</h3>
               </div>
-              {isAudio ? (
-                <AudioPlayerControlWidget
-                  seekData={topicStates['mod_audio/track/seek']}
-                  playAudioData={topicStates['mod_audio/track/play_audio']}
-                  stateData={topicStates['mod_audio/track/state']}
-                  trackListData={topicStates['mod_audio/track/list']}
-                  ambienceDurData={topicStates['mod_ambience/set_duration']}
-                  trackCmdData={topicStates['mod_audio/track/cmd']}
-                  sessionData={topicStates['session-data']}
-                  mediaInfo={topicStates['mod_audio/track/play_audio'] ? multimediaMap[topicStates['mod_audio/track/play_audio'].payload] : null}
-                  stroboData={topicStates['mod_audio/strobo/set_level']}
-                  audioLevelData={topicStates['mod_audio/audio/set_level']}
-                  vibrationData={topicStates['mod_audio/vibration/set_level']}
-                  olfactoryData={topicStates['mod_olfactory/cmd']}
-                  onPublish={onPublish}
-                />
-              ) : (
-                <div className={`grid gap-3.5 ${isAmbience ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6'}`}>
-                  {moduleDefs.map(def => {
-                    if (INTEGRATED_TOPICS.includes(def.key)) return null;
-                    const data = topicStates[def.key];
-                    return (
-                      <GenericTopicCard
-                        key={def.key}
-                        def={def}
-                        data={data}
-                        Icon={def.icon}
-                        theme={theme}
-                        isFlashing={data?.isFlashing}
-                        serverName={data?.serverName || pods[0]?.name}
-                        mediaInfo={data ? multimediaMap[data.payload] : null}
-                        onPublish={onPublish}
-                      />
-                    );
-                  })}
-                </div>
-              )}
+              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${theme.badge}`}>
+                {visibleCount} Topik
+              </span>
             </div>
-          );
-        })}
-      </div>
+            {isAudio ? (
+              <AudioPlayerControlWidget
+                seekData={topicStates['mod_audio/track/seek']}
+                playAudioData={topicStates['mod_audio/track/play_audio']}
+                stateData={topicStates['mod_audio/track/state']}
+                trackListData={topicStates['mod_audio/track/list']}
+                ambienceDurData={topicStates['mod_ambience/set_duration']}
+                trackCmdData={topicStates['mod_audio/track/cmd']}
+                sessionData={topicStates['session-data']}
+                mediaInfo={topicStates['mod_audio/track/play_audio'] ? multimediaMap[topicStates['mod_audio/track/play_audio'].payload] : null}
+                stroboData={topicStates['mod_audio/strobo/set_level']}
+                audioLevelData={topicStates['mod_audio/audio/set_level']}
+                vibrationData={topicStates['mod_audio/vibration/set_level']}
+                olfactoryData={topicStates['mod_olfactory/cmd']}
+                onPublish={onPublish}
+              />
+            ) : (
+              <div className={`grid gap-3.5 ${isAmbience
+                ? 'grid-cols-2 sm:grid-cols-2 md:grid-cols-4'
+                : moduleName === 'Chair'
+                  ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-6'
+                  : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6'
+                }`}>
+                {moduleDefs.map(def => {
+                  if (INTEGRATED_TOPICS.includes(def.key)) return null;
+                  const data = topicStates[def.key];
+                  return (
+                    <GenericTopicCard
+                      key={def.key}
+                      def={def}
+                      data={data}
+                      Icon={def.icon}
+                      theme={theme}
+                      isFlashing={data?.isFlashing}
+                      serverName={data?.serverName || pods[0]?.name}
+                      mediaInfo={data ? multimediaMap[data.payload] : null}
+                      onPublish={onPublish}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
 function GenericTopicCard({ def, data, Icon, theme, isFlashing, serverName, mediaInfo, onPublish }) {
+  const isOccupancyState = def.key.includes('pob_state') || def.key.includes('pod_state') || def.key === 'mod_chair/pob_state';
   const isLevel = def.key.includes('level') || def.key.includes('brightness');
+  const isThreshold = def.key.includes('threshold');
   const isHex = def.key.includes('hex');
   const isDuration = def.key.includes('duration');
-  const isState = def.key.includes('state');
-  const isFrequency = def.key.includes('frequency');
+  const isState = def.key.includes('state') && !isOccupancyState;
+  const isFrequency = def.key.includes('frequency') || def.key.includes('schumann');
+  const isTemp = def.key.includes('temperature') || def.key.includes('temp');
+  const isHumidity = def.key.includes('humidity');
   const rawPayload = data ? String(data.payload).trim() : null;
   const numVal = rawPayload !== null && !isNaN(Number(rawPayload)) && rawPayload !== '' ? Number(rawPayload) : null;
+  const occVal = isOccupancyState && rawPayload !== null ? parseOccupancy(rawPayload) : null;
+
+  let jsonObj = null;
+  if (rawPayload && (rawPayload.startsWith('{') || rawPayload.startsWith('['))) {
+    try {
+      jsonObj = JSON.parse(rawPayload);
+    } catch (_) { }
+  }
 
   return (
     <div className={`flex flex-col justify-between p-3.5 rounded-2xl border transition-all duration-300 min-h-[145px] relative overflow-hidden group ${isFlashing ? 'bg-cyan-500/15 border-cyan-400 ring-2 ring-cyan-400/50 shadow-lg shadow-cyan-500/20' : data ? 'bg-slate-900/85 backdrop-blur-md border-slate-800/90 hover:border-slate-700 shadow-lg hover:shadow-cyan-500/5' : 'bg-slate-900/50 backdrop-blur-sm border-slate-800/60 opacity-80'}`}>
@@ -238,7 +329,59 @@ function GenericTopicCard({ def, data, Icon, theme, isFlashing, serverName, medi
       <div className="my-auto flex flex-col justify-center">
         {data ? (
           <>
-            {isLevel && numVal !== null ? (
+            {isOccupancyState && occVal !== null ? (
+              <div className="flex items-center gap-1.5">
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-extrabold uppercase border ${
+                  occVal === 1
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                    : 'bg-slate-800/80 text-slate-300 border-slate-700'
+                  }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${
+                    occVal === 1
+                      ? 'bg-emerald-400 animate-pulse'
+                      : 'bg-slate-500'
+                    }`} />
+                  {occVal === 1 ? 'OCCUPIED (1)' : 'AVAILABLE (0)'}
+                </span>
+              </div>
+            ) : jsonObj && typeof jsonObj === 'object' ? (
+              <div className="flex flex-col gap-1 bg-slate-950/60 p-2 rounded-xl border border-slate-800">
+                {jsonObj.frequency !== undefined && (
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-slate-400 font-medium">Freq:</span>
+                    <span className="font-mono font-black text-indigo-300">{jsonObj.frequency} Hz</span>
+                  </div>
+                )}
+                {jsonObj.duration !== undefined && (
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-slate-400 font-medium">Dur:</span>
+                    <span className="font-mono font-bold text-white">
+                      {jsonObj.duration >= 1000 ? `${Math.floor(jsonObj.duration / 1000)}s` : `${jsonObj.duration}ms`}
+                    </span>
+                  </div>
+                )}
+                {jsonObj.state !== undefined && (
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-slate-400 font-medium">State:</span>
+                    <span className="font-mono font-bold text-emerald-300">{String(jsonObj.state)}</span>
+                  </div>
+                )}
+              </div>
+            ) : isThreshold && numVal !== null ? (
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-black text-white font-mono leading-none">{numVal}</span>
+              </div>
+            ) : isTemp && numVal !== null ? (
+              <div className="flex items-baseline gap-1">
+                <span className="text-xl font-black text-white font-mono leading-none">{numVal}</span>
+                <span className="text-xs font-bold text-rose-400">°C</span>
+              </div>
+            ) : isHumidity && numVal !== null ? (
+              <div className="flex items-baseline gap-1">
+                <span className="text-xl font-black text-white font-mono leading-none">{numVal}</span>
+                <span className="text-xs font-bold text-cyan-400">% RH</span>
+              </div>
+            ) : isLevel && numVal !== null ? (
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-baseline justify-between"><span className="text-lg font-black text-white leading-none font-mono">{numVal}<span className="text-xs text-slate-400 font-bold ml-0.5">%</span></span><span className="text-[9px] font-semibold text-slate-400">Level</span></div>
                 <div className="w-full h-2 bg-slate-950/80 rounded-full overflow-hidden border border-slate-800/80"><div className={`h-full bg-gradient-to-r ${theme.gradient} transition-all duration-500 rounded-full`} style={{ width: `${Math.min(100, Math.max(0, numVal))}%` }} /></div>
@@ -251,7 +394,18 @@ function GenericTopicCard({ def, data, Icon, theme, isFlashing, serverName, medi
             ) : isDuration && numVal !== null ? (
               <div className="flex flex-col"><span className="text-base font-black text-white font-mono leading-none">{(() => { const totalSec = numVal > 10000 ? Math.floor(numVal / 1000) : numVal; const mins = Math.floor(totalSec / 60); const secs = totalSec % 60; return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`; })()}</span><span className="text-[9px] text-slate-400 font-medium mt-1">Total: {numVal > 10000 ? Math.floor(numVal / 1000) : numVal} dtk</span></div>
             ) : isState && rawPayload ? (
-              <div className="flex items-center gap-1.5"><span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-extrabold uppercase border ${rawPayload === '1' || rawPayload.toLowerCase() === 'active' || rawPayload.toLowerCase() === 'on' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-slate-800/80 text-slate-300 border-slate-700'}`}><span className={`w-1.5 h-1.5 rounded-full ${rawPayload === '1' || rawPayload.toLowerCase() === 'active' || rawPayload.toLowerCase() === 'on' ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />{rawPayload}</span></div>
+              <div className="flex items-center gap-1.5">
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-extrabold uppercase border ${rawPayload === '1' || rawPayload.toLowerCase() === 'active' || rawPayload.toLowerCase() === 'on' || rawPayload.toLowerCase() === 'occupied'
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                  : 'bg-slate-800/80 text-slate-300 border-slate-700'
+                  }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${rawPayload === '1' || rawPayload.toLowerCase() === 'active' || rawPayload.toLowerCase() === 'on' || rawPayload.toLowerCase() === 'occupied'
+                    ? 'bg-emerald-400 animate-pulse'
+                    : 'bg-slate-500'
+                    }`} />
+                  {rawPayload === '1' ? 'OCCUPIED (1)' : rawPayload === '0' ? 'AVAILABLE (0)' : rawPayload}
+                </span>
+              </div>
             ) : isFrequency && rawPayload ? (
               <div className="flex items-baseline gap-1"><span className="text-base font-black text-white font-mono">{rawPayload}</span><span className="text-xs font-bold text-amber-400">Hz</span></div>
             ) : (
