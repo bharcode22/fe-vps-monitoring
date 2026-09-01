@@ -1,33 +1,196 @@
 import { BACKEND_URL, getAuthHeaders } from './client';
 
 /**
- * Upload a single binary chunk of a file to monitoring backend
+ * Fetch Master API JWT authentication token from backend
  */
-export async function uploadMultimediaChunkApi(uploadSessionId, fieldName, chunkIndex, totalChunks, filename, chunkBlob) {
-  const token = localStorage.getItem('vps_monitoring_token') || '';
-  const headers = {
-    'Content-Type': 'application/octet-stream',
-    'x-upload-id': uploadSessionId,
-    'x-field-name': fieldName,
-    'x-chunk-index': String(chunkIndex),
-    'x-total-chunks': String(totalChunks),
-    'x-filename': encodeURIComponent(filename)
-  };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const res = await fetch(`${BACKEND_URL}/api/vps/multimedia/upload-chunk`, {
-    method: 'POST',
-    headers,
-    body: chunkBlob
+export async function fetchMasterTokenApi() {
+  const res = await fetch(`${BACKEND_URL}/api/vps/multimedia/master-token`, {
+    headers: getAuthHeaders()
   });
-
   const data = await res.json();
-  if (!data.success) {
-    throw new Error(data.error || `Gagal mengunggah chunk ${chunkIndex + 1} untuk ${fieldName}`);
+  if (!data.success || !data.token) {
+    throw new Error(data.error || 'Gagal mengambil token autentikasi Master API');
   }
   return data;
+}
+
+/**
+ * Direct High-Speed Multipart Upload with SSE Progress Tracking from Browser to Master API (/multimedia/upload-with-progress)
+ */
+export function uploadDirectToMasterApi(
+  formData,
+  masterToken,
+  masterApiBase = 'https://be-api.regenesispod.com/admin-api',
+  onClientProgress = null,
+  onServerProgress = null,
+  onXhrCreated = null
+) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    const cleanBase = (masterApiBase || 'https://be-api.regenesispod.com/admin-api').replace(/\/+$/, '');
+    const uploadUrl = `${cleanBase}/multimedia/upload-with-progress`;
+
+    xhr.open('POST', uploadUrl, true);
+    const authHeader = masterToken?.startsWith('Bearer ') ? masterToken : masterToken;
+    xhr.setRequestHeader('Authorization', authHeader);
+
+    if (onXhrCreated) {
+      onXhrCreated(xhr);
+    }
+
+    // Phase 1: Client Upload Stream to Master API Server
+    if (onClientProgress && xhr.upload) {
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          onClientProgress(e.loaded, e.total);
+        }
+      };
+    }
+
+    let seenIndex = 0;
+    let finalCompletedData = null;
+    let hasError = null;
+
+    const parseSseChunk = () => {
+      const text = xhr.responseText || '';
+      if (text.length <= seenIndex) return;
+
+      const newChunk = text.substring(seenIndex);
+      seenIndex = text.length;
+
+      const lines = newChunk.split('\n');
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('data:')) {
+          try {
+            const jsonStr = trimmed.replace(/^data:\s*/, '');
+            const eventData = JSON.parse(jsonStr);
+
+            if (eventData.status === 'heartbeat') {
+              continue;
+            }
+
+            if (eventData.status === 'completed') {
+              finalCompletedData = eventData;
+            }
+
+            if (eventData.status === 'error') {
+              hasError = eventData.error || 'Terjadi kesalahan pada backend Master API';
+            }
+
+            if (onServerProgress) {
+              onServerProgress(eventData);
+            }
+          } catch (_) {}
+        }
+      }
+    };
+
+    // Phase 2: Listen to SSE stream chunks pushed from Master API Server as it uploads to AWS S3
+    xhr.onprogress = () => {
+      parseSseChunk();
+    };
+
+    xhr.onload = () => {
+      parseSseChunk();
+
+      if (hasError) {
+        reject(new Error(hasError));
+        return;
+      }
+
+      if (xhr.status >= 200 && xhr.status < 300) {
+        if (finalCompletedData) {
+          resolve(finalCompletedData.data || finalCompletedData);
+        } else {
+          // If no specific SSE completed event but status 200, try to parse full responseText
+          try {
+            const parsed = JSON.parse(xhr.responseText);
+            resolve(parsed?.data || parsed);
+          } catch (_) {
+            resolve({ message: 'Upload multimedia berhasil diproses' });
+          }
+        }
+      } else {
+        const errorMsg = hasError || xhr.responseText || `HTTP ${xhr.status}`;
+        reject(new Error(errorMsg));
+      }
+    };
+
+    xhr.onerror = () => {
+      reject(new Error('Koneksi jaringan terputus saat mengunggah langsung ke Master API'));
+    };
+
+    xhr.onabort = () => {
+      reject(new Error('Upload dibatalkan oleh pengguna'));
+    };
+
+    xhr.ontimeout = () => {
+      reject(new Error('Timeout koneksi (15 menit) saat mengunggah langsung ke Master API'));
+    };
+
+    // 15 menit timeout untuk file berukuran besar hingga 10 GB
+    xhr.timeout = 900000;
+
+    xhr.send(formData);
+  });
+}
+
+/**
+ * Upload a single binary chunk of a file to monitoring backend with real-time onProgress callback
+ */
+export function uploadMultimediaChunkApi(uploadSessionId, fieldName, chunkIndex, totalChunks, filename, chunkBlob, onProgress = null) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    const token = localStorage.getItem('vps_monitoring_token') || '';
+
+    xhr.open('POST', `${BACKEND_URL}/api/vps/multimedia/upload-chunk`, true);
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+    xhr.setRequestHeader('x-upload-id', uploadSessionId);
+    xhr.setRequestHeader('x-field-name', fieldName);
+    xhr.setRequestHeader('x-chunk-index', String(chunkIndex));
+    xhr.setRequestHeader('x-total-chunks', String(totalChunks));
+    xhr.setRequestHeader('x-filename', encodeURIComponent(filename));
+
+    if (token) {
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    }
+
+    if (onProgress && xhr.upload) {
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          onProgress(e.loaded, e.total);
+        }
+      };
+    }
+
+    xhr.onload = () => {
+      let data = null;
+      try {
+        data = JSON.parse(xhr.responseText);
+      } catch (_) {}
+
+      if (xhr.status >= 200 && xhr.status < 300 && data && data.success) {
+        resolve(data);
+      } else {
+        const errorMsg = data?.error || data?.message || xhr.responseText || `HTTP ${xhr.status}`;
+        reject(new Error(errorMsg || `Gagal mengunggah chunk ${chunkIndex + 1} untuk ${fieldName}`));
+      }
+    };
+
+    xhr.onerror = () => {
+      reject(new Error(`Koneksi jaringan terputus saat mengunggah chunk ${chunkIndex + 1} (${fieldName})`));
+    };
+
+    xhr.ontimeout = () => {
+      reject(new Error(`Timeout koneksi (120s) saat mengunggah chunk ${chunkIndex + 1} (${fieldName})`));
+    };
+
+    // 120 detik timeout per chunk
+    xhr.timeout = 120000;
+
+    xhr.send(chunkBlob);
+  });
 }
 
 /**
