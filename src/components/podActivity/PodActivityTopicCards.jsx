@@ -126,33 +126,12 @@ export default function PodActivityTopicCards({ show, onClose, feed = [], pods =
           isFlashing: false
         };
         init['mod_chair/pob_state'] = entry;
-        init['mod_ambience/pod_state'] = entry;
       }
     }
     return init;
   });
   const [selectedServerId, setSelectedServerId] = useState('ALL');
   const [multimediaMap, setMultimediaMap] = useState({});
-
-  useEffect(() => {
-    if (pods && pods[0]) {
-      const p = pods[0];
-      if (p.stateValue !== null && p.stateValue !== undefined) {
-        const valStr = String(p.stateValue);
-        const entry = {
-          payload: p.lastPayload !== undefined && p.lastPayload !== null ? String(p.lastPayload) : valStr,
-          timestamp: p.lastSeenAt ? new Date(p.lastSeenAt).getTime() : Date.now(),
-          serverName: p.name,
-          isFlashing: false
-        };
-        setTopicStates((prev) => ({
-          ...prev,
-          'mod_chair/pob_state': entry,
-          'mod_ambience/pod_state': entry
-        }));
-      }
-    }
-  }, [pods]);
 
   const fetchMultimediaInfo = async (payloadVal) => {
     const soundScapeId = String(payloadVal).trim();
@@ -198,12 +177,6 @@ export default function PodActivityTopicCards({ show, onClose, feed = [], pods =
       };
 
       updatedStates[topicKey] = stateEntry;
-
-      // Synchronize pob_state between mod_chair and mod_ambience if either arrives
-      if (topicKey === 'mod_chair/pob_state' || topicKey === 'mod_ambience/pod_state') {
-        updatedStates['mod_chair/pob_state'] = stateEntry;
-        updatedStates['mod_ambience/pod_state'] = stateEntry;
-      }
     }
 
     setTopicStates(prev => ({ ...prev, ...updatedStates }));
@@ -269,17 +242,32 @@ export default function PodActivityTopicCards({ show, onClose, feed = [], pods =
                 }`}>
                 {moduleDefs.map(def => {
                   if (INTEGRATED_TOPICS.includes(def.key)) return null;
-                  const data = topicStates[def.key];
+
+                  const isPobChair = def.key === 'mod_chair/pob_state';
+                  const data = topicStates[def.key] || (isPobChair ? (topicStates['mod_chair/pob_state'] || topicStates[`pod/${pods[0]?.mac || pods[0]?.id}/2.0/mod_chair/pob_state`]) : null);
+
+                  // Always show known pod occupancy state as baseline for mod_chair/pob_state
+                  const fallbackData = (!data && isPobChair && pods[0] && pods[0].stateValue !== null && pods[0].stateValue !== undefined)
+                    ? {
+                      payload: pods[0].lastPayload !== undefined && pods[0].lastPayload !== null ? String(pods[0].lastPayload) : String(pods[0].stateValue),
+                      timestamp: pods[0].lastSeenAt ? new Date(pods[0].lastSeenAt).getTime() : Date.now(),
+                      serverName: pods[0].name,
+                      isFlashing: false
+                    }
+                    : null;
+
+                  const cardData = data || fallbackData;
+
                   return (
                     <GenericTopicCard
                       key={def.key}
                       def={def}
-                      data={data}
+                      data={cardData}
                       Icon={def.icon}
                       theme={theme}
-                      isFlashing={data?.isFlashing}
-                      serverName={data?.serverName || pods[0]?.name}
-                      mediaInfo={data ? multimediaMap[data.payload] : null}
+                      isFlashing={cardData?.isFlashing}
+                      serverName={cardData?.serverName || pods[0]?.name}
+                      mediaInfo={cardData ? multimediaMap[cardData.payload] : null}
                       onPublish={onPublish}
                     />
                   );
@@ -314,6 +302,19 @@ function GenericTopicCard({ def, data, Icon, theme, isFlashing, serverName, medi
     } catch (_) { }
   }
 
+  let tempVal = isTemp && numVal !== null ? numVal : null;
+  if (isTemp && tempVal === null && jsonObj && typeof jsonObj === 'object') {
+    if (jsonObj.temperature !== undefined && !isNaN(Number(jsonObj.temperature))) tempVal = Number(jsonObj.temperature);
+    else if (jsonObj.temp !== undefined && !isNaN(Number(jsonObj.temp))) tempVal = Number(jsonObj.temp);
+    else if (jsonObj.value !== undefined && !isNaN(Number(jsonObj.value))) tempVal = Number(jsonObj.value);
+  }
+
+  let humVal = isHumidity && numVal !== null ? numVal : null;
+  if (isHumidity && humVal === null && jsonObj && typeof jsonObj === 'object') {
+    if (jsonObj.humidity !== undefined && !isNaN(Number(jsonObj.humidity))) humVal = Number(jsonObj.humidity);
+    else if (jsonObj.value !== undefined && !isNaN(Number(jsonObj.value))) humVal = Number(jsonObj.value);
+  }
+
   return (
     <div className={`flex flex-col justify-between p-3.5 rounded-2xl border transition-all duration-300 min-h-[145px] relative overflow-hidden group ${isFlashing ? 'bg-cyan-500/15 border-cyan-400 ring-2 ring-cyan-400/50 shadow-lg shadow-cyan-500/20' : data ? 'bg-slate-900/85 backdrop-blur-md border-slate-800/90 hover:border-slate-700 shadow-lg hover:shadow-cyan-500/5' : 'bg-slate-900/50 backdrop-blur-sm border-slate-800/60 opacity-80'}`}>
       <div className="flex items-center justify-between mb-2">
@@ -331,18 +332,26 @@ function GenericTopicCard({ def, data, Icon, theme, isFlashing, serverName, medi
           <>
             {isOccupancyState && occVal !== null ? (
               <div className="flex items-center gap-1.5">
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-extrabold uppercase border ${
-                  occVal === 1
-                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                    : 'bg-slate-800/80 text-slate-300 border-slate-700'
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-extrabold uppercase border ${occVal === 1
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                  : 'bg-slate-800/80 text-slate-300 border-slate-700'
                   }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${
-                    occVal === 1
-                      ? 'bg-emerald-400 animate-pulse'
-                      : 'bg-slate-500'
+                  <span className={`w-1.5 h-1.5 rounded-full ${occVal === 1
+                    ? 'bg-emerald-400 animate-pulse'
+                    : 'bg-slate-500'
                     }`} />
                   {occVal === 1 ? 'OCCUPIED (1)' : 'AVAILABLE (0)'}
                 </span>
+              </div>
+            ) : isTemp && tempVal !== null ? (
+              <div className="flex items-baseline gap-1">
+                <span className="text-xl font-black text-white font-mono leading-none">{tempVal}</span>
+                <span className="text-xs font-bold text-rose-400">°C</span>
+              </div>
+            ) : isHumidity && humVal !== null ? (
+              <div className="flex items-baseline gap-1">
+                <span className="text-xl font-black text-white font-mono leading-none">{humVal}</span>
+                <span className="text-xs font-bold text-cyan-400">% RH</span>
               </div>
             ) : jsonObj && typeof jsonObj === 'object' ? (
               <div className="flex flex-col gap-1 bg-slate-950/60 p-2 rounded-xl border border-slate-800">
@@ -370,16 +379,6 @@ function GenericTopicCard({ def, data, Icon, theme, isFlashing, serverName, medi
             ) : isThreshold && numVal !== null ? (
               <div className="flex items-baseline gap-1">
                 <span className="text-2xl font-black text-white font-mono leading-none">{numVal}</span>
-              </div>
-            ) : isTemp && numVal !== null ? (
-              <div className="flex items-baseline gap-1">
-                <span className="text-xl font-black text-white font-mono leading-none">{numVal}</span>
-                <span className="text-xs font-bold text-rose-400">°C</span>
-              </div>
-            ) : isHumidity && numVal !== null ? (
-              <div className="flex items-baseline gap-1">
-                <span className="text-xl font-black text-white font-mono leading-none">{numVal}</span>
-                <span className="text-xs font-bold text-cyan-400">% RH</span>
               </div>
             ) : isLevel && numVal !== null ? (
               <div className="flex flex-col gap-1.5">
