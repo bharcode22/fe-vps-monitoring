@@ -61,8 +61,8 @@ export default function PodActivityDetailPage({ pod, onBack }) {
           detectedPrefixRef.current = match[1];
         }
 
-        // Track occupancy from either mod_chair/pob_state or mod_ambience/pod_state
-        if (packet.topic.includes('pob_state') || packet.topic.includes('pod_state')) {
+        // Track occupancy specifically from mod_chair/pob_state
+        if (packet.topic.includes('pob_state')) {
           const occ = parseOccupancy(packet.payload);
           if (occ !== null) setOccupancyState(occ);
         }
@@ -107,7 +107,7 @@ export default function PodActivityDetailPage({ pod, onBack }) {
     // Listen to raw background MQTT log events for this pod
     socket.on('pod-activity:mqtt-log', (logEntry) => {
       if (logEntry && logEntry.serverId === pod.id) {
-        if (logEntry.topic && (logEntry.topic.includes('pob_state') || logEntry.topic.includes('pod_state'))) {
+        if (logEntry.topic && logEntry.topic.includes('pob_state')) {
           const occ = parseOccupancy(logEntry.payload);
           if (occ !== null) setOccupancyState(occ);
         }
