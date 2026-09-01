@@ -14,25 +14,14 @@ import {
   Gauge,
   Sparkles,
   Layers,
-  ArrowRight,
-  RefreshCw,
-  Eye,
   Trash2,
   Server,
-  Cpu
+  Flame
 } from 'lucide-react';
 import {
-  uploadMultimediaChunkApi,
-  completeMultimediaUploadApi,
-  cancelMultimediaUploadApi,
   fetchMasterTokenApi,
   uploadDirectToMasterApi
 } from '../../api/vpsApi';
-import io from 'socket.io-client';
-import { SOCKET_URL } from '../../config';
-
-const MAX_CHUNK_SIZE = 64 * 1024 * 1024; // 64 MB per chunk (Maximized throughput untuk backend server langsung)
-const CONCURRENCY_LIMIT = 4; // 4 worker paralel simultan
 
 function formatBytes(bytes, decimals = 2) {
   if (!bytes || bytes === 0) return '0 B';
@@ -71,12 +60,9 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
   // Cover Image Preview URL
   const [coverPreviewUrl, setCoverPreviewUrl] = useState(null);
 
-  // Upload Method: 'chunk_backend' (Maximized 64MB Chunk) | 'direct_master' (Direct Master API)
-  const [uploadMethod, setUploadMethod] = useState('chunk_backend');
-
   // Upload Engine State
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadPhase, setUploadPhase] = useState('idle'); // 'idle' | 'auth' | 'uploading_server' | 'assembling' | 'uploading_s3' | 'processing_db' | 'completed' | 'error'
+  const [uploadPhase, setUploadPhase] = useState('idle'); // 'idle' | 'auth' | 'uploading_server' | 'uploading_s3' | 'processing_db' | 'completed' | 'error'
   const [statusMessage, setStatusMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -87,16 +73,14 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
   const [uploadSpeed, setUploadSpeed] = useState('0 MB/s');
   const [etaSeconds, setEtaSeconds] = useState(0);
 
-  // Server-to-S3 Progress State
+  // Server-to-S3 Progress State (Received via SSE directly from Master API)
   const [serverS3Progress, setServerS3Progress] = useState({
     status: 'idle',
-    stage: 'idle',
-    stageTitle: '',
     overallPercent: 0,
     totalSize: 0,
     totalLoaded: 0,
     message: '',
-    files: []
+    files: [] // [{ name, type, size, loaded, percent, status }]
   });
 
   // Per-file detailed progress
@@ -104,7 +88,6 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
 
   // Refs for tracking active upload state
   const isCancelledRef = useRef(false);
-  const activeSessionIdRef = useRef(null);
   const activeXhrRef = useRef(null);
   const fileInputRefs = {
     lamp: useRef(null),
@@ -113,53 +96,48 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
     cover_album: useRef(null)
   };
 
-  // Socket.IO Listener for Backend Progress
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const socket = io(SOCKET_URL, {
-      transports: ['websocket', 'polling']
+  const resetForm = () => {
+    setMetadata({
+      tittle: '',
+      artist: '',
+      album: '',
+      IsShowAtCustom: 'show'
     });
+    setFiles({
+      lamp: null,
+      video: null,
+      music: null,
+      cover_album: null
+    });
+    setCoverPreviewUrl(null);
+    setIsUploading(false);
+    setUploadPhase('idle');
+    setStatusMessage('');
+    setErrorMessage('');
+    setOverallProgress(0);
+    setUploadedBytesTotal(0);
+    setTotalBytesToUpload(0);
+    setUploadSpeed('0 MB/s');
+    setEtaSeconds(0);
+    setFileProgressMap({});
+    setServerS3Progress({
+      status: 'idle',
+      overallPercent: 0,
+      totalSize: 0,
+      totalLoaded: 0,
+      message: '',
+      files: []
+    });
+    isCancelledRef.current = false;
+    activeXhrRef.current = null;
 
-    socket.on('multimedia_backend_progress', (data) => {
-      if (!data) return;
-      if (activeSessionIdRef.current && data.uploadSessionId && data.uploadSessionId !== activeSessionIdRef.current) {
-        return;
-      }
-
-      setServerS3Progress({
-        status: data.stage || 'uploading',
-        stage: data.stage || '',
-        stageTitle: data.stageTitle || '',
-        overallPercent: data.progress !== undefined ? data.progress : 0,
-        totalSize: 0,
-        totalLoaded: 0,
-        message: data.message || '',
-        files: data.files || []
-      });
-
-      if (data.stage === 'merging') {
-        setUploadPhase('assembling');
-        setStatusMessage(data.message || 'Server sedang menggabungkan potongan file (chunk)...');
-      } else if (data.stage === 'dispatching' || data.stage === 's3_streaming') {
-        setUploadPhase('uploading_s3');
-        setStatusMessage(data.message || 'Server sedang streaming file ke Master AWS S3...');
-      } else if (data.stage === 'processing') {
-        setUploadPhase('processing_db');
-        setStatusMessage(data.message || 'Menghitung hash SHA-256 & mendaftarkan ke Database...');
-      } else if (data.stage === 'completed') {
-        setUploadPhase('completed');
-        setStatusMessage(data.message || 'Multimedia berhasil diunggah dan terdaftar di Master AWS S3 & Database!');
-        setOverallProgress(100);
-      } else if (data.stage === 'error') {
-        setErrorMessage(data.message || 'Terjadi kesalahan saat memproses di backend');
+    // Reset input elements
+    Object.values(fileInputRefs).forEach(ref => {
+      if (ref?.current) {
+        ref.current.value = '';
       }
     });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [isOpen]);
+  };
 
   // Create preview when cover album is chosen
   useEffect(() => {
@@ -175,31 +153,23 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
   // Reset state when modal opens/closes
   useEffect(() => {
     if (isOpen) {
-      setIsUploading(false);
-      setUploadPhase('idle');
-      setStatusMessage('');
-      setErrorMessage('');
-      setOverallProgress(0);
-      setUploadedBytesTotal(0);
-      setTotalBytesToUpload(0);
-      setUploadSpeed('0 MB/s');
-      setEtaSeconds(0);
-      setFileProgressMap({});
-      setServerS3Progress({
-        status: 'idle',
-        stage: 'idle',
-        stageTitle: '',
-        overallPercent: 0,
-        totalSize: 0,
-        totalLoaded: 0,
-        message: '',
-        files: []
-      });
-      isCancelledRef.current = false;
-      activeSessionIdRef.current = null;
-      activeXhrRef.current = null;
+      resetForm();
     }
   }, [isOpen]);
+
+  const handleCloseModal = () => {
+    if (isUploading && uploadPhase !== 'completed') {
+      if (!window.confirm('Yakin ingin membatalkan proses upload langsung yang sedang berlangsung?')) {
+        return;
+      }
+      isCancelledRef.current = true;
+      if (activeXhrRef.current) {
+        activeXhrRef.current.abort();
+      }
+    }
+    resetForm();
+    onClose();
+  };
 
   if (!isOpen) return null;
 
@@ -230,226 +200,46 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
 
     setErrorMessage('');
     setIsUploading(true);
+    setUploadPhase('auth');
+    setStatusMessage('Mengautentikasi ke Master API...');
     isCancelledRef.current = false;
 
     // Calculate total size
     let grandTotalBytes = 0;
     const selectedFields = [];
     const initialProgressMap = {};
-    const allChunkTasks = [];
-    const filesManifest = {};
 
     ['lamp', 'video', 'music', 'cover_album'].forEach(field => {
       const f = files[field];
       if (f) {
         grandTotalBytes += f.size;
-        const totalChunks = Math.ceil(f.size / MAX_CHUNK_SIZE);
-        selectedFields.push({ field, file: f, totalChunks });
-
-        filesManifest[field] = {
-          filename: f.name,
-          totalChunks,
-          size: f.size
-        };
-
+        selectedFields.push({ field, file: f });
         initialProgressMap[field] = {
           progress: 0,
-          currentChunk: 0,
-          totalChunks,
           uploadedBytes: 0,
           totalBytes: f.size,
           status: 'uploading'
         };
-
-        for (let chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
-          const start = chunkIdx * MAX_CHUNK_SIZE;
-          const end = Math.min(start + MAX_CHUNK_SIZE, f.size);
-          const chunkBlob = f.slice(start, end);
-
-          allChunkTasks.push({
-            id: `${field}_${chunkIdx}`,
-            field,
-            file: f,
-            chunkIdx,
-            totalChunks,
-            chunkBlob,
-            chunkSize: chunkBlob.size
-          });
-        }
       }
     });
 
     setTotalBytesToUpload(grandTotalBytes);
     setFileProgressMap(initialProgressMap);
-
-    const sessionId = `up_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-    activeSessionIdRef.current = sessionId;
-
-    // ─────────────────────────────────────────────────────────────
-    // BRANCH A: Maximized Chunk Upload Engine (64MB Chunk, 4x Concurrency)
-    // ─────────────────────────────────────────────────────────────
-    if (uploadMethod === 'chunk_backend') {
-      setUploadPhase('uploading_server');
-      setStatusMessage(`Menyiapkan antrean ${allChunkTasks.length} chunk (64MB per chunk, 4x paralel)...`);
-
-      const taskBytesMap = {};
-      allChunkTasks.forEach(t => { taskBytesMap[t.id] = 0; });
-
-      const uploadStartTime = Date.now();
-      let lastRenderTime = 0;
-
-      const updateProgressState = (force = false) => {
-        const now = Date.now();
-        if (!force && now - lastRenderTime < 100) return;
-        lastRenderTime = now;
-
-        let globalUploaded = 0;
-        const fieldBytesMap = {};
-        selectedFields.forEach(({ field }) => { fieldBytesMap[field] = 0; });
-
-        allChunkTasks.forEach(task => {
-          const bytes = taskBytesMap[task.id] || 0;
-          globalUploaded += bytes;
-          if (fieldBytesMap[task.field] !== undefined) {
-            fieldBytesMap[task.field] += bytes;
-          }
-        });
-
-        const elapsedSec = (now - uploadStartTime) / 1000;
-        const speedBytesSec = elapsedSec > 0 ? globalUploaded / elapsedSec : 0;
-        const speedFormatted = `${formatBytes(speedBytesSec)}/s`;
-        const remainingBytes = grandTotalBytes - globalUploaded;
-        const remainingSec = speedBytesSec > 0 ? Math.ceil(remainingBytes / speedBytesSec) : 0;
-
-        setUploadedBytesTotal(globalUploaded);
-        setOverallProgress(Math.min(100, Math.round((globalUploaded / grandTotalBytes) * 100)));
-        setUploadSpeed(speedFormatted);
-        setEtaSeconds(remainingSec);
-
-        setFileProgressMap(prev => {
-          const next = { ...prev };
-          selectedFields.forEach(({ field, file, totalChunks }) => {
-            const uploaded = fieldBytesMap[field] || 0;
-            const isDone = uploaded >= file.size;
-            next[field] = {
-              ...next[field],
-              uploadedBytes: uploaded,
-              progress: Math.min(100, Math.round((uploaded / file.size) * 100)),
-              status: isDone ? 'done' : 'uploading'
-            };
-          });
-          return next;
-        });
-      };
-
-      try {
-        let taskCursor = 0;
-        let completedCount = 0;
-        const totalTasksCount = allChunkTasks.length;
-
-        async function chunkWorker() {
-          while (taskCursor < allChunkTasks.length) {
-            if (isCancelledRef.current) throw new Error('Upload dibatalkan oleh pengguna');
-            const task = allChunkTasks[taskCursor++];
-
-            let attempts = 0;
-            let chunkSuccess = false;
-            let lastError = null;
-
-            while (attempts < 3 && !chunkSuccess) {
-              if (isCancelledRef.current) throw new Error('Upload dibatalkan oleh pengguna');
-              try {
-                attempts++;
-                setStatusMessage(`Mengunggah [${task.field.toUpperCase()}] chunk ${task.chunkIdx + 1}/${task.totalChunks} (64MB) ke backend...`);
-
-                await uploadMultimediaChunkApi(
-                  sessionId,
-                  task.field,
-                  task.chunkIdx,
-                  task.totalChunks,
-                  task.file.name,
-                  task.chunkBlob,
-                  (loaded) => {
-                    if (isCancelledRef.current) return;
-                    taskBytesMap[task.id] = Math.min(loaded, task.chunkSize);
-                    updateProgressState();
-                  }
-                );
-
-                taskBytesMap[task.id] = task.chunkSize;
-                chunkSuccess = true;
-              } catch (err) {
-                lastError = err;
-                console.warn(`Retry chunk ${task.chunkIdx + 1} (${task.field}) attempt ${attempts}/3:`, err.message);
-                if (attempts < 3) {
-                  await new Promise(r => setTimeout(r, 800 * attempts));
-                }
-              }
-            }
-
-            if (!chunkSuccess) {
-              throw new Error(`Gagal mengunggah chunk ${task.chunkIdx + 1} untuk ${task.file.name}: ${lastError?.message}`);
-            }
-
-            completedCount++;
-            updateProgressState(true);
-          }
-        }
-
-        // Launch 4 concurrent workers
-        const activeWorkers = Math.min(CONCURRENCY_LIMIT, allChunkTasks.length);
-        const workerPromises = [];
-        for (let w = 0; w < activeWorkers; w++) {
-          workerPromises.push(chunkWorker());
-        }
-        await Promise.all(workerPromises);
-
-        updateProgressState(true);
-
-        // Step 2: Trigger backend complete & reassemble
-        setUploadPhase('assembling');
-        setStatusMessage('Semua chunk 64MB terkirim. Server sedang menggabungkan file...');
-
-        const completeRes = await completeMultimediaUploadApi(
-          sessionId,
-          {
-            tittle: metadata.tittle.trim(),
-            artist: metadata.artist.trim(),
-            album: metadata.album.trim(),
-            file: '',
-            IsShowAtCustom: metadata.IsShowAtCustom
-          },
-          filesManifest
-        );
-
-        setUploadPhase('completed');
-        setStatusMessage('Multimedia berhasil diunggah dan terdaftar di Master AWS S3 & Database!');
-        setOverallProgress(100);
-
-        if (onSuccess) {
-          onSuccess(completeRes.data);
-        }
-      } catch (err) {
-        if (isCancelledRef.current) return;
-        console.error('Error during chunk upload process:', err);
-        setUploadPhase('error');
-        setErrorMessage(err.message || 'Terjadi kesalahan saat mengunggah chunk ke server');
-      } finally {
-        setIsUploading(false);
-      }
-      return;
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    // BRANCH B: Direct Upload to Master API with SSE (/upload-with-progress)
-    // ─────────────────────────────────────────────────────────────
-    setUploadPhase('auth');
-    setStatusMessage('Mengautentikasi ke Master API...');
+    setServerS3Progress({
+      status: 'idle',
+      overallPercent: 0,
+      totalSize: grandTotalBytes,
+      totalLoaded: 0,
+      message: 'Menunggu respon server...',
+      files: []
+    });
 
     try {
+      // 1. Fetch cached JWT token from backend (super fast ~100ms)
       const authData = await fetchMasterTokenApi();
       if (isCancelledRef.current) return;
 
+      // 2. Build FormData with files and metadata
       const formData = new FormData();
       if (files.lamp) formData.append('lamp', files.lamp);
       if (files.video) formData.append('video', files.video);
@@ -461,8 +251,9 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
       formData.append('album', metadata.album.trim());
       formData.append('IsShowAtCustom', metadata.IsShowAtCustom || 'show');
 
+      // 3. Start direct single-hop upload directly to Master API & AWS S3 with SSE progress
       setUploadPhase('uploading_server');
-      setStatusMessage(`Mengirim ${formatBytes(grandTotalBytes)} ke Master API Server...`);
+      setStatusMessage(`Mengirim ${formatBytes(grandTotalBytes)} langsung ke Master API...`);
 
       const uploadStartTime = Date.now();
       let lastRenderTime = 0;
@@ -471,6 +262,7 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
         formData,
         authData.token,
         authData.masterApiBase,
+        // Phase 1: Client Upload onProgress (Browser -> Master Server)
         (loaded, total) => {
           if (isCancelledRef.current) return;
           const now = Date.now();
@@ -489,7 +281,25 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
           setOverallProgress(percent);
           setUploadSpeed(`${formatBytes(speedBytes)}/s`);
           setEtaSeconds(etaSec);
+
+          if (percent < 100) {
+            setFileProgressMap(prev => {
+              const next = { ...prev };
+              selectedFields.forEach(({ field, file }) => {
+                const ratio = file.size / grandTotalBytes;
+                const approxLoaded = Math.min(file.size, Math.round(loaded * ratio));
+                next[field] = {
+                  ...next[field],
+                  uploadedBytes: approxLoaded,
+                  progress: percent,
+                  status: 'uploading'
+                };
+              });
+              return next;
+            });
+          }
         },
+        // Phase 2: Master Server SSE onServerProgress (Master Server -> AWS S3)
         (eventData) => {
           if (isCancelledRef.current || !eventData) return;
 
@@ -508,9 +318,35 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
           } else if (eventData.status === 'uploading') {
             setUploadPhase('uploading_s3');
             setStatusMessage(`Master Server streaming ke AWS S3 (${eventData.overallPercent || 0}%)...`);
+
+            // Update fileProgressMap with actual S3 progress per file
+            if (Array.isArray(eventData.files)) {
+              setFileProgressMap(prev => {
+                const next = { ...prev };
+                eventData.files.forEach(f => {
+                  if (next[f.type]) {
+                    next[f.type] = {
+                      ...next[f.type],
+                      uploadedBytes: f.loaded || 0,
+                      totalBytes: f.size || next[f.type].totalBytes,
+                      progress: f.percent || 0,
+                      status: f.status === 'completed' ? 'done' : f.status || 'uploading'
+                    };
+                  }
+                });
+                return next;
+              });
+            }
           } else if (eventData.status === 'processing') {
             setUploadPhase('processing_db');
             setStatusMessage(eventData.message || 'Master Server memproses hash SHA-256 & mendaftarkan ke Database...');
+            setFileProgressMap(prev => {
+              const next = { ...prev };
+              Object.keys(next).forEach(k => {
+                next[k] = { ...next[k], progress: 100, status: 'done' };
+              });
+              return next;
+            });
           } else if (eventData.status === 'completed') {
             setUploadPhase('completed');
             setStatusMessage('Multimedia berhasil diunggah dan terdaftar di Master AWS S3 & Database!');
@@ -522,6 +358,7 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
         }
       );
 
+      // 4. Finished successfully
       setUploadPhase('completed');
       setStatusMessage('Multimedia berhasil diunggah langsung ke Master API & AWS S3!');
       setOverallProgress(100);
@@ -540,13 +377,13 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
     }
   };
 
-  const handleCancelUpload = async () => {
+  const handleCancelUpload = () => {
     if (!isUploading) {
       onClose();
       return;
     }
 
-    if (window.confirm('Yakin ingin membatalkan proses upload yang sedang berlangsung?')) {
+    if (window.confirm('Yakin ingin membatalkan proses upload langsung yang sedang berlangsung?')) {
       isCancelledRef.current = true;
       if (activeXhrRef.current) {
         activeXhrRef.current.abort();
@@ -554,13 +391,9 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
       setIsUploading(false);
       setUploadPhase('idle');
       setStatusMessage('Upload dibatalkan.');
-      if (activeSessionIdRef.current) {
-        await cancelMultimediaUploadApi(activeSessionIdRef.current).catch(() => {});
-      }
       onClose();
     }
   };
-
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
@@ -576,17 +409,17 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
               <div className="flex items-center gap-2">
                 <h3 className="text-lg font-black text-white">Upload Master Multimedia</h3>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 flex items-center gap-1">
-                  <Sparkles size={10} /> SSE Live Progress Tracking
+                  <Sparkles size={10} /> Direct Master API (Single-Hop)
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Mengunggah langsung ke Master API (/multimedia/upload-with-progress) dengan pantauan S3 real-time.
+                Mengunggah langsung dari browser ke Master API (/multimedia/upload-with-progress) dengan pantauan SSE real-time.
               </p>
             </div>
           </div>
 
           <button
-            onClick={handleCancelUpload}
+            onClick={handleCloseModal}
             disabled={uploadPhase === 'processing_db'}
             className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/80 transition-all cursor-pointer disabled:opacity-40"
           >
@@ -623,32 +456,59 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
           {/* Active Uploading Dashboard Meter */}
           {(isUploading || uploadPhase === 'completed') && (
             <div className="p-5 rounded-2xl bg-slate-950/80 border border-cyan-500/30 space-y-4">
+              <style>{`
+                @keyframes snailCrawl {
+                  0% { transform: translateX(-4px) translateY(0px) scaleX(1); }
+                  25% { transform: translateX(0px) translateY(-2px) scaleX(1.05); }
+                  50% { transform: translateX(4px) translateY(0px) scaleX(1); }
+                  75% { transform: translateX(1px) translateY(-1px) scaleX(0.98); }
+                  100% { transform: translateX(-4px) translateY(0px) scaleX(1); }
+                }
+                @keyframes flameFlicker {
+                  0%, 100% { transform: scale(1) rotate(-2deg); filter: drop-shadow(0 0 6px #f97316); }
+                  25% { transform: scale(1.22) rotate(4deg); filter: drop-shadow(0 0 14px #ef4444); }
+                  50% { transform: scale(0.92) rotate(-3deg); filter: drop-shadow(0 0 8px #eab308); }
+                  75% { transform: scale(1.18) rotate(3deg); filter: drop-shadow(0 0 16px #ff5722); }
+                }
+                .animate-snail-crawl {
+                  display: inline-block;
+                  animation: snailCrawl 2.2s ease-in-out infinite;
+                }
+                .animate-flame-flicker {
+                  display: inline-block;
+                  animation: flameFlicker 0.85s ease-in-out infinite;
+                }
+              `}</style>
 
               {/* Stage Flow Indicator */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2">
 
-                {/* Step 1: Browser to Server */}
+                {/* Step 1: Browser to Master Server */}
                 <div className={`p-3 rounded-xl border flex items-center gap-3 transition-all ${uploadPhase === 'uploading_server'
-                  ? 'bg-cyan-950/40 border-cyan-500/50 shadow-md shadow-cyan-950/40'
+                  ? 'bg-amber-950/30 border-amber-500/50 shadow-md shadow-amber-950/40 ring-1 ring-amber-500/30'
                   : overallProgress >= 100 || uploadPhase === 'uploading_s3' || uploadPhase === 'processing_db' || uploadPhase === 'completed'
                     ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-300'
                     : 'bg-slate-900/40 border-slate-800 text-slate-500'
                   }`}>
-                  <div className={`p-2 rounded-lg ${overallProgress >= 100 || uploadPhase === 'uploading_s3' || uploadPhase === 'processing_db' || uploadPhase === 'completed'
+                  <div className={`p-2 rounded-lg flex items-center justify-center min-w-[34px] min-h-[34px] ${overallProgress >= 100 || uploadPhase === 'uploading_s3' || uploadPhase === 'processing_db' || uploadPhase === 'completed'
                     ? 'bg-emerald-500/20 text-emerald-400'
                     : uploadPhase === 'uploading_server'
-                      ? 'bg-cyan-500/20 text-cyan-400 animate-pulse'
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
                       : 'bg-slate-800 text-slate-400'
                     }`}>
                     {overallProgress >= 100 || uploadPhase === 'uploading_s3' || uploadPhase === 'processing_db' || uploadPhase === 'completed' ? (
-                      <CheckCircle2 size={16} />
+                      <CheckCircle2 size={18} className="text-emerald-400" />
+                    ) : uploadPhase === 'uploading_server' ? (
+                      <span className="animate-snail-crawl text-lg select-none" role="img" aria-label="Siput">🐌</span>
                     ) : (
-                      <UploadCloud size={16} />
+                      <UploadCloud size={18} />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-[11px] font-bold text-white flex items-center justify-between">
-                      <span>Tahap 1: Kirim ke Master API</span>
+                      <span className="flex items-center gap-1.5">
+                        Tahap 1: Upload ke Master Server
+                      </span>
                       <span className="font-mono text-cyan-400">{overallProgress}%</span>
                     </div>
                     <p className="text-[10px] text-slate-400 truncate mt-0.5">
@@ -657,31 +517,33 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
                   </div>
                 </div>
 
-                {/* Step 2: Server to AWS S3 */}
+                {/* Step 2: Master Server to AWS S3 & DB */}
                 <div className={`p-3 rounded-xl border flex items-center gap-3 transition-all ${uploadPhase === 'uploading_s3' || uploadPhase === 'processing_db'
-                  ? 'bg-indigo-950/40 border-indigo-500/50 shadow-md shadow-indigo-950/40'
+                  ? 'bg-orange-950/40 border-orange-500/60 shadow-lg shadow-orange-950/50 ring-1 ring-orange-500/40'
                   : uploadPhase === 'completed'
                     ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-300'
                     : 'bg-slate-900/40 border-slate-800 text-slate-500'
                   }`}>
-                  <div className={`p-2 rounded-lg ${uploadPhase === 'completed'
+                  <div className={`p-2 rounded-lg flex items-center justify-center min-w-[34px] min-h-[34px] ${uploadPhase === 'completed'
                     ? 'bg-emerald-500/20 text-emerald-400'
                     : uploadPhase === 'uploading_s3' || uploadPhase === 'processing_db'
-                      ? 'bg-indigo-500/20 text-indigo-400 animate-spin'
+                      ? 'bg-orange-500/20 text-orange-400 border border-orange-500/40 shadow-inner'
                       : 'bg-slate-800 text-slate-400'
                     }`}>
                     {uploadPhase === 'completed' ? (
-                      <CheckCircle2 size={16} />
+                      <CheckCircle2 size={18} className="text-emerald-400" />
                     ) : uploadPhase === 'uploading_s3' || uploadPhase === 'processing_db' ? (
-                      <Loader2 size={16} />
+                      <span className="animate-flame-flicker text-lg select-none" role="img" aria-label="Api">🔥</span>
                     ) : (
-                      <Server size={16} />
+                      <Server size={18} />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-[11px] font-bold text-white flex items-center justify-between">
-                      <span>Tahap 2: Stream AWS S3 & DB</span>
-                      <span className="font-mono text-indigo-400">
+                      <span className="flex items-center gap-1.5">
+                        Tahap 2: Stream AWS S3 & DB
+                      </span>
+                      <span className="font-mono text-orange-400">
                         {uploadPhase === 'completed' ? '100%' : `${serverS3Progress.overallPercent}%`}
                       </span>
                     </div>
@@ -703,14 +565,14 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
                   )}
                   <span className="text-xs font-bold text-slate-200">{statusMessage}</span>
                 </div>
-                <span className="text-sm font-black text-cyan-400 font-mono">
+                <span className="text-sm font-black text-cyan-400 font-mono shrink-0 whitespace-nowrap">
                   {uploadPhase === 'uploading_s3' || uploadPhase === 'processing_db'
                     ? `S3 Stream: ${serverS3Progress.overallPercent}%`
                     : `${overallProgress}% (${formatBytes(uploadedBytesTotal)} / ${formatBytes(totalBytesToUpload)})`}
                 </span>
               </div>
 
-              {/* Main Progress Bar (Switches smoothly between Client Upload and S3 Stream) */}
+              {/* Main Progress Bar */}
               <div className="w-full h-3 bg-slate-900 rounded-full overflow-hidden border border-slate-800 relative">
                 <div
                   className={`h-full transition-all duration-300 ${uploadPhase === 'completed'
@@ -747,8 +609,8 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
                 <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center gap-2 text-slate-300">
                   <HardDrive size={14} className="text-purple-400 shrink-0" />
                   <div>
-                    <div className="text-[9px] text-slate-500 uppercase font-sans">Endpoint Backend</div>
-                    <div className="font-bold text-purple-300 truncate">/upload-with-progress</div>
+                    <div className="text-[9px] text-slate-500 uppercase font-sans">Jalur Upload</div>
+                    <div className="font-bold text-purple-300 truncate">Direct Master S3</div>
                   </div>
                 </div>
               </div>
@@ -757,20 +619,25 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
               <div className="space-y-2 pt-2 border-t border-slate-800/80">
                 {Object.entries(fileProgressMap).map(([field, p]) => (
                   <div key={field} className="flex items-center justify-between gap-3 text-xs bg-slate-900/40 p-2.5 rounded-xl border border-slate-800/50">
-                    <span className="font-bold text-slate-300 uppercase tracking-wider text-[10px] w-24 flex items-center gap-1.5">
-                      {field === 'lamp' ? '⚡ STROBE' : field === 'video' ? '🎬 VIDEO' : field === 'music' ? '🎵 MUSIC' : '🖼️ COVER'}
+                    <span className="font-bold text-slate-300 uppercase tracking-wider text-[10px] w-10 shrink-0 flex items-center gap-1.5">
+                      {field === 'lamp' ? 'STROBE' : field === 'video' ? 'VIDEO' : field === 'music' ? 'MUSIC' : 'COVER'}
                       {p.status === 'done' && <CheckCircle2 size={12} className="text-emerald-400" />}
                     </span>
-                    <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+                    <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden min-w-[60px]">
                       <div
                         className={`h-full transition-all duration-200 ${p.status === 'done' ? 'bg-emerald-400' : 'bg-cyan-400'
                           }`}
                         style={{ width: `${p.progress}%` }}
                       />
                     </div>
-                    <span className="font-mono text-[10px] text-slate-400 w-32 text-right">
-                      {formatBytes(p.uploadedBytes)} / {formatBytes(p.totalBytes)} ({p.progress}%)
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0 font-mono text-[10px] text-right whitespace-nowrap">
+                      <span className="text-slate-400">
+                        {formatBytes(p.uploadedBytes)} / {formatBytes(p.totalBytes)}
+                      </span>
+                      <span className={`font-bold min-w-[42px] text-right ${p.status === 'done' ? 'text-emerald-400' : 'text-cyan-300'}`}>
+                        ({p.progress}%)
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -787,59 +654,6 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
               )}
             </div>
           )}
-
-          {/* Upload Method Selector */}
-          <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2.5">
-            <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <Cpu size={14} className="text-cyan-400" /> Mode & Jalur Upload
-              </span>
-              <span className="text-[10px] text-cyan-400 font-mono font-bold">Maximized Throughput</span>
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <button
-                type="button"
-                disabled={isUploading}
-                onClick={() => setUploadMethod('chunk_backend')}
-                className={`p-3 rounded-xl border text-left transition-all cursor-pointer disabled:opacity-50 ${
-                  uploadMethod === 'chunk_backend'
-                    ? 'bg-cyan-950/50 border-cyan-500/60 text-white shadow-md shadow-cyan-950/50 ring-1 ring-cyan-500/30'
-                    : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold flex items-center gap-1.5">
-                    <Sparkles size={13} className="text-cyan-400" /> Max Chunk 64MB (4x Paralel)
-                  </span>
-                  {uploadMethod === 'chunk_backend' && <CheckCircle2 size={14} className="text-cyan-400" />}
-                </div>
-                <p className="text-[10px] text-slate-400 mt-1">
-                  Kirim chunk 64MB paralel ke server lokal/backend langsung, lalu backend stream ke Master S3.
-                </p>
-              </button>
-
-              <button
-                type="button"
-                disabled={isUploading}
-                onClick={() => setUploadMethod('direct_master')}
-                className={`p-3 rounded-xl border text-left transition-all cursor-pointer disabled:opacity-50 ${
-                  uploadMethod === 'direct_master'
-                    ? 'bg-indigo-950/50 border-indigo-500/60 text-white shadow-md shadow-indigo-950/50 ring-1 ring-indigo-500/30'
-                    : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold flex items-center gap-1.5">
-                    <UploadCloud size={13} className="text-indigo-400" /> Direct Master API (SSE Stream)
-                  </span>
-                  {uploadMethod === 'direct_master' && <CheckCircle2 size={14} className="text-indigo-400" />}
-                </div>
-                <p className="text-[10px] text-slate-400 mt-1">
-                  Upload langsung dari browser ke Master API /upload-with-progress dengan live SSE.
-                </p>
-              </button>
-            </div>
-          </div>
 
           {/* Section 1: Metadata Inputs */}
           <div className="space-y-4">
@@ -1164,14 +978,14 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
         {/* Modal Footer Controls */}
         <div className="px-6 py-4 border-t border-cyan-500/20 bg-slate-950/80 flex items-center justify-between gap-4">
           <div className="text-[11px] text-slate-400 flex items-center gap-2">
-            <HardDrive size={13} className="text-cyan-400" />
-            <span>Chunking 50MB aktif untuk bypass batas 100MB Cloudflare</span>
+            <Sparkles size={13} className="text-cyan-400" />
+            <span>Direct Upload Single-Hop aktif — Tanpa antrean disk backend lokal</span>
           </div>
 
           <div className="flex items-center gap-3">
             <button
-              onClick={handleCancelUpload}
-              disabled={uploadPhase === 'assembling'}
+              onClick={handleCloseModal}
+              disabled={uploadPhase === 'processing_db'}
               className="px-4 py-2 rounded-xl text-xs font-bold text-slate-300 bg-slate-800/80 hover:bg-slate-800 hover:text-white border border-slate-700 transition-all cursor-pointer disabled:opacity-40"
             >
               {uploadPhase === 'completed' ? 'Tutup' : 'Batal'}
@@ -1179,7 +993,7 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
 
             {uploadPhase === 'completed' ? (
               <button
-                onClick={onClose}
+                onClick={handleCloseModal}
                 className="px-5 py-2 rounded-xl text-xs font-bold text-slate-950 bg-emerald-400 hover:bg-emerald-300 transition-all cursor-pointer flex items-center gap-1.5 shadow-lg shadow-emerald-500/20"
               >
                 <CheckCircle2 size={15} /> Selesai & Kembali
@@ -1193,12 +1007,12 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
                 {isUploading ? (
                   <>
                     <Loader2 size={15} className="animate-spin text-slate-950" />
-                    <span>Memproses Upload...</span>
+                    <span>Mengunggah Berkas...</span>
                   </>
                 ) : (
                   <>
                     <UploadCloud size={15} />
-                    <span>Mulai Upload Chunk</span>
+                    <span>Mulai Upload Multimedia</span>
                   </>
                 )}
               </button>
