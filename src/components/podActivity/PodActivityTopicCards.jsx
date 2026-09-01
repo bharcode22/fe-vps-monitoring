@@ -134,14 +134,20 @@ export default function PodActivityTopicCards({ show, onClose, feed = [], pods =
   const [multimediaMap, setMultimediaMap] = useState({});
 
   const fetchMultimediaInfo = async (payloadVal) => {
+    if (!payloadVal) return;
     const soundScapeId = String(payloadVal).trim();
-    if (!soundScapeId || multimediaMap[soundScapeId] !== undefined) return;
+    if (!soundScapeId || soundScapeId === '0' || soundScapeId === '1' || soundScapeId === '2' || soundScapeId === '3' || soundScapeId === 'Idle' || soundScapeId === 'null' || soundScapeId === 'undefined' || soundScapeId === 'stop' || soundScapeId.length < 2) return;
+    if (multimediaMap[soundScapeId] !== undefined) return;
 
     try {
       const token = localStorage.getItem('vps_monitoring_token');
       const res = await fetch(`/api/vps/content/multimedia/${encodeURIComponent(soundScapeId)}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      if (!res.ok) {
+        setMultimediaMap((prev) => ({ ...prev, [soundScapeId]: null }));
+        return;
+      }
       const json = await res.json();
       if (json.success && json.data) {
         setMultimediaMap((prev) => ({ ...prev, [soundScapeId]: json.data }));
@@ -165,7 +171,7 @@ export default function PodActivityTopicCards({ show, onClose, feed = [], pods =
       const cleanKey = topicKey.replace(/^pod\/[^/]+\/(?:2\.0\/)?/, '').replace(/^\//, '');
       if (cleanKey) topicKey = cleanKey;
 
-      if (topicKey.includes('track') || topicKey.includes('audio') || topicKey.includes('play')) {
+      if (topicKey === 'mod_audio/track/play_audio') {
         fetchMultimediaInfo(logItem.payload);
       }
 
