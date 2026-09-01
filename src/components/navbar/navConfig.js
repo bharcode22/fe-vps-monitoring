@@ -158,7 +158,7 @@ export const NAV_DROPDOWN_GROUPS = [
       {
         id: 'multimedia-sync',
         aliases: ['rabbitmq-pod-sync', 're-save-sync'],
-        label: 'RabbitMQ POD Sync',
+        label: 'Content Management',
         desc: 'Sinkronisasi Multimedia ke mobile-synch di POD',
         icon: Shuffle,
         colorClass: 'text-indigo-400',

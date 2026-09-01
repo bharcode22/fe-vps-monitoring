@@ -46,9 +46,19 @@ import MultimediaUploadModal from '../components/content/MultimediaUploadModal';
 import io from 'socket.io-client';
 import { SOCKET_URL } from '../config';
 
-export default function StorageManagerPage({ onBack, onNavigateView }) {
+export default function StorageManagerPage({
+  onBack,
+  onNavigateView,
+  initialActiveCode = null,
+  onClearInitialActiveCode = null,
+  returnView = null,
+  onClearReturnView = null
+}) {
   // Main Tab Navigation: 'docker_storage' | 'media_catalog' | 'rogue_scanner'
   const [activeTab, setActiveTab] = useState(() => {
+    if (initialActiveCode || localStorage.getItem('storageManagerInitialCode')) {
+      return 'media_catalog';
+    }
     return localStorage.getItem('storageManagerActiveTab') || 'docker_storage';
   });
 
@@ -242,6 +252,10 @@ export default function StorageManagerPage({ onBack, onNavigateView }) {
       setStorageData(summary);
       // Auto trigger docker inspection
       handleInspectAllDocker();
+      // If code workspace is already open, make sure POD check is triggered
+      if (activeCodeDetail?.code) {
+        checkPodsForActiveCode(activeCodeDetail.code);
+      }
     } catch (err) {
       console.error('Error fetching storage summary:', err.message);
       setStorageError(err.message || 'Gagal memuat status storage POD. Pastikan Anda sudah login.');
@@ -379,7 +393,36 @@ export default function StorageManagerPage({ onBack, onNavigateView }) {
     setDetailS3Files(null);
     setDetailPodsStatus({});
     setPlayingAudioUrl(null);
+    if (onClearInitialActiveCode) {
+      onClearInitialActiveCode();
+    }
   };
+
+  const handleBackToOriginOrCatalog = () => {
+    const origin = returnView || localStorage.getItem('storageManagerReturnView');
+    if (origin && onNavigateView) {
+      localStorage.removeItem('storageManagerReturnView');
+      if (onClearReturnView) onClearReturnView();
+      if (onClearInitialActiveCode) onClearInitialActiveCode();
+      setActiveCodeDetail(null);
+      onNavigateView(origin);
+      return;
+    }
+    handleBackToCatalog();
+  };
+
+  // Handle auto-opening initial active code from other views (e.g. Multimedia RabbitMQ Sync)
+  useEffect(() => {
+    const targetCode = initialActiveCode || localStorage.getItem('storageManagerInitialCode');
+    if (targetCode) {
+      setActiveTab('media_catalog');
+      handleOpenCodeDetail({ code: String(targetCode) });
+      localStorage.removeItem('storageManagerInitialCode');
+      if (onClearInitialActiveCode) {
+        onClearInitialActiveCode();
+      }
+    }
+  }, [initialActiveCode]);
 
   const checkPodsForActiveCode = async (code = activeCodeDetail?.code, filenames = []) => {
     if (!code) return;
@@ -751,11 +794,17 @@ export default function StorageManagerPage({ onBack, onNavigateView }) {
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-cyan-500/20 pb-5">
         <div className="flex items-center gap-3.5">
           <button
-            onClick={activeCodeDetail ? handleBackToCatalog : onBack}
+            onClick={activeCodeDetail ? handleBackToOriginOrCatalog : onBack}
             className="p-2.5 bg-slate-900 hover:bg-slate-800 text-cyan-400 rounded-xl border border-cyan-500/30 transition-all cursor-pointer shadow-lg shadow-cyan-500/5 flex items-center gap-1.5 text-xs font-bold shrink-0"
           >
             <ArrowLeft size={16} />
-            <span>{activeCodeDetail ? 'Kembali ke Katalog' : 'Kembali'}</span>
+            <span>
+              {activeCodeDetail
+                ? (returnView === 'multimedia-sync' || localStorage.getItem('storageManagerReturnView') === 'multimedia-sync'
+                    ? 'Kembali ke Content Management'
+                    : 'Kembali ke Katalog')
+                : 'Kembali'}
+            </span>
           </button>
           <div>
             <div className="flex items-center gap-2.5">
@@ -937,7 +986,12 @@ export default function StorageManagerPage({ onBack, onNavigateView }) {
       {activeCodeDetail && (
         <CodeWorkspaceView
           activeCodeDetail={activeCodeDetail}
-          onBack={handleBackToCatalog}
+          onBack={handleBackToOriginOrCatalog}
+          returnViewTitle={
+            returnView === 'multimedia-sync' || localStorage.getItem('storageManagerReturnView') === 'multimedia-sync'
+              ? 'Content Management'
+              : (returnView ? 'Kembali' : 'Katalog')
+          }
           detailS3Files={detailS3Files}
           isDetailFilesLoading={isDetailFilesLoading}
           playingAudioUrl={playingAudioUrl}
@@ -946,6 +1000,7 @@ export default function StorageManagerPage({ onBack, onNavigateView }) {
           onPromptDeleteS3File={handlePromptDeleteOnS3File}
           deletingS3FileKey={deletingS3FileKey}
           isS3Deleting={!!loadingActions[`s3_${activeCodeDetail.code}`]}
+          isStorageLoading={isStorageLoading}
           pods={storageData?.pods || []}
           detailPodsStatus={detailPodsStatus}
           isCheckingAllPods={isCheckingAllPods}

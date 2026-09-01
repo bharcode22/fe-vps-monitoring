@@ -63,6 +63,28 @@ export default function App() {
   const [editingServer, setEditingServer] = useState(null);
   const [editingService, setEditingService] = useState(null);
   const [selectedDetailServerId, setSelectedDetailServerId] = useState(null);
+  const [storageInitialCode, setStorageInitialCode] = useState(() => {
+    return localStorage.getItem('storageManagerInitialCode') || null;
+  });
+  const [storageReturnView, setStorageReturnView] = useState(() => {
+    return localStorage.getItem('storageManagerReturnView') || null;
+  });
+
+  const handleNavigateView = (view, extraParams = null) => {
+    if (extraParams?.code) {
+      setStorageInitialCode(extraParams.code);
+      localStorage.setItem('storageManagerInitialCode', extraParams.code);
+    }
+    if (extraParams?.returnView !== undefined) {
+      setStorageReturnView(extraParams.returnView);
+      if (extraParams.returnView) {
+        localStorage.setItem('storageManagerReturnView', extraParams.returnView);
+      } else {
+        localStorage.removeItem('storageManagerReturnView');
+      }
+    }
+    setCurrentView(view);
+  };
 
   // Persistent TV Mode state (Restores instantly from localStorage & syncs with DB)
   const [isTvMode, setIsTvMode] = useState(() => {
@@ -207,51 +229,58 @@ export default function App() {
         isTvMode={isTvMode}
         onToggleTvMode={handleToggleTvMode}
         currentView={currentView}
-        onNavigateView={setCurrentView}
+        onNavigateView={handleNavigateView}
       />
 
       {/* Render View: Dashboard, Server List, Installation, or Tools */}
       <ErrorBoundary title="Gagal Memuat Tampilan Halaman">
       {currentView === 'settings' ? (
         <SettingsPage
-          onBack={() => setCurrentView('dashboard')}
+          onBack={() => handleNavigateView('dashboard')}
           onOpenUserModal={() => setIsUserModalOpen(true)}
           isTvMode={isTvMode}
           onToggleTvMode={handleToggleTvMode}
         />
       ) : currentView === 'database-users' || currentView === 'db-users' || currentView === 'user-manager' ? (
-        <UserManagerPage onBack={() => setCurrentView('dashboard')} />
+        <UserManagerPage onBack={() => handleNavigateView('dashboard')} />
       ) : currentView === 'pod-activity' || currentView === 'pod-occupancy' ? (
-        <PodActivityPage onBack={() => setCurrentView('dashboard')} />
+        <PodActivityPage onBack={() => handleNavigateView('dashboard')} />
       ) : currentView === 'pod-logs-sync' || currentView === 'pod-logs' ? (
-        <PodLogsSyncPage onBack={() => setCurrentView('dashboard')} />
+        <PodLogsSyncPage onBack={() => handleNavigateView('dashboard')} />
       ) : currentView === 'tnc-sync-manager' ? (
-        <TncManagerPage onBack={() => setCurrentView('dashboard')} />
+        <TncManagerPage onBack={() => handleNavigateView('dashboard')} />
       ) : currentView === 'master-pod-sync' || currentView === 'master-sync' ? (
-        <MasterPodSyncMatrixPage onBack={() => setCurrentView('dashboard')} />
+        <MasterPodSyncMatrixPage onBack={() => handleNavigateView('dashboard')} />
       ) : currentView === 'pod-topic-debugger' || currentView === 'pod-topics' ? (
-        <PodTopicDebuggerPage onBack={() => setCurrentView('dashboard')} />
+        <PodTopicDebuggerPage onBack={() => handleNavigateView('dashboard')} />
       ) : currentView === 'storage-manager' || currentView === 'storage' || currentView === 'content-manager' || currentView === 'content' ? (
         <StorageManagerPage
-          onBack={() => setCurrentView('dashboard')}
-          onNavigateView={setCurrentView}
+          onBack={() => handleNavigateView('dashboard')}
+          onNavigateView={handleNavigateView}
+          initialActiveCode={storageInitialCode}
+          onClearInitialActiveCode={() => setStorageInitialCode(null)}
+          returnView={storageReturnView}
+          onClearReturnView={() => setStorageReturnView(null)}
         />
       ) : currentView === 'env-manager' ? (
-        <EnvManagerPage onBack={() => setCurrentView('dashboard')} />
+        <EnvManagerPage onBack={() => handleNavigateView('dashboard')} />
       ) : currentView === 'installation' || currentView === 'instalation' ? (
-        <InstallationPage onBack={() => setCurrentView('dashboard')} />
+        <InstallationPage onBack={() => handleNavigateView('dashboard')} />
       ) : currentView === 'metadata-comparison' ? (
-        <MetadataComparisonPage onBack={() => setCurrentView('dashboard')} />
+        <MetadataComparisonPage onBack={() => handleNavigateView('dashboard')} />
       ) : currentView === 'sounds-comparison' ? (
-        <SoundsComparisonPage onBack={() => setCurrentView('dashboard')} />
+        <SoundsComparisonPage onBack={() => handleNavigateView('dashboard')} />
       ) : currentView === 'multimedia-sync' || currentView === 'rabbitmq-pod-sync' || currentView === 're-save-sync' ? (
-        <MultimediaRabbitMqSyncPage onBack={() => setCurrentView('dashboard')} />
+        <MultimediaRabbitMqSyncPage
+          onBack={() => handleNavigateView('dashboard')}
+          onNavigateView={handleNavigateView}
+        />
       ) : currentView === 'rabbitmq' ? (
-        <RabbitMqMonitorPage onBack={() => setCurrentView('dashboard')} />
+        <RabbitMqMonitorPage onBack={() => handleNavigateView('dashboard')} />
       ) : currentView === 'sync' ? (
         <DatabaseSyncPage
           servers={servers}
-          onBack={() => setCurrentView('dashboard')}
+          onBack={() => handleNavigateView('dashboard')}
         />
       ) : currentView === 'dashboard' ? (
         <DashboardPage

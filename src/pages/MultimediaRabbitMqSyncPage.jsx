@@ -35,7 +35,7 @@ import {
 import DockerLogModal from '../components/server/DockerLogModal';
 import MultimediaUploadModal from '../components/content/MultimediaUploadModal';
 
-export default function MultimediaRabbitMqSyncPage({ onBack }) {
+export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
   // 1. Master Multimedia State
   const [multimediaItems, setMultimediaItems] = useState([]);
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10, totalPages: 1 });
@@ -255,7 +255,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack }) {
               </div>
               <div>
                 <h1 className="text-lg font-black text-white tracking-tight flex items-center gap-2">
-                  Sinkronisasi Multimedia RabbitMQ
+                  Content Management
                   <span className="px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 uppercase">
                     Master API ➔ RabbitMQ ➔ POD V3
                   </span>
@@ -291,37 +291,39 @@ export default function MultimediaRabbitMqSyncPage({ onBack }) {
 
           {/* Catalog Panel Header */}
           <div className="shrink-0 p-3.5 sm:p-4 border-b border-purple-500/20 bg-gradient-to-r from-purple-950/30 to-slate-900/60 space-y-2.5">
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
               <div className="flex items-center gap-2 min-w-0">
                 <div className="p-1.5 rounded-lg bg-purple-500/20 text-purple-300 shrink-0">
                   <Layers size={15} />
                 </div>
                 <h2 className="text-xs sm:text-sm font-black text-white truncate">
-                  Pilih Konten Master API
+                  File at S3 AWS
                 </h2>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0">
                   {pagination.total} Track
                 </span>
               </div>
 
-              <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+                {selectedItem?.sound_scape && onNavigateView && (
+                  <button
+                    onClick={() => onNavigateView('storage-manager', { code: String(selectedItem.sound_scape), returnView: 'multimedia-sync' })}
+                    className="px-2.5 py-1 rounded-xl bg-purple-500/25 hover:bg-purple-500/35 text-purple-200 border border-purple-500/40 text-[10.5px] font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
+                    title={`Buka Workspace Pengelolaan Konten Kode #${selectedItem.sound_scape} di Storage Manager`}
+                  >
+                    <Layers size={12} className="text-purple-400" />
+                    <span>Detail #{selectedItem.sound_scape}</span>
+                  </button>
+                )}
+
                 <button
                   onClick={() => loadMasterMultimedia(pagination.page, searchQuery)}
                   disabled={isLoadingMaster}
-                  className="px-2.5 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 hover:border-purple-500/40 text-[10.5px] font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 active:scale-95"
+                  className="p-1.5 sm:px-2.5 sm:py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 hover:border-purple-500/40 text-[10.5px] font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 active:scale-95 shrink-0"
                   title="Segarkan Data Master API"
                 >
                   <RefreshCw size={11} className={isLoadingMaster ? 'animate-spin text-purple-400' : ''} />
-                  <span>Segarkan</span>
-                </button>
-
-                <button
-                  onClick={() => setIsUploadModalOpen(true)}
-                  className="px-2.5 py-1 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 text-[10.5px] font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
-                  title="Upload Konten Multimedia Baru"
-                >
-                  <UploadCloud size={12} />
-                  <span>Upload Baru</span>
+                  <span className="hidden sm:inline">Segarkan</span>
                 </button>
               </div>
             </div>
@@ -434,6 +436,21 @@ export default function MultimediaRabbitMqSyncPage({ onBack }) {
                         </span>
                       )}
 
+                      {/* Workspace Detail Button */}
+                      {onNavigateView && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onNavigateView('storage-manager', { code: String(item.sound_scape), returnView: 'multimedia-sync' });
+                          }}
+                          className="p-1 rounded-md bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 hover:text-purple-300 border border-purple-500/30 transition-all cursor-pointer ml-1"
+                          title={`Buka Pengelolaan Konten Kode #${item.sound_scape} di Storage Manager`}
+                        >
+                          <Layers size={11} />
+                        </button>
+                      )}
+
                       {/* Delete from Master API Button */}
                       <button
                         type="button"
@@ -441,7 +458,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack }) {
                           e.stopPropagation();
                           setDeleteTargetItem(item);
                         }}
-                        className="p-1 rounded-md bg-slate-900/90 hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 border border-slate-800 hover:border-rose-500/40 transition-all cursor-pointer ml-1"
+                        className="p-1 rounded-md bg-slate-900/90 hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 border border-slate-800 hover:border-rose-500/40 transition-all cursor-pointer ml-0.5"
                         title={`Hapus #${item.sound_scape} dari Master API`}
                       >
                         <Trash2 size={11} />
@@ -520,7 +537,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack }) {
                 </div>
               </div>
 
-              {/* Status Check Button */}
+              {/* Action Buttons: Status Check */}
               <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
                 <button
                   onClick={() => inspectFleet(selectedItem?.sound_scape || '')}
@@ -620,7 +637,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack }) {
                           )}
                         </div>
 
-                        {/* Badges: Container Status & Local Media Status */}
+                        {/* Badges: Container Status */}
                         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                           <span className={`px-1.5 py-0.5 rounded-md text-[9.5px] font-bold flex items-center gap-1 border ${!pod.isOnline
                             ? 'bg-slate-800 text-slate-400 border-slate-700'
@@ -634,17 +651,6 @@ export default function MultimediaRabbitMqSyncPage({ onBack }) {
                               }`} />
                             <span>{pod.containerStatus || pod.containerState}</span>
                           </span>
-
-                          {/* Local File Status for selected sound_scape */}
-                          {selectedItem?.sound_scape && (
-                            <span className={`px-1.5 py-0.5 rounded-md text-[9.5px] font-mono font-bold flex items-center gap-1 border ${pod.hasMediaFolder
-                              ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
-                              : 'bg-slate-900 text-slate-400 border-slate-800'
-                              }`}>
-                              <HardDrive size={9} />
-                              <span>{pod.hasMediaFolder ? `Ada (${pod.localFileCount} berkas)` : 'Belum Ada'}</span>
-                            </span>
-                          )}
                         </div>
                       </div>
                     </div>
