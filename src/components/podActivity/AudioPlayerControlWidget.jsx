@@ -43,7 +43,7 @@ const AudioPlayerControlWidget = ({ seekData, playAudioData, stateData, trackLis
       const cmdTs = trackCmdData?.timestamp || 0;
       const cmdStr = trackCmdData?.payload ? String(trackCmdData.payload).trim().toLowerCase() : '';
 
-      const isResume = (cmdStr === '3' || cmdStr.includes('resume')) && Math.abs(trackStartTs - cmdTs) < 5000;
+      const isResume = (cmdStr === '1' || cmdStr === '3' || cmdStr.includes('resume') || cmdStr.includes('play')) && Math.abs(trackStartTs - cmdTs) < 5000;
       const isStale = seekTs < trackStartTs && trackStartTs > 0 && !isResume;
 
       let parsedPayload = null;
@@ -73,8 +73,6 @@ const AudioPlayerControlWidget = ({ seekData, playAudioData, stateData, trackLis
     return s.includes('voice') || s.includes('guide') || s.includes('prompt') || s.includes('intro') || s.includes('outro') || s.includes('announcement');
   };
 
-  let isPlaying = false;
-  let stateText = 'Idle';
   let title = 'Idle';
 
   // 1. Prioritize real session data from session-data topic
@@ -115,72 +113,67 @@ const AudioPlayerControlWidget = ({ seekData, playAudioData, stateData, trackLis
   // Check stateData for Voice Guide vs Session play state
   let voiceGuideTrack = null;
   let isVoicePlaying = false;
+  let stateParsedState = null;
 
   if (stateData?.payload) {
     try {
-      const parsed = typeof stateData.payload === 'string' ? JSON.parse(stateData.payload) : stateData.payload;
-      const stateActive = (parsed.state === "1" || parsed.state === 1) && !String(parsed.state).includes('0');
+      const parsed = typeof stateData.payload === 'string' && (stateData.payload.startsWith('{') || stateData.payload.startsWith('['))
+        ? JSON.parse(stateData.payload)
+        : stateData.payload;
 
-      if (parsed.track && isVoiceGuideTrack(parsed.track)) {
+      const rawStateStr = typeof parsed === 'object' && parsed !== null ? String(parsed.state ?? '') : String(parsed);
+      stateParsedState = rawStateStr;
+
+      if (parsed && typeof parsed === 'object' && parsed.track && isVoiceGuideTrack(parsed.track)) {
         voiceGuideTrack = parsed.track;
-        isVoicePlaying = stateActive;
-      } else if (parsed.track && parsed.track !== 'null' && parsed.track !== 'undefined' && parsed.track !== 'Idle' && parsed.track !== '') {
-        // If track is a real session track, use it
-        if (title === 'Idle') title = parsed.track;
-      }
-
-      // If it's a non-voice track state, update session playing state
-      if (!isVoiceGuideTrack(parsed.track)) {
-        isPlaying = stateActive;
-        stateText = isPlaying ? 'Playing' : 'Paused';
-        if (parsed.track === 'null' || parsed.track === 'undefined' || parsed.track === 'Idle' || parsed.track === '') {
-          stateText = 'Stopped';
+        isVoicePlaying = rawStateStr === '1' || rawStateStr === '0';
+      } else if (parsed && typeof parsed === 'object' && parsed.track && parsed.track !== 'null' && parsed.track !== 'undefined' && parsed.track !== 'Idle' && parsed.track !== '') {
+        if (title === 'Idle') {
+          title = parsed.track;
         }
       }
     } catch (_) { }
-  } else if (seekDataState?.timestamp) {
-    const elapsedSinceSeek = Date.now() - seekDataState.timestamp;
-    isPlaying = elapsedSinceSeek < 10000;
-    stateText = isPlaying ? 'Playing' : 'Paused';
-  } else if (playAudioData?.payload && !isVoiceGuideTrack(playAudioData.payload)) {
+  }
+
+  // Determine active track
+  const hasActiveTrack = (title !== 'Idle' && title !== 'null' && title !== 'undefined' && !isVoiceGuideTrack(title)) || Boolean(playAudioData?.payload && !isVoiceGuideTrack(playAudioData.payload)) || Boolean(seekDataState?.payload);
+
+  let isPlaying = hasActiveTrack;
+  let isPaused = false;
+  let isStopped = !hasActiveTrack;
+  let stateText = isPlaying ? 'Playing' : 'Stopped';
+
+  if (stateParsedState === '2' || (stateParsedState && stateParsedState.includes('pause'))) {
+    isPaused = true;
+    isPlaying = false;
+    stateText = 'Paused';
+  } else if (stateParsedState === '3' || (stateParsedState && stateParsedState.includes('resume'))) {
+    isPaused = false;
     isPlaying = true;
     stateText = 'Playing';
   }
 
-  // If title is a voice guide or still idle, keep it as Idle
-  if (isVoiceGuideTrack(title) || title === 'Idle' || title === 'null' || title === 'undefined') {
-    title = 'Idle';
-    if (!seekDataState?.payload && !playAudioData?.payload) {
-      isPlaying = false;
-      stateText = 'Stopped';
-    }
-  }
-
-  let isPaused = false;
-  let isStopped = false;
-
+  // Check trackCmdData (pause = 2, resume = 3, play/stop = 0)
   if (trackCmdData?.timestamp) {
     const timeDiff = Date.now() - trackCmdData.timestamp;
-    if (timeDiff < 30000) {
+    if (timeDiff < 60000) {
       const cmd = String(trackCmdData.payload).trim().toLowerCase();
 
-      if (cmd === '1' || cmd.includes('pause')) {
+      if (cmd === '2' || cmd.includes('pause')) {
         isPaused = true;
         isPlaying = false;
         stateText = 'Paused';
-      } else if (cmd === '2' || cmd.includes('stop')) {
-        isStopped = true;
-        isPlaying = false;
-        stateText = 'Stopped';
-      } else if (cmd === '3' || cmd.includes('resume')) {
+      } else if (cmd === '3' || cmd === '1' || cmd.includes('resume')) {
         isPaused = false;
-        isStopped = false;
-        if (stateText !== 'Stopped') {
-          stateText = 'Playing';
-          isPlaying = true;
-        }
+        isPlaying = true;
+        stateText = 'Playing';
       }
     }
+  }
+
+  if (isPaused) {
+    isPlaying = false;
+    stateText = 'Paused';
   }
 
   if (durVal <= 0 && ambienceDurData?.payload) {
@@ -241,24 +234,40 @@ const AudioPlayerControlWidget = ({ seekData, playAudioData, stateData, trackLis
   const [localPos, setLocalPos] = useState(rawPos);
   const effectiveDur = rawDur > 0 ? rawDur : 0;
   const lastSyncTs = useRef(0);
+  const activeTrackKeyRef = useRef(playAudioData?.payload || title);
+
+  // Reset to 0 only when a brand new track is played
+  useEffect(() => {
+    const currentTrack = playAudioData?.payload || (title !== 'Idle' ? title : null);
+    if (currentTrack && currentTrack !== activeTrackKeyRef.current && !isVoiceGuideTrack(currentTrack)) {
+      activeTrackKeyRef.current = currentTrack;
+      setLocalPos(0);
+      lastSyncTs.current = Date.now();
+    }
+  }, [playAudioData?.payload, title]);
 
   useEffect(() => {
-    if (isStopped && !isPlaying) {
+    // Only reset to 0 if explicitly stopped (not paused)
+    if (isStopped && !isPaused && !isPlaying) {
       setLocalPos(0);
       lastSyncTs.current = posTimestamp;
       return;
     }
+
     if (posTimestamp > lastSyncTs.current) {
       let compensatedPos = rawPos;
       if (isPlaying) {
         const elapsedSincePacket = Math.floor((Date.now() - posTimestamp) / 1000);
         const compensation = elapsedSincePacket > 2 ? elapsedSincePacket : 0;
         compensatedPos += compensation;
+        setLocalPos(effectiveDur > 0 ? Math.min(effectiveDur, compensatedPos) : compensatedPos);
+      } else if (rawPos > 0) {
+        // If paused, update localPos only if rawPos is valid and positive
+        setLocalPos(rawPos);
       }
-      setLocalPos(effectiveDur > 0 ? Math.min(effectiveDur, compensatedPos) : compensatedPos);
       lastSyncTs.current = posTimestamp;
     }
-  }, [rawPos, isPlaying, posTimestamp, effectiveDur]);
+  }, [rawPos, isPlaying, isPaused, isStopped, posTimestamp, effectiveDur]);
 
   useEffect(() => {
     if (!isPlaying) return;
@@ -395,9 +404,6 @@ const AudioPlayerControlWidget = ({ seekData, playAudioData, stateData, trackLis
             </span>
             <span className="font-mono text-4xl md:text-5xl font-black text-white tracking-tight drop-shadow-md">
               {formatMinSec(localPos)}
-            </span>
-            <span className="text-xs font-mono text-slate-500 mt-1 font-semibold">
-              / {formatMinSec(effectiveDur)}
             </span>
           </div>
         </div>
