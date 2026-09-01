@@ -231,6 +231,8 @@ export default function PodActivityTopicCards({ show, onClose, feed = [], pods =
                 audioLevelData={topicStates['mod_audio/audio/set_level']}
                 vibrationData={topicStates['mod_audio/vibration/set_level']}
                 olfactoryData={topicStates['mod_olfactory/cmd']}
+                serverId={pods[0]?.id || selectedServerId}
+                serverName={pods[0]?.name}
                 onPublish={onPublish}
               />
             ) : (

@@ -29,7 +29,7 @@ const MiniCircle = ({ label, value, icon: Icon, percentage, colorClass, strokeCl
   );
 };
 
-const AudioPlayerControlWidget = ({ seekData, playAudioData, stateData, trackListData, ambienceDurData, trackCmdData, mediaInfo, sessionData, stroboData, audioLevelData, vibrationData, olfactoryData, onPublish }) => {
+const AudioPlayerControlWidget = ({ seekData, playAudioData, stateData, trackListData, ambienceDurData, trackCmdData, mediaInfo, sessionData, stroboData, audioLevelData, vibrationData, olfactoryData, serverId, serverName, onPublish }) => {
   let durVal = 0;
   let posVal = 0;
 
@@ -135,45 +135,98 @@ const AudioPlayerControlWidget = ({ seekData, playAudioData, stateData, trackLis
     } catch (_) { }
   }
 
-  // Determine active track
-  const hasActiveTrack = (title !== 'Idle' && title !== 'null' && title !== 'undefined' && !isVoiceGuideTrack(title)) || Boolean(playAudioData?.payload && !isVoiceGuideTrack(playAudioData.payload)) || Boolean(seekDataState?.payload);
+  // Check trackListData if title is still Idle
+  if (durVal <= 0 && trackListData?.payload) {
+    try {
+      let tList = typeof trackListData.payload === 'string' ? JSON.parse(trackListData.payload) : trackListData.payload;
+      if (Array.isArray(tList)) {
+        const found = tList.find(t => {
+          const tId = String(t.id || t.track || '').toLowerCase();
+          const pPayload = String(playAudioData?.payload || '').toLowerCase();
+          const curTitle = String(title).toLowerCase();
+          return (pPayload && tId.includes(pPayload) && !isVoiceGuideTrack(tId)) || (curTitle && tId.includes(curTitle) && !isVoiceGuideTrack(tId)) || (t.title && curTitle.includes(String(t.title).toLowerCase()));
+        });
+        if (found) {
+          if (found.duration) {
+            const d = Number(found.duration);
+            durVal = d > 10000 ? Math.floor(d / 1000) : d;
+          }
+          if (title === 'Idle' || !title) {
+            title = found.display || found.title || found.name || title;
+          }
+        }
+      }
+    } catch (_) { }
+  }
+
+  const storageKey = `pod_audio_progress_${serverId || 'default'}`;
+
+  // Read saved progress synchronously on initial load
+  const getSavedData = () => {
+    try {
+      const savedRaw = localStorage.getItem(storageKey) || localStorage.getItem('pod_audio_last_progress');
+      if (savedRaw) return JSON.parse(savedRaw);
+    } catch (_) { }
+    return null;
+  };
+
+  const initialSaved = getSavedData();
+
+  // Determine active track strictly (No ghost tracks)
+  const isInvalidTitle = !title || title === 'Idle' || title === 'null' || title === 'undefined' || title === '0' || title === 'Idle (Standby)' || isVoiceGuideTrack(title);
+  const hasActiveTrack = !isInvalidTitle;
+
+  const isSavedPaused = Boolean(hasActiveTrack && initialSaved?.isPaused && initialSaved?.pos > 0 && (initialSaved?.track === title || !initialSaved?.track));
 
   let isPlaying = hasActiveTrack;
-  let isPaused = false;
+  let isPaused = isSavedPaused;
   let isStopped = !hasActiveTrack;
-  let stateText = isPlaying ? 'Playing' : 'Stopped';
+  let stateText = isPlaying ? (isPaused ? 'Paused' : 'Playing') : 'Idle';
 
-  if (stateParsedState === '2' || (stateParsedState && stateParsedState.includes('pause'))) {
-    isPaused = true;
+  if (!hasActiveTrack) {
     isPlaying = false;
-    stateText = 'Paused';
-  } else if (stateParsedState === '3' || (stateParsedState && stateParsedState.includes('resume'))) {
     isPaused = false;
-    isPlaying = true;
-    stateText = 'Playing';
-  }
+    isStopped = true;
+    stateText = 'Idle';
+  } else {
+    if (stateParsedState === '2' || (stateParsedState && stateParsedState.includes('pause'))) {
+      isPaused = true;
+      isPlaying = false;
+      stateText = 'Paused';
+    } else if (stateParsedState === '3' || (stateParsedState && stateParsedState.includes('resume'))) {
+      isPaused = false;
+      isPlaying = true;
+      stateText = 'Playing';
+    }
 
-  // Check trackCmdData (pause = 2, resume = 3, play/stop = 0)
-  if (trackCmdData?.timestamp) {
-    const timeDiff = Date.now() - trackCmdData.timestamp;
-    if (timeDiff < 60000) {
-      const cmd = String(trackCmdData.payload).trim().toLowerCase();
+    // Check trackCmdData (pause = 2, resume = 3, play = 0 or 1)
+    if (trackCmdData?.timestamp) {
+      const timeDiff = Date.now() - trackCmdData.timestamp;
+      if (timeDiff < 60000) {
+        const cmd = String(trackCmdData.payload).trim().toLowerCase();
 
-      if (cmd === '2' || cmd.includes('pause')) {
-        isPaused = true;
-        isPlaying = false;
-        stateText = 'Paused';
-      } else if (cmd === '3' || cmd === '1' || cmd.includes('resume')) {
-        isPaused = false;
-        isPlaying = true;
-        stateText = 'Playing';
+        if (cmd === '2' || cmd.includes('pause')) {
+          isPaused = true;
+          isPlaying = false;
+          stateText = 'Paused';
+        } else if (cmd === '3' || cmd === '0' || cmd === '1' || cmd.includes('resume') || cmd.includes('play')) {
+          isPaused = false;
+          isStopped = false;
+          isPlaying = true;
+          stateText = 'Playing';
+        } else if (cmd === 'stop' || cmd.includes('stop') || cmd.includes('end')) {
+          isStopped = true;
+          isPlaying = false;
+          isPaused = false;
+          stateText = 'Stopped';
+        }
       }
     }
-  }
 
-  if (isPaused) {
-    isPlaying = false;
-    stateText = 'Paused';
+    if (isPaused) {
+      isPlaying = false;
+      stateText = 'Paused';
+    }
   }
 
   if (durVal <= 0 && ambienceDurData?.payload) {
@@ -198,29 +251,6 @@ const AudioPlayerControlWidget = ({ seekData, playAudioData, stateData, trackLis
     }
   }
 
-  if (durVal <= 0 && trackListData?.payload) {
-    try {
-      let tList = typeof trackListData.payload === 'string' ? JSON.parse(trackListData.payload) : trackListData.payload;
-      if (Array.isArray(tList)) {
-        const found = tList.find(t => {
-          const tId = String(t.id || t.track || '').toLowerCase();
-          const pPayload = String(playAudioData?.payload || '').toLowerCase();
-          const curTitle = String(title).toLowerCase();
-          return (pPayload && tId.includes(pPayload) && !isVoiceGuideTrack(tId)) || (curTitle && tId.includes(curTitle) && !isVoiceGuideTrack(tId)) || (t.title && curTitle.includes(String(t.title).toLowerCase()));
-        });
-        if (found) {
-          if (found.duration) {
-            const d = Number(found.duration);
-            durVal = d > 10000 ? Math.floor(d / 1000) : d;
-          }
-          if (title === 'Idle' || !title) {
-            title = found.display || found.title || found.name || title;
-          }
-        }
-      }
-    } catch (_) { }
-  }
-
   const formatMinSec = (totalSeconds) => {
     if (!totalSeconds || isNaN(totalSeconds) || totalSeconds <= 0) return '00:00';
     const m = Math.floor(totalSeconds / 60);
@@ -230,30 +260,72 @@ const AudioPlayerControlWidget = ({ seekData, playAudioData, stateData, trackLis
 
   const rawPos = posVal;
   const rawDur = durVal;
-
-  const [localPos, setLocalPos] = useState(rawPos);
   const effectiveDur = rawDur > 0 ? rawDur : 0;
-  const lastSyncTs = useRef(0);
-  const activeTrackKeyRef = useRef(playAudioData?.payload || title);
 
-  // Reset to 0 only when a brand new track is played
-  useEffect(() => {
-    const currentTrack = playAudioData?.payload || (title !== 'Idle' ? title : null);
-    if (currentTrack && currentTrack !== activeTrackKeyRef.current && !isVoiceGuideTrack(currentTrack)) {
-      activeTrackKeyRef.current = currentTrack;
-      setLocalPos(0);
-      lastSyncTs.current = Date.now();
+  const [localPos, setLocalPos] = useState(() => {
+    if (!hasActiveTrack) return 0;
+    if (rawPos > 0) return rawPos;
+    if (initialSaved && typeof initialSaved.pos === 'number' && initialSaved.pos > 0 && (initialSaved.track === title || !initialSaved.track)) {
+      return initialSaved.pos;
     }
-  }, [playAudioData?.payload, title]);
+    return 0;
+  });
 
+  const lastSyncTs = useRef(0);
+
+  // On title resolution after reload/mount, restore saved pause progress only if track is active
   useEffect(() => {
-    // Only reset to 0 if explicitly stopped (not paused)
-    if (isStopped && !isPaused && !isPlaying) {
+    if (!hasActiveTrack) {
       setLocalPos(0);
-      lastSyncTs.current = posTimestamp;
+      try {
+        localStorage.removeItem(storageKey);
+        localStorage.removeItem('pod_audio_last_progress');
+      } catch (_) { }
       return;
     }
 
+    try {
+      const saved = getSavedData();
+      if (saved && typeof saved.pos === 'number' && saved.pos > 0 && (saved.track === title || !saved.track)) {
+        if (saved.isPaused || isPaused) {
+          setLocalPos(saved.pos);
+        } else if (isPlaying) {
+          const elapsed = Math.floor((Date.now() - (saved.updatedAt || Date.now())) / 1000);
+          const total = saved.pos + (elapsed > 0 && elapsed < 7200 ? elapsed : 0);
+          setLocalPos(effectiveDur > 0 ? Math.min(effectiveDur, total) : total);
+        }
+      }
+    } catch (_) { }
+  }, [hasActiveTrack, title, isPaused, isPlaying, effectiveDur, storageKey]);
+
+  // Sync to localStorage ONLY when hasActiveTrack is true and localPos > 0
+  useEffect(() => {
+    if (!hasActiveTrack || localPos <= 0) return;
+    try {
+      const jsonPayload = JSON.stringify({
+        track: title,
+        pos: localPos,
+        isPaused: isPaused,
+        isPlaying: isPlaying,
+        updatedAt: Date.now()
+      });
+      localStorage.setItem(storageKey, jsonPayload);
+      localStorage.setItem('pod_audio_last_progress', jsonPayload);
+    } catch (_) { }
+  }, [localPos, isPaused, isPlaying, hasActiveTrack, title, storageKey]);
+
+  // Handle explicit stop command or session end
+  useEffect(() => {
+    if (isStopped && !isPaused && !isPlaying) {
+      setLocalPos(0);
+      try {
+        localStorage.removeItem(storageKey);
+        localStorage.removeItem('pod_audio_last_progress');
+      } catch (_) { }
+    }
+  }, [isStopped, isPaused, isPlaying, storageKey]);
+
+  useEffect(() => {
     if (posTimestamp > lastSyncTs.current) {
       let compensatedPos = rawPos;
       if (isPlaying) {
@@ -262,7 +334,6 @@ const AudioPlayerControlWidget = ({ seekData, playAudioData, stateData, trackLis
         compensatedPos += compensation;
         setLocalPos(effectiveDur > 0 ? Math.min(effectiveDur, compensatedPos) : compensatedPos);
       } else if (rawPos > 0) {
-        // If paused, update localPos only if rawPos is valid and positive
         setLocalPos(rawPos);
       }
       lastSyncTs.current = posTimestamp;

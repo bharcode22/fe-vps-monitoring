@@ -177,7 +177,7 @@ const AudioSocketControlWidget = ({ eventStates, onEmit, socketTopics = [], mqtt
     // Only accept STOP command if it was issued AFTER the track started
     if (cmdTs >= trackStartTs) {
       const cmdStr = String(mqttCmd.payload).trim().toLowerCase();
-      if (cmdStr === '0' || cmdStr.includes('stop') || cmdStr.includes('end')) {
+      if (cmdStr === 'stop' || cmdStr.includes('stop') || cmdStr.includes('end')) {
         isStopped = true;
       }
     }
