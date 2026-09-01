@@ -156,6 +156,15 @@ export const NAV_DROPDOWN_GROUPS = [
         bgActiveClass: 'bg-purple-500/15 text-purple-300 border-purple-500/30'
       },
       {
+        id: 'multimedia-sync',
+        aliases: ['rabbitmq-pod-sync', 're-save-sync'],
+        label: 'RabbitMQ POD Sync',
+        desc: 'Sinkronisasi Multimedia ke mobile-synch di POD',
+        icon: Shuffle,
+        colorClass: 'text-indigo-400',
+        bgActiveClass: 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30'
+      },
+      {
         id: 'installation',
         aliases: ['instalation'],
         label: 'Installation Guide',

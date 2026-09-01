@@ -11,7 +11,11 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  AlertTriangle
+  AlertTriangle,
+  UploadCloud,
+  Sparkles,
+  Clock,
+  Shuffle
 } from 'lucide-react';
 
 export default function CatalogView({
@@ -26,7 +30,9 @@ export default function CatalogView({
   onPageChange,
   onSelectFolder,
   isLoading,
-  error
+  error,
+  onOpenUploadModal,
+  onNavigateToMultimediaSync
 }) {
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-200">
@@ -43,16 +49,44 @@ export default function CatalogView({
             </p>
           </div>
 
-          {/* Search Bar */}
-          <div className="relative w-full sm:w-64">
-            <Search size={14} className="absolute left-3.5 top-3 text-slate-500" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Cari kode (misal: 154363)..."
-              className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-rose-500 font-mono"
-            />
+          {/* Action Bar (Search + Upload Button + RabbitMQ Sync Button) */}
+          <div className="flex items-center gap-2.5 w-full sm:w-auto flex-wrap sm:flex-nowrap">
+            {/* Tombol ke Sinkronisasi Multimedia RabbitMQ */}
+            {onNavigateToMultimediaSync && (
+              <button
+                type="button"
+                onClick={onNavigateToMultimediaSync}
+                className="px-3.5 py-2 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/40 hover:border-purple-400 text-xs font-bold transition-all cursor-pointer shadow-lg shadow-purple-500/10 flex items-center gap-2 shrink-0 active:scale-95"
+                title="Buka Halaman Sinkronisasi Multimedia RabbitMQ & POD Matrix"
+              >
+                <Shuffle size={14} className="text-purple-400" />
+                <span>Sinkronisasi RabbitMQ</span>
+              </button>
+            )}
+
+            {/* Upload Multimedia Button */}
+            {onOpenUploadModal && (
+              <button
+                onClick={onOpenUploadModal}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 via-pink-500 to-purple-600 hover:from-rose-400 hover:to-purple-500 text-white text-xs font-bold transition-all cursor-pointer shadow-lg shadow-rose-500/20 flex items-center gap-2 shrink-0 active:scale-95"
+              >
+                <UploadCloud size={15} />
+                <span>Upload Multimedia</span>
+                <span className="px-1.5 py-0.5 rounded-md bg-white/20 text-[10px] font-mono">10GB</span>
+              </button>
+            )}
+
+            {/* Search Bar */}
+            <div className="relative w-full sm:w-64">
+              <Search size={14} className="absolute left-3.5 top-3 text-slate-500" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="Cari kode (misal: 154363)..."
+                className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white focus:outline-none focus:border-rose-500 font-mono"
+              />
+            </div>
           </div>
         </div>
 
@@ -134,9 +168,17 @@ export default function CatalogView({
                     )}
                   </div>
 
-                  <div className="text-xs font-mono font-bold text-sky-300 mb-2">
-                    {folder.totalSizeFormatted}
-                    <span className="text-[10px] text-slate-500 font-normal ml-1">({folder.totalFiles} file)</span>
+                  <div className="flex items-baseline justify-between gap-1 mb-2">
+                    <div className="text-xs font-mono font-bold text-sky-300">
+                      {folder.totalSizeFormatted}
+                      <span className="text-[10px] text-slate-500 font-normal ml-1">({folder.totalFiles} file)</span>
+                    </div>
+                    {folder.lastModified && (
+                      <div className="text-[9.5px] font-mono text-slate-500 flex items-center gap-1 shrink-0" title={`Terakhir diupdate: ${new Date(folder.lastModified).toLocaleString('id-ID')}`}>
+                        <Clock size={10} className="text-slate-500" />
+                        <span>{new Date(folder.lastModified).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Asset Counts Breakdown */}

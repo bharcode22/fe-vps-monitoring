@@ -17,6 +17,7 @@ import RabbitMqMonitorPage from './pages/RabbitMqMonitorPage';
 import InstallationPage from './pages/InstallationPage';
 import EnvManagerPage from './pages/EnvManagerPage';
 import StorageManagerPage from './pages/StorageManagerPage';
+import MultimediaRabbitMqSyncPage from './pages/MultimediaRabbitMqSyncPage';
 import DashboardPage from './pages/DashboardPage';
 import PodTopicDebuggerPage from './pages/PodTopicDebuggerPage';
 import MasterPodSyncMatrixPage from './pages/MasterPodSyncMatrixPage';
@@ -168,7 +169,9 @@ export default function App() {
     : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3'
     }`;
 
-  const isFullWidthView = isTvMode || [
+  const isMultimediaSyncView = ['multimedia-sync', 'rabbitmq-pod-sync', 're-save-sync'].includes(currentView);
+
+  const isFullWidthView = isTvMode || isMultimediaSyncView || [
     'pod-topic-debugger',
     'pod-topics',
     'master-pod-sync',
@@ -185,7 +188,12 @@ export default function App() {
   ].includes(currentView);
 
   return (
-    <div className={`mx-auto pb-10 transition-all duration-300 ${isFullWidthView ? 'w-full max-w-[98%] 2xl:max-w-[1920px] px-2 sm:px-4 lg:px-6' : 'max-w-7xl px-4 sm:px-6'
+    <div className={`mx-auto transition-all duration-300 ${
+      isMultimediaSyncView
+        ? 'w-full max-w-[98%] 2xl:max-w-[1920px] px-2 sm:px-4 lg:px-6 pb-2'
+        : isFullWidthView
+          ? 'w-full max-w-[98%] 2xl:max-w-[1920px] px-2 sm:px-4 lg:px-6 pb-10'
+          : 'max-w-7xl px-4 sm:px-6 pb-10'
       }`}>
 
       {/* Header Top Navbar */}
@@ -224,7 +232,10 @@ export default function App() {
       ) : currentView === 'pod-topic-debugger' || currentView === 'pod-topics' ? (
         <PodTopicDebuggerPage onBack={() => setCurrentView('dashboard')} />
       ) : currentView === 'storage-manager' || currentView === 'storage' || currentView === 'content-manager' || currentView === 'content' ? (
-        <StorageManagerPage onBack={() => setCurrentView('dashboard')} />
+        <StorageManagerPage
+          onBack={() => setCurrentView('dashboard')}
+          onNavigateView={setCurrentView}
+        />
       ) : currentView === 'env-manager' ? (
         <EnvManagerPage onBack={() => setCurrentView('dashboard')} />
       ) : currentView === 'installation' || currentView === 'instalation' ? (
@@ -233,6 +244,8 @@ export default function App() {
         <MetadataComparisonPage onBack={() => setCurrentView('dashboard')} />
       ) : currentView === 'sounds-comparison' ? (
         <SoundsComparisonPage onBack={() => setCurrentView('dashboard')} />
+      ) : currentView === 'multimedia-sync' || currentView === 'rabbitmq-pod-sync' || currentView === 're-save-sync' ? (
+        <MultimediaRabbitMqSyncPage onBack={() => setCurrentView('dashboard')} />
       ) : currentView === 'rabbitmq' ? (
         <RabbitMqMonitorPage onBack={() => setCurrentView('dashboard')} />
       ) : currentView === 'sync' ? (
@@ -469,8 +482,8 @@ export default function App() {
       )}
       </ErrorBoundary>
 
-      {/* Global Footer displayed on all pages */}
-      <Footer />
+      {/* Global Footer displayed on all pages except full-screen single-screen tools */}
+      {!isMultimediaSyncView && <Footer />}
 
       {/* Add / Edit VPS / POD SSH Modal */}
       <AddServerModal

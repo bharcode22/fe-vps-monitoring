@@ -42,10 +42,11 @@ import CodeWorkspaceView from '../components/content/CodeWorkspaceView';
 import HardDeleteModal from '../components/content/HardDeleteModal';
 import FileIntegrityModal from '../components/content/FileIntegrityModal';
 import FlowEditorStorageView from '../components/storage/FlowEditorStorageView';
+import MultimediaUploadModal from '../components/content/MultimediaUploadModal';
 import io from 'socket.io-client';
 import { SOCKET_URL } from '../config';
 
-export default function StorageManagerPage({ onBack }) {
+export default function StorageManagerPage({ onBack, onNavigateView }) {
   // Main Tab Navigation: 'docker_storage' | 'media_catalog' | 'rogue_scanner'
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('storageManagerActiveTab') || 'docker_storage';
@@ -177,6 +178,7 @@ export default function StorageManagerPage({ onBack }) {
   const [isExecutingDelete, setIsExecutingDelete] = useState(false);
   const [deletingS3FileKey, setDeletingS3FileKey] = useState(null);
   const [successToast, setSuccessToast] = useState('');
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
   // Audio Preview Player
   const [playingAudioUrl, setPlayingAudioUrl] = useState(null);
@@ -661,7 +663,7 @@ export default function StorageManagerPage({ onBack }) {
         const podId = targetPodIds[0];
         const result = await deleteCodeOnPodApi(podId, s3Code, filenames);
         setSuccessToast(`Berhasil menghapus file #${s3Code} di ${result.serverName} (${result.deletedCount} file, ${result.freedFormatted} dibebaskan)`);
-        
+
         // Await re-check and storage refresh so the loading indicator persists until data is fully synced
         await checkSinglePodForActiveCode(podId);
         await refreshSinglePodStorage(podId);
@@ -670,7 +672,7 @@ export default function StorageManagerPage({ onBack }) {
       else {
         const result = await batchDeleteCodeApi(s3Code, filenames, targetPodIds, deleteFromS3);
         setSuccessToast(`Berhasil memproses batch delete untuk kode #${s3Code}`);
-        
+
         await checkPodsForActiveCode(s3Code, filenames);
         await Promise.all(targetPodIds.map(id => refreshSinglePodStorage(id)));
         if (deleteFromS3) {
@@ -708,19 +710,29 @@ export default function StorageManagerPage({ onBack }) {
     }
   };
 
-  // Filtered Catalog Folders
+  // Filtered Catalog Folders (Sorted by newest first)
   const allFolders = s3FoldersData?.folders || [];
-  const filteredFolders = allFolders.filter(folder => {
-    const matchesSearch = catalogSearch.trim() === '' || folder.code.toLowerCase().includes(catalogSearch.trim().toLowerCase());
-    if (!matchesSearch) return false;
+  const filteredFolders = allFolders
+    .filter(folder => {
+      const matchesSearch = catalogSearch.trim() === '' || folder.code.toLowerCase().includes(catalogSearch.trim().toLowerCase());
+      if (!matchesSearch) return false;
 
-    if (catalogCategoryFilter === 'audio') return folder.audioCount > 0;
-    if (catalogCategoryFilter === 'video') return folder.videoCount > 0;
-    if (catalogCategoryFilter === 'image') return folder.imageCount > 0;
-    if (catalogCategoryFilter === 'strobe') return folder.strobeCount > 0;
-    if (catalogCategoryFilter === 'orphan') return folder.isOrphan === true;
-    return true;
-  });
+      if (catalogCategoryFilter === 'audio') return folder.audioCount > 0;
+      if (catalogCategoryFilter === 'video') return folder.videoCount > 0;
+      if (catalogCategoryFilter === 'image') return folder.imageCount > 0;
+      if (catalogCategoryFilter === 'strobe') return folder.strobeCount > 0;
+      if (catalogCategoryFilter === 'orphan') return folder.isOrphan === true;
+      return true;
+    })
+    .sort((a, b) => {
+      const timeA = a.lastModified ? new Date(a.lastModified).getTime() : 0;
+      const timeB = b.lastModified ? new Date(b.lastModified).getTime() : 0;
+      if (timeB !== timeA) return timeB - timeA;
+      const numA = parseInt(a.code, 10);
+      const numB = parseInt(b.code, 10);
+      if (!isNaN(numA) && !isNaN(numB)) return numB - numA;
+      return String(b.code).localeCompare(String(a.code), undefined, { numeric: true });
+    });
 
   const totalCatalogPages = Math.ceil(filteredFolders.length / catalogPageSize) || 1;
   const currentCatalogFolders = filteredFolders.slice((catalogPage - 1) * catalogPageSize, catalogPage * catalogPageSize);
@@ -916,6 +928,8 @@ export default function StorageManagerPage({ onBack }) {
           onSelectFolder={handleOpenCodeDetail}
           isLoading={isS3Loading}
           error={s3Error}
+          onOpenUploadModal={() => setIsUploadModalOpen(true)}
+          onNavigateToMultimediaSync={onNavigateView ? () => onNavigateView('multimedia-sync') : null}
         />
       )}
 
@@ -994,6 +1008,16 @@ export default function StorageManagerPage({ onBack }) {
           setIntegrityModal(prev => ({ ...prev, isOpen: false }));
           handleDownloadSingleFileToPod(targetPod, targetFilename);
         } : null}
+      />
+
+      {/* Multimedia Batch Chunk Upload Modal */}
+      <MultimediaUploadModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        onSuccess={() => {
+          setSuccessToast('Berhasil mengunggah multimedia master baru ke AWS S3 & Master DB!');
+          loadS3Folders();
+        }}
       />
 
       {/* Hidden Audio Player for Previews */}

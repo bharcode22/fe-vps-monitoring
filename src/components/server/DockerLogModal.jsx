@@ -5,7 +5,7 @@ import { io } from 'socket.io-client';
 import { SOCKET_URL } from '../../config';
 import { fetchDockerLogsApi } from '../../api/vpsApi';
 
-export default function DockerLogModal({ isOpen, onClose, serverId, containerName }) {
+export default function DockerLogModal({ isOpen, onClose, serverId, containerName, autoStream = false }) {
   const [logs, setLogs] = useState('');
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
@@ -25,13 +25,17 @@ export default function DockerLogModal({ isOpen, onClose, serverId, containerNam
   // Initial load on mount or container change
   useEffect(() => {
     if (isOpen && serverId && containerName) {
-      setIsStreaming(false);
-      loadStaticLogs();
+      if (autoStream) {
+        startStreaming();
+      } else {
+        setIsStreaming(false);
+        loadStaticLogs();
+      }
     }
     return () => {
       stopStreaming();
     };
-  }, [isOpen, serverId, containerName]);
+  }, [isOpen, serverId, containerName, autoStream]);
 
   const loadStaticLogs = async () => {
     stopStreaming();
