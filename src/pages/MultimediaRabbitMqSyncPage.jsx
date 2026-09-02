@@ -534,29 +534,6 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                   {pagination.total} Track
                 </span>
               </div>
-
-              <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-                {selectedItem?.sound_scape && onNavigateView && (
-                  <button
-                    onClick={() => onNavigateView('storage-manager', { code: String(selectedItem.sound_scape), returnView: 'multimedia-sync' })}
-                    className="px-2.5 py-1 rounded-xl bg-purple-500/25 hover:bg-purple-500/35 text-purple-200 border border-purple-500/40 text-[10.5px] font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
-                    title={`Buka Workspace Pengelolaan Konten Kode #${selectedItem.sound_scape} di Storage Manager`}
-                  >
-                    <Layers size={12} className="text-purple-400" />
-                    <span>Detail #{selectedItem.sound_scape}</span>
-                  </button>
-                )}
-
-                <button
-                  onClick={() => loadMasterMultimedia(pagination.page, searchQuery)}
-                  disabled={isLoadingMaster}
-                  className="p-1.5 sm:px-2.5 sm:py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 hover:border-purple-500/40 text-[10.5px] font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 active:scale-95 shrink-0"
-                  title="Segarkan Data Master API"
-                >
-                  <RefreshCw size={11} className={isLoadingMaster ? 'animate-spin text-purple-400' : ''} />
-                  <span className="hidden sm:inline">Segarkan</span>
-                </button>
-              </div>
             </div>
 
             {/* Search Bar */}
@@ -650,8 +627,8 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                         </div>
                       </div>
 
-                      {/* Right Actions: File Indicators, Info Modal & Delete Button */}
-                      <div className="flex items-center gap-1 shrink-0">
+                      {/* Right Actions: Clear Labeled Detail & Delete Buttons */}
+                      <div className="flex items-center gap-1.5 shrink-0">
                         {/* Info Payload Modal Button */}
                         <button
                           type="button"
@@ -659,26 +636,12 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                             e.stopPropagation();
                             setTrackInfoModalItem(item);
                           }}
-                          className="p-1 rounded-md bg-purple-500/15 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 transition-all cursor-pointer shadow-sm"
+                          className="px-2 py-1 rounded-xl bg-purple-500/15 hover:bg-purple-500/30 text-purple-200 border border-purple-500/40 text-[10.5px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm active:scale-95"
                           title="Lihat Struktur Data Berkas Master API (music, video, lamp, album)"
                         >
-                          <Info size={11} />
+                          <Info size={12} className="text-purple-400" />
+                          <span>Detail</span>
                         </button>
-
-                        {/* Workspace Detail Button */}
-                        {onNavigateView && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onNavigateView('storage-manager', { code: String(item.sound_scape), returnView: 'multimedia-sync' });
-                            }}
-                            className="p-1 rounded-md bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 hover:text-purple-300 border border-purple-500/30 transition-all cursor-pointer ml-0.5"
-                            title={`Buka Pengelolaan Konten Kode #${item.sound_scape} di Storage Manager`}
-                          >
-                            <Layers size={11} />
-                          </button>
-                        )}
 
                         {/* Delete from Master API Button */}
                         <button
@@ -687,10 +650,11 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                             e.stopPropagation();
                             setDeleteTargetItem(item);
                           }}
-                          className="p-1 rounded-md bg-slate-900/90 hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 border border-slate-800 hover:border-rose-500/40 transition-all cursor-pointer ml-0.5"
+                          className="px-2 py-1 rounded-xl bg-rose-500/10 hover:bg-rose-500/25 text-rose-300 hover:text-rose-100 border border-rose-500/30 hover:border-rose-500/50 text-[10.5px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm active:scale-95"
                           title={`Hapus #${item.sound_scape} dari Master API`}
                         >
-                          <Trash2 size={11} />
+                          <Trash2 size={12} className="text-rose-400" />
+                          <span>Hapus</span>
                         </button>
                       </div>
                     </div>
@@ -942,7 +906,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                               <span>{pod.containerStatus || pod.containerState}</span>
                             </span>
 
-                            {/* Physical File Check Status (On-demand) */}
+                            {/* Physical File Check Status (On-demand - Shown once checked) */}
                             {selectedItem?.sound_scape && (
                               <>
                                 {isCheckingThisPodFiles ? (
@@ -950,50 +914,28 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                                     <Loader2 size={10} className="animate-spin text-cyan-400" />
                                     <span>Memeriksa Berkas...</span>
                                   </span>
-                                ) : !podCheck ? (
+                                ) : podCheck && (
                                   <button
                                     type="button"
-                                    onClick={() => handleCheckSinglePodFiles(pod)}
-                                    disabled={!pod.isOnline || isCheckingThisPodFiles}
-                                    className="px-2 py-0.5 rounded-md text-[9.5px] font-mono font-bold bg-slate-900 hover:bg-cyan-500/20 text-cyan-400 hover:text-cyan-200 border border-slate-700 hover:border-cyan-500/40 flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-sm active:scale-95"
-                                    title="Klik untuk memeriksa ketersediaan berkas fisik di POD ini"
+                                    onClick={() => handleToggleExpandPodFiles(podId)}
+                                    className={`px-2 py-0.5 rounded-md text-[9.5px] font-mono font-bold flex items-center gap-1 border transition-all cursor-pointer shadow-sm active:scale-95 ${podCheck.fileStatus === 'all'
+                                      ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/40'
+                                      : podCheck.foundCount > 0
+                                        ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border-amber-500/40'
+                                        : 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border-rose-500/40'
+                                      }`}
+                                    title="Klik untuk melihat/menutup rincian berkas"
                                   >
                                     <HardDrive size={10} />
-                                    <span>📁 Cek Berkas</span>
-                                  </button>
-                                ) : (
-                                  <div className="flex items-center gap-1">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleToggleExpandPodFiles(podId)}
-                                      className={`px-2 py-0.5 rounded-md text-[9.5px] font-mono font-bold flex items-center gap-1 border transition-all cursor-pointer shadow-sm active:scale-95 ${podCheck.fileStatus === 'all'
-                                        ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/40'
+                                    <span>
+                                      {podCheck.fileStatus === 'all'
+                                        ? `Lengkap (${podCheck.foundCount}/${podCheck.totalExpected} Berkas • ${podCheck.totalFormatted})`
                                         : podCheck.foundCount > 0
-                                          ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border-amber-500/40'
-                                          : 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border-rose-500/40'
-                                        }`}
-                                      title="Klik untuk melihat/menutup rincian berkas"
-                                    >
-                                      <HardDrive size={10} />
-                                      <span>
-                                        {podCheck.fileStatus === 'all'
-                                          ? `Lengkap (${podCheck.foundCount}/${podCheck.totalExpected} Berkas • ${podCheck.totalFormatted})`
-                                          : podCheck.foundCount > 0
-                                            ? `Sebagian (${podCheck.foundCount}/${podCheck.totalExpected} Berkas)`
-                                            : `Kosong (0/${podCheck.totalExpected || 0})`}
-                                      </span>
-                                      {isExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleCheckSinglePodFiles(pod)}
-                                      disabled={isCheckingThisPodFiles}
-                                      className="p-1 rounded-md bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-cyan-300 border border-slate-700 hover:border-cyan-500/40 transition-colors cursor-pointer disabled:opacity-50"
-                                      title="Periksa ulang berkas pada POD ini"
-                                    >
-                                      <RefreshCw size={10} className={isCheckingThisPodFiles ? 'animate-spin text-cyan-400' : ''} />
-                                    </button>
-                                  </div>
+                                          ? `Sebagian (${podCheck.foundCount}/${podCheck.totalExpected} Berkas)`
+                                          : `Kosong (0/${podCheck.totalExpected || 0})`}
+                                    </span>
+                                    {isExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                                  </button>
                                 )}
                               </>
                             )}
@@ -1001,15 +943,15 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                         </div>
                       </div>
 
-                      {/* Individual Action Controls per POD */}
-                      <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
+                      {/* Individual Action Controls per POD (Clean Labeled Buttons) */}
+                      <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0 flex-wrap">
                         {/* Start Container Button (if Exited) */}
                         {isExited && (
                           <button
+                            type="button"
                             onClick={() => handleControlSinglePod(pod, 'start')}
                             disabled={isStartLoading}
-                            className={`px-2.5 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[10.5px] font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 active:scale-95 ${isStartLoading ? 'animate-pulse' : ''
-                              }`}
+                            className="px-2.5 py-1 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 active:scale-95 shadow-sm"
                             title="Nyalakan container mobile-synch pada POD ini"
                           >
                             {isStartLoading ? (
@@ -1024,38 +966,36 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                         {/* Restart Container Button (if Online) */}
                         {pod.isOnline && (
                           <button
+                            type="button"
                             onClick={() => handleControlSinglePod(pod, 'restart')}
                             disabled={isRestartLoading}
-                            className={`p-1.5 rounded-xl bg-slate-900 hover:bg-purple-500/20 text-slate-300 hover:text-purple-300 border border-slate-700 hover:border-purple-500/40 transition-all cursor-pointer disabled:opacity-50 active:scale-95 ${isRestartLoading ? 'border-purple-500/60 bg-purple-500/10' : ''
-                              }`}
+                            className="px-2.5 py-1 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/30 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 active:scale-95 shadow-sm"
                             title="Restart container mobile-synch pada POD ini"
                           >
-                            {isRestartLoading ? (
-                              <Loader2 size={12} className="animate-spin text-purple-400" />
-                            ) : (
-                              <RotateCw size={12} />
-                            )}
+                            <RotateCw size={11} className={isRestartLoading ? 'animate-spin text-purple-400' : 'text-purple-400'} />
+                            <span>{isRestartLoading ? 'Restarting...' : 'Restart'}</span>
                           </button>
                         )}
 
                         {/* Stop Container Button (if Running) */}
                         {isRunning && (
                           <button
+                            type="button"
                             onClick={() => handleControlSinglePod(pod, 'stop')}
                             disabled={isStopLoading}
-                            className={`p-1.5 rounded-xl bg-slate-900 hover:bg-rose-500/20 text-slate-300 hover:text-rose-300 border border-slate-700 hover:border-rose-500/40 transition-all cursor-pointer disabled:opacity-50 active:scale-95 ${isStopLoading ? 'border-rose-500/60 bg-rose-500/10' : ''
-                              }`}
+                            className="px-2.5 py-1 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 active:scale-95 shadow-sm"
                             title="Stop container mobile-synch pada POD ini"
                           >
                             {isStopLoading ? (
-                              <Loader2 size={12} className="animate-spin text-rose-400" />
+                              <Loader2 size={11} className="animate-spin text-rose-400" />
                             ) : (
-                              <Square size={10} className="fill-rose-400 text-rose-400" />
+                              <Square size={9} className="fill-rose-400 text-rose-400" />
                             )}
+                            <span>{isStopLoading ? 'Menghentikan...' : 'Stop'}</span>
                           </button>
                         )}
 
-                        {/* Re-check Single POD Status & Files Button */}
+                        {/* Cek Berkas / Refresh Status Button on the Right */}
                         {pod.isOnline && (
                           <button
                             type="button"
@@ -1064,26 +1004,27 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                               handleCheckSinglePodFiles(pod);
                             }}
                             disabled={isInspectLoading || isCheckingThisPodFiles}
-                            className={`px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-cyan-500/20 text-slate-300 hover:text-cyan-300 border border-slate-700 hover:border-cyan-500/40 text-[10.5px] font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 active:scale-95 ${isInspectLoading || isCheckingThisPodFiles ? 'border-cyan-500/60 bg-cyan-500/10' : ''
-                              }`}
-                            title="Periksa ulang status container dan ketersediaan berkas fisik pada POD ini"
+                            className="px-2.5 py-1 rounded-xl bg-slate-900 hover:bg-cyan-500/20 text-slate-300 hover:text-cyan-300 border border-slate-700 hover:border-cyan-500/40 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 active:scale-95 shadow-sm"
+                            title="Periksa status container dan ketersediaan berkas fisik pada POD ini"
                           >
                             <RefreshCw
                               size={11}
                               className={isInspectLoading || isCheckingThisPodFiles ? 'animate-spin text-cyan-400' : 'text-slate-400'}
                             />
-                            <span>{isInspectLoading || isCheckingThisPodFiles ? 'Memeriksa...' : 'Re-check'}</span>
+                            <span>{isInspectLoading || isCheckingThisPodFiles ? 'Memeriksa...' : 'Cek Berkas'}</span>
                           </button>
                         )}
 
                         {/* View Logs Button */}
                         {pod.isOnline && (
                           <button
+                            type="button"
                             onClick={() => setLogModalPod(pod)}
-                            className="p-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-700 transition-all cursor-pointer active:scale-95"
+                            className="px-2 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer active:scale-95 shadow-sm"
                             title="Buka Console Log Real-time mobile-synch"
                           >
-                            <Terminal size={12} />
+                            <Terminal size={11} className="text-slate-400" />
+                            <span>Logs</span>
                           </button>
                         )}
                       </div>
@@ -1095,27 +1036,15 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                         <div className="flex items-center justify-between text-[10.5px] font-mono text-slate-400">
                           <span className="flex items-center gap-1.5 font-bold text-slate-300">
                             <FolderOpen size={12} className="text-cyan-400 shrink-0" />
-                            <span>Direktori Media: <code className="text-cyan-300 font-semibold">/home/pod/sounds, /videos, /images</code></span>
+                            <span>Berkas Media POD:</span>
                           </span>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-white">{podCheck.foundCount}/{podCheck.totalExpected} Berkas</span>
-                            <button
-                              type="button"
-                              onClick={() => handleCheckSinglePodFiles(pod)}
-                              disabled={isCheckingThisPodFiles}
-                              className="p-1 rounded bg-slate-900 hover:bg-slate-800 text-cyan-400 border border-slate-700 hover:border-cyan-500/40 transition-colors cursor-pointer"
-                              title="Periksa ulang berkas pada POD ini"
-                            >
-                              <RefreshCw size={10} className={isCheckingThisPodFiles ? 'animate-spin' : ''} />
-                            </button>
-                          </div>
+                          <span className="font-bold text-white">{podCheck.foundCount}/{podCheck.totalExpected} Berkas</span>
                         </div>
 
                         {/* Grid of Files */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                           {/* Found Files on POD */}
                           {podCheck.files?.map(f => {
-                            const folderType = f.folderType || (f.fullPath?.includes('/videos') ? 'videos' : f.fullPath?.includes('/images') ? 'images' : 'sounds');
                             const integrityKey = `${podId}_${f.fullPath}`;
                             const isIntegrityChecking = !!actionLoadingMap[`integrity_${podId}_${f.fullPath}`];
                             const integrityData = integrityMap[integrityKey];
@@ -1139,7 +1068,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                                   </div>
                                   <div className="flex items-center gap-1.5 shrink-0">
                                     <span className="text-[9.5px] font-mono text-emerald-300 font-semibold shrink-0">
-                                      {f.sizeFormatted || 'Ada'} &bull; /{folderType}
+                                      {f.sizeFormatted || 'Ada'}
                                     </span>
 
                                     {/* Tombol Cek Kesehatan / Integritas (ffprobe) */}
@@ -1645,7 +1574,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
             {/* Key-Value File Cards */}
             <div className="space-y-2">
               <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                Daftar Berkas Terdaftar di Master API:
+                Daftar Berkas Di Cloud:
               </div>
 
               {/* Music Audio */}
@@ -1663,25 +1592,20 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   {trackInfoModalItem.music && (
-                    <>
-                      <span className="text-[10px] font-mono text-cyan-400/80 px-2 py-0.5 rounded bg-cyan-500/10">
-                        /sounds
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenMediaPreview({
-                          filename: trackInfoModalItem.music,
-                          category: 'audio',
-                          url: `https://developerfile-084897310273.s3.ap-southeast-1.amazonaws.com/media/${trackInfoModalItem.sound_scape}/${trackInfoModalItem.music}`,
-                          sourceLabel: `AWS S3 • media/${trackInfoModalItem.sound_scape}/`
-                        })}
-                        className="px-2.5 py-1 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-[10.5px] font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
-                        title="Putar / Preview Audio dari AWS S3"
-                      >
-                        <Play size={10} className="fill-cyan-400 text-cyan-400" />
-                        <span>Preview</span>
-                      </button>
-                    </>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenMediaPreview({
+                        filename: trackInfoModalItem.music,
+                        category: 'audio',
+                        url: `https://developerfile-084897310273.s3.ap-southeast-1.amazonaws.com/media/${trackInfoModalItem.sound_scape}/${trackInfoModalItem.music}`,
+                        sourceLabel: `AWS S3 • media/${trackInfoModalItem.sound_scape}/`
+                      })}
+                      className="px-2.5 py-1 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-[10.5px] font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
+                      title="Putar / Preview Audio dari AWS S3"
+                    >
+                      <Play size={10} className="fill-cyan-400 text-cyan-400" />
+                      <span>Preview</span>
+                    </button>
                   )}
                 </div>
               </div>
@@ -1701,25 +1625,20 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   {trackInfoModalItem.video && (
-                    <>
-                      <span className="text-[10px] font-mono text-rose-400/80 px-2 py-0.5 rounded bg-rose-500/10">
-                        /videos
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenMediaPreview({
-                          filename: trackInfoModalItem.video,
-                          category: 'video',
-                          url: `https://developerfile-084897310273.s3.ap-southeast-1.amazonaws.com/media/${trackInfoModalItem.sound_scape}/${trackInfoModalItem.video}`,
-                          sourceLabel: `AWS S3 • media/${trackInfoModalItem.sound_scape}/`
-                        })}
-                        className="px-2.5 py-1 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-[10.5px] font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
-                        title="Putar / Preview Video dari AWS S3"
-                      >
-                        <Film size={10} className="text-rose-400" />
-                        <span>Preview</span>
-                      </button>
-                    </>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenMediaPreview({
+                        filename: trackInfoModalItem.video,
+                        category: 'video',
+                        url: `https://developerfile-084897310273.s3.ap-southeast-1.amazonaws.com/media/${trackInfoModalItem.sound_scape}/${trackInfoModalItem.video}`,
+                        sourceLabel: `AWS S3 • media/${trackInfoModalItem.sound_scape}/`
+                      })}
+                      className="px-2.5 py-1 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-[10.5px] font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
+                      title="Putar / Preview Video dari AWS S3"
+                    >
+                      <Film size={10} className="text-rose-400" />
+                      <span>Preview</span>
+                    </button>
                   )}
                 </div>
               </div>
@@ -1739,26 +1658,21 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   {trackInfoModalItem.lamp && (
-                    <>
-                      <span className="text-[10px] font-mono text-amber-400/80 px-2 py-0.5 rounded bg-amber-500/10">
-                        /sounds
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenMediaPreview({
-                          filename: trackInfoModalItem.lamp,
-                          category: 'lamp',
-                          isStrobe: true,
-                          url: `https://developerfile-084897310273.s3.ap-southeast-1.amazonaws.com/media/${trackInfoModalItem.sound_scape}/${trackInfoModalItem.lamp}`,
-                          sourceLabel: `AWS S3 • media/${trackInfoModalItem.sound_scape}/`
-                        })}
-                        className="px-2.5 py-1 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[10.5px] font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
-                        title="Putar & Simulasi Lampu Strobe dari AWS S3"
-                      >
-                        <Zap size={10} className="fill-amber-400 text-amber-400" />
-                        <span>Simulasi Strobe</span>
-                      </button>
-                    </>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenMediaPreview({
+                        filename: trackInfoModalItem.lamp,
+                        category: 'lamp',
+                        isStrobe: true,
+                        url: `https://developerfile-084897310273.s3.ap-southeast-1.amazonaws.com/media/${trackInfoModalItem.sound_scape}/${trackInfoModalItem.lamp}`,
+                        sourceLabel: `AWS S3 • media/${trackInfoModalItem.sound_scape}/`
+                      })}
+                      className="px-2.5 py-1 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[10.5px] font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
+                      title="Putar & Simulasi Lampu Strobe dari AWS S3"
+                    >
+                      <Zap size={10} className="fill-amber-400 text-amber-400" />
+                      <span>Preview</span>
+                    </button>
                   )}
                 </div>
               </div>
@@ -1776,11 +1690,6 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                     </span>
                   </div>
                 </div>
-                {trackInfoModalItem.album && (
-                  <span className="text-[10px] font-mono text-purple-400/80 px-2 py-0.5 rounded bg-purple-500/10 shrink-0">
-                    metadata
-                  </span>
-                )}
               </div>
 
               {/* Cover Album (if present) */}
@@ -1798,9 +1707,6 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-[10px] font-mono text-emerald-400/80 px-2 py-0.5 rounded bg-emerald-500/10">
-                      /images
-                    </span>
                     <button
                       type="button"
                       onClick={() => handleOpenMediaPreview({
@@ -1823,7 +1729,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
             </div>
 
             {/* Raw JSON Code Block Preview */}
-            <div className="space-y-1.5">
+            {/* <div className="space-y-1.5">
               <div className="flex items-center justify-between text-[11px] font-bold text-slate-400">
                 <span>Respon JSON:</span>
                 <button
@@ -1843,7 +1749,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                   album: trackInfoModalItem.album || null
                 }, null, 2)}
               </pre>
-            </div>
+            </div> */}
 
             {/* Modal Footer Actions */}
             <div className="flex items-center justify-between gap-3 pt-1">

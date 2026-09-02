@@ -91,6 +91,25 @@ function findFirstPulseTime(envL, envR, thresh = 100) {
   return null;
 }
 
+// 12 High-Power LED Domes mapped directly from physical LIGHTING STROBE BOARD V2.0 (IMG_7669.jpeg)
+const STROBE_BOARD_LEDS = [
+  // 6 COOL LEDs (Perimeter & Cardinal Points - Pale Clear Glass Domes)
+  { id: 'cool-top', label: 'LED1', type: 'cool', cx: 130, cy: 38 },
+  { id: 'cool-left-top', label: 'LED2', type: 'cool', cx: 50, cy: 98 },
+  { id: 'cool-left-bottom', label: 'LED3', type: 'cool', cx: 50, cy: 162 },
+  { id: 'cool-right-top', label: 'LED4', type: 'cool', cx: 210, cy: 98 },
+  { id: 'cool-right-bottom', label: 'LED5', type: 'cool', cx: 210, cy: 162 },
+  { id: 'cool-bottom', label: 'LED6', type: 'cool', cx: 130, cy: 222 },
+
+  // 6 WARM LEDs (Inner Solar Cluster - Golden Amber Domes)
+  { id: 'warm-upper-left', label: 'LED7', type: 'warm', cx: 96, cy: 90 },
+  { id: 'warm-upper-center', label: 'LED8', type: 'warm', cx: 130, cy: 100 },
+  { id: 'warm-upper-right', label: 'LED9', type: 'warm', cx: 164, cy: 90 },
+  { id: 'warm-lower-left', label: 'LED10', type: 'warm', cx: 110, cy: 156 },
+  { id: 'warm-lower-right', label: 'LED11', type: 'warm', cx: 150, cy: 156 },
+  { id: 'warm-inner-bottom', label: 'LED12', type: 'warm', cx: 130, cy: 180 }
+];
+
 export default function MediaPreviewModal({
   isOpen,
   file,
@@ -133,20 +152,28 @@ export default function MediaPreviewModal({
       setFirstPulseTime(null);
       envelopesRef.current = { envL: null, envR: null };
 
+      const abortCtrl = new AbortController();
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       const ctx = AudioCtx ? new AudioCtx() : null;
 
-      // Use backend proxy endpoint to bypass S3 CORS and retrieve 100% genuine raw WAV bytes
+      // 1. Direct AWS S3 fetch (Super fast via AWS Cloud/CDN now that CORS is active)
+      // 2. Fallback to Server 8 Backend Proxy if direct CORS ever fails
+      const directUrl = file.url;
       const proxyUrl = `${BACKEND_URL}/api/vps/content/s3/proxy-file?url=${encodeURIComponent(file.url)}`;
 
-      fetch(proxyUrl, { headers: getAuthHeaders() })
+      fetch(directUrl, { signal: abortCtrl.signal })
         .then(res => {
-          if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+          if (!res.ok) throw new Error(`Direct S3 HTTP error ${res.status}`);
           return res.arrayBuffer();
         })
-        .catch(() => {
-          // Direct fallback if proxy unavailable
-          return fetch(file.url).then(res => res.arrayBuffer());
+        .catch(directErr => {
+          if (abortCtrl.signal.aborted) throw directErr;
+          console.log('Direct S3 fetch fallback to backend proxy:', directErr.message);
+          return fetch(proxyUrl, { headers: getAuthHeaders(), signal: abortCtrl.signal })
+            .then(res => {
+              if (!res.ok) throw new Error(`Proxy HTTP error ${res.status}`);
+              return res.arrayBuffer();
+            });
         })
         .then(ab => {
           if (ctx) {
@@ -155,6 +182,7 @@ export default function MediaPreviewModal({
           throw new Error('AudioContext unavailable');
         })
         .then(audioBuffer => {
+          if (abortCtrl.signal.aborted) return;
           // Extract genuine 500Hz Dual Envelopes (Left = Warm, Right = Cool)
           const envL = extractHighFreqEnvelope(audioBuffer, 0);
           const envR = extractHighFreqEnvelope(audioBuffer, 1);
@@ -166,9 +194,18 @@ export default function MediaPreviewModal({
           setIsDecodingStrobe(false);
         })
         .catch(err => {
-          console.warn('Real strobe decoding failed or cancelled:', err.message);
-          setIsDecodingStrobe(false);
+          if (!abortCtrl.signal.aborted) {
+            console.warn('Real strobe decoding failed:', err.message);
+            setIsDecodingStrobe(false);
+          }
         });
+
+      return () => {
+        abortCtrl.abort();
+        if (ctx && ctx.state !== 'closed') {
+          ctx.close().catch(() => { });
+        }
+      };
     }
   }, [isOpen, file, isStrobe, strobeThreshold]);
 
@@ -184,11 +221,12 @@ export default function MediaPreviewModal({
       setIsWarmActive(false);
       setIsCoolActive(false);
 
-      const initialVol = isStrobe ? 0.15 : 1;
+      const initialVol = isStrobe ? 0 : 1;
       setVolume(initialVol);
+      setIsMuted(isStrobe);
       if (mediaRef.current) {
         mediaRef.current.volume = initialVol;
-        mediaRef.current.muted = false;
+        mediaRef.current.muted = isStrobe;
         mediaRef.current.currentTime = 0;
       }
     }
@@ -409,7 +447,7 @@ export default function MediaPreviewModal({
 
   return (
     <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[1000] flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-150">
-      
+
       {/* Strobe Bar Glow Styles */}
       <style>{`
         .strobe-warm-glow {
@@ -432,7 +470,7 @@ export default function MediaPreviewModal({
       `}</style>
 
       <div className={`w-full ${isStrobe ? 'max-w-4xl' : 'max-w-3xl'} bg-slate-950 border ${isStrobe ? 'border-amber-500/40 shadow-amber-500/10' : 'border-cyan-500/40 shadow-cyan-500/10'} rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200`}>
-        
+
         {/* Modal Header */}
         <div className="p-4 sm:p-5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
@@ -477,6 +515,19 @@ export default function MediaPreviewModal({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {/* Quick Jump Button in Modal Header (Always Visible & Never Covered) */}
+            {isStrobe && firstPulseTime !== null && firstPulseTime > 0.5 && (
+              <button
+                type="button"
+                onClick={jumpToFirstPulse}
+                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-lg shadow-amber-500/30 transition-all cursor-pointer active:scale-95 animate-pulse"
+                title={`Lompat langsung ke detik ${formatDuration(firstPulseTime)} saat lampu strobe mulai berkedip aktif`}
+              >
+                <Zap size={14} className="fill-slate-950 text-slate-950" />
+                <span>Lompat({formatDuration(firstPulseTime)})</span>
+              </button>
+            )}
+
             {file.url && (
               <a
                 href={file.url}
@@ -499,8 +550,8 @@ export default function MediaPreviewModal({
           </div>
         </div>
 
-        {/* Modal Body */}
-        <div className="p-4 sm:p-6 flex flex-col items-center justify-center bg-slate-950/60 overflow-y-auto min-h-[220px]">
+        {/* Modal Body (Scrollable container with clean top alignment) */}
+        <div className="p-4 sm:p-6 flex-1 w-full flex flex-col items-stretch justify-start bg-slate-950/60 overflow-y-auto min-h-[220px]">
           {errorMsg && (
             <div className="mb-4 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs w-full text-center">
               {errorMsg}
@@ -529,9 +580,9 @@ export default function MediaPreviewModal({
           {/* 1. REGENESIS DUAL STROBE LIGHT BAR SIMULATION & 500Hz LOGIC TRACK */}
           {isStrobe && (
             <div className="w-full flex flex-col gap-4">
-              
+
               {/* Entrainment & Decoder Status Banner */}
-              <div className="p-3 rounded-2xl bg-amber-950/30 border border-amber-500/30 flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
+              <div className="p-3.5 rounded-2xl bg-amber-950/20 border border-amber-500/30 flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 shrink-0">
                     <ShieldAlert size={16} />
@@ -551,115 +602,215 @@ export default function MediaPreviewModal({
                   </div>
                 </div>
 
-                {/* Strobe Status Badge & Jump to First Pulse Button with Rich Loading UX */}
-                <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                {/* Strobe Status Badge with Rich Loading UX */}
+                <div className="flex items-center gap-2 shrink-0">
                   {isDecodingStrobe ? (
                     <div className="px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-mono flex items-center gap-2 animate-pulse">
                       <Loader2 size={13} className="animate-spin text-amber-400" />
-                      <span>Mendekode Sinyal Audio (500Hz)...</span>
+                      <span>Mendekode Sinyal Audio...</span>
                     </div>
                   ) : (
-                    <>
-                      {firstPulseTime !== null && firstPulseTime > 0.5 ? (
-                        <button
-                          type="button"
-                          onClick={jumpToFirstPulse}
-                          className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-[11px] flex items-center gap-1.5 shadow-lg shadow-amber-500/25 transition-all cursor-pointer active:scale-95 animate-pulse"
-                          title={`Lompat langsung ke detik ${formatDuration(firstPulseTime)} saat lampu strobe mulai berkedip aktif`}
-                        >
-                          <Zap size={13} className="fill-slate-950 text-slate-950" />
-                          <span>Lompat ke Pulsa ({formatDuration(firstPulseTime)})</span>
-                        </button>
-                      ) : firstPulseTime !== null ? (
-                        <span className="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 text-[10.5px] font-mono">
-                          ⚡ Pulsa aktif dari 00:00
-                        </span>
-                      ) : (
-                        <span className="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-slate-500 text-[10.5px] font-mono">
-                          Tidak ada pulsa terdeteksi
-                        </span>
-                      )}
-
-                      <span className={`px-2.5 py-1.5 rounded-xl text-[10.5px] font-mono font-bold flex items-center gap-1.5 border transition-all ${isPlaying
-                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-md shadow-emerald-500/10'
-                        : 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
-                        }`}>
-                        <span className={`w-2 h-2 rounded-full ${isPlaying ? 'bg-emerald-400 animate-ping' : 'bg-cyan-400'}`} />
-                        <span>{isPlaying ? 'PULSA AKTIF' : 'DECODE SIAP (500Hz)'}</span>
-                      </span>
-                    </>
+                    <span className={`px-2.5 py-1.5 rounded-xl text-[10.5px] font-mono font-bold flex items-center gap-1.5 border transition-all ${isPlaying
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-md shadow-emerald-500/10'
+                      : 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
+                      }`}>
+                      <span className={`w-2 h-2 rounded-full ${isPlaying ? 'bg-emerald-400 animate-ping' : 'bg-cyan-400'}`} />
+                      <span>{isPlaying ? 'PULSA AKTIF' : 'DECODE SIAP (500Hz)'}</span>
+                    </span>
                   )}
                 </div>
               </div>
 
-              {/* Central Dual Light Bar Pod Simulation Area */}
-              <div className="flex items-stretch justify-center gap-3 sm:gap-5 py-4 bg-slate-900/60 p-4 rounded-3xl border border-slate-800 min-h-[220px]">
-                
-                {/* 1. Left Light Bar (WARM L) */}
-                <div className="w-12 sm:w-16 flex flex-col items-center justify-center">
-                  <div
-                    className={`w-full h-44 sm:h-52 rounded-2xl border flex flex-col items-center justify-between p-2 transition-all duration-75 ${isWarmActive
-                      ? 'strobe-warm-glow'
-                      : 'bg-slate-950 border-slate-800 text-slate-600'
-                      }`}
-                  >
-                    <span className="text-[9px] font-mono font-black uppercase">WARM</span>
-                    <Zap size={22} className={isWarmActive ? 'text-amber-950' : 'text-slate-700'} />
-                    <span className="vertical-text-pod text-[9.5px] font-mono font-bold tracking-widest">
-                      LEFT (L)
-                    </span>
-                  </div>
-                </div>
+              {/* Central Strobe PCB Simulator Module (LIGHTING STROBE BOARD V2.0 - Standalone Hero LED Disc) */}
+              <div className="flex items-center justify-center py-6 px-4 bg-slate-950/80 p-5 rounded-3xl border border-slate-800/80 shadow-2xl relative">
 
-                {/* 2. Center Pod Core Screen (Audio Wave & Entrainment Indicator) */}
-                <div className="flex-1 max-w-sm flex flex-col items-center justify-center bg-slate-950/90 rounded-2xl border border-slate-800/90 p-4 text-center relative overflow-hidden">
-                  <div className="text-[11px] font-mono text-slate-400 font-bold mb-1">
-                    POD v3 LIGHTING SIMULATOR
-                  </div>
+                {/* Standalone Circular PCB Module (Dark High-Contrast PCB Base) */}
+                <div className="relative w-72 h-72 sm:w-80 sm:h-80 rounded-full p-2 bg-gradient-to-br from-slate-800 via-slate-900 to-black border-4 border-slate-700 shadow-[0_0_60px_rgba(0,0,0,0.95)] flex items-center justify-center overflow-hidden shrink-0">
+                  <svg viewBox="0 0 260 260" className="w-full h-full drop-shadow-2xl select-none">
+                    <defs>
+                      {/* Warm Active Glow Radial Flare */}
+                      <radialGradient id="warm-glow-flare" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
+                        <stop offset="30%" stopColor="#fbbf24" stopOpacity="0.95" />
+                        <stop offset="65%" stopColor="#f59e0b" stopOpacity="0.5" />
+                        <stop offset="100%" stopColor="#d97706" stopOpacity="0" />
+                      </radialGradient>
 
-                  {isDecodingStrobe ? (
-                    <div className="flex flex-col items-center justify-center py-2 my-2">
-                      <Loader2 size={24} className="animate-spin text-amber-400 mb-1.5" />
-                      <span className="text-[11px] font-mono font-bold text-amber-300">Menganalisis Driver Lampu...</span>
-                      <span className="text-[9.5px] font-mono text-slate-500 mt-0.5">Memetakan kanal Warm (L) & Cool (R)</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3 my-3">
-                      <div className={`px-3 py-1.5 rounded-xl border text-[11px] font-mono font-bold transition-all ${isWarmActive
-                        ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-lg shadow-amber-400/40 scale-105'
-                        : 'bg-slate-900 text-slate-500 border-slate-800'
-                        }`}>
-                        WARM {isWarmActive ? 'ON' : 'OFF'}
-                      </div>
-                      <span className="text-slate-600 font-bold">&bull;</span>
-                      <div className={`px-3 py-1.5 rounded-xl border text-[11px] font-mono font-bold transition-all ${isCoolActive
-                        ? 'bg-cyan-400 text-slate-950 border-cyan-300 shadow-lg shadow-cyan-400/40 scale-105'
-                        : 'bg-slate-900 text-slate-500 border-slate-800'
-                        }`}>
-                        COOL {isCoolActive ? 'ON' : 'OFF'}
-                      </div>
-                    </div>
-                  )}
+                      {/* Cool Active Glow Radial Flare */}
+                      <radialGradient id="cool-glow-flare" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
+                        <stop offset="30%" stopColor="#7dd3fc" stopOpacity="0.95" />
+                        <stop offset="65%" stopColor="#0284c7" stopOpacity="0.5" />
+                        <stop offset="100%" stopColor="#0369a1" stopOpacity="0" />
+                      </radialGradient>
 
-                  <div className="text-[10px] font-mono text-slate-500">
-                    Carrier: 19.2 kHz &bull; Logic Rate: 500 Hz
-                  </div>
-                </div>
+                      {/* Warm Active Bulb Grad */}
+                      <radialGradient id="warm-active-bulb" cx="35%" cy="35%" r="65%">
+                        <stop offset="0%" stopColor="#ffffff" />
+                        <stop offset="40%" stopColor="#fef08a" />
+                        <stop offset="75%" stopColor="#f59e0b" />
+                        <stop offset="100%" stopColor="#b45309" />
+                      </radialGradient>
+                      {/* Warm Idle Bulb Grad */}
+                      <radialGradient id="warm-idle-bulb" cx="35%" cy="35%" r="65%">
+                        <stop offset="0%" stopColor="#fde68a" />
+                        <stop offset="60%" stopColor="#d97706" />
+                        <stop offset="100%" stopColor="#451a03" />
+                      </radialGradient>
 
-                {/* 3. Right Light Bar (COOL R) */}
-                <div className="w-12 sm:w-16 flex flex-col items-center justify-center">
-                  <div
-                    className={`w-full h-44 sm:h-52 rounded-2xl border flex flex-col items-center justify-between p-2 transition-all duration-75 ${isCoolActive
-                      ? 'strobe-cool-glow'
-                      : 'bg-slate-950 border-slate-800 text-slate-600'
-                      }`}
-                  >
-                    <span className="text-[9px] font-mono font-black uppercase">COOL</span>
-                    <Zap size={22} className={isCoolActive ? 'text-sky-950' : 'text-slate-700'} />
-                    <span className="vertical-text-pod text-[9.5px] font-mono font-bold tracking-widest">
-                      RIGHT (R)
-                    </span>
-                  </div>
+                      {/* Cool Active Bulb Grad */}
+                      <radialGradient id="cool-active-bulb" cx="35%" cy="35%" r="65%">
+                        <stop offset="0%" stopColor="#ffffff" />
+                        <stop offset="40%" stopColor="#e0f2fe" />
+                        <stop offset="75%" stopColor="#38bdf8" />
+                        <stop offset="100%" stopColor="#0369a1" />
+                      </radialGradient>
+                      {/* Cool Idle Bulb Grad */}
+                      <radialGradient id="cool-idle-bulb" cx="35%" cy="35%" r="65%">
+                        <stop offset="0%" stopColor="#f1f5f9" />
+                        <stop offset="60%" stopColor="#64748b" />
+                        <stop offset="100%" stopColor="#1e293b" />
+                      </radialGradient>
+                    </defs>
+
+                    {/* Dark Charcoal PCB Circular Base Plate */}
+                    <circle cx="130" cy="130" r="127" fill="#090d16" stroke="#334155" strokeWidth="2.5" />
+                    <circle cx="130" cy="130" r="122" fill="#0f172a" stroke="#1e293b" strokeWidth="1.5" strokeDasharray="4 2" />
+
+                    {/* Silkscreen Sunburst Ray Lines (Crisp high-contrast markings) */}
+                    <g stroke="#334155" strokeWidth="1.8" strokeLinecap="round">
+                      {/* Top Fan Pattern */}
+                      <path d="M 120 70 L 130 55 L 140 70 Z" fill="none" strokeWidth="1.5" />
+                      <path d="M 112 72 L 130 55 L 148 72" fill="none" strokeWidth="1.5" />
+                      <path d="M 104 74 L 130 55 L 156 74" fill="none" strokeWidth="1.5" />
+
+                      {/* Radial Peripheral Rays */}
+                      <line x1="130" y1="6" x2="130" y2="20" />
+                      <line x1="100" y1="12" x2="108" y2="28" />
+                      <line x1="160" y1="12" x2="152" y2="28" />
+                      <line x1="72" y1="26" x2="84" y2="40" />
+                      <line x1="188" y1="26" x2="176" y2="40" />
+                      <line x1="46" y1="50" x2="62" y2="62" />
+                      <line x1="214" y1="50" x2="198" y2="62" />
+                      <line x1="24" y1="84" x2="42" y2="92" />
+                      <line x1="236" y1="84" x2="218" y2="92" />
+                      <line x1="20" y1="130" x2="36" y2="130" />
+                      <line x1="240" y1="130" x2="224" y2="130" />
+                      <line x1="24" y1="176" x2="42" y2="168" />
+                      <line x1="236" y1="176" x2="218" y2="168" />
+                      <line x1="46" y1="210" x2="62" y2="198" />
+                      <line x1="214" y1="210" x2="198" y2="198" />
+                      <line x1="72" y1="234" x2="84" y2="220" />
+                      <line x1="188" y1="234" x2="176" y2="220" />
+                      <line x1="100" y1="248" x2="108" y2="232" />
+                      <line x1="160" y1="248" x2="152" y2="232" />
+                    </g>
+
+                    {/* Black Wire Cathode Traces (Left) */}
+                    <g stroke="#020617" strokeWidth="3" fill="none" strokeLinecap="round">
+                      <path d="M 80 120 Q 105 125 124 128" />
+                      <path d="M 80 128 Q 105 130 124 130" />
+                      <path d="M 80 136 Q 105 133 124 132" />
+                      <path d="M 80 144 Q 105 136 124 134" />
+                    </g>
+
+                    {/* White Wire Anode Traces (Right) */}
+                    <g stroke="#cbd5e1" strokeWidth="2.5" fill="none" strokeLinecap="round">
+                      <path d="M 180 120 Q 155 125 136 128" />
+                      <path d="M 180 128 Q 155 130 136 130" />
+                      <path d="M 180 136 Q 155 133 136 132" />
+                      <path d="M 180 144 Q 155 136 136 134" />
+                    </g>
+
+                    {/* Center Wire Hub Hole */}
+                    <circle cx="130" cy="130" r="11" fill="#020617" stroke="#334155" strokeWidth="2" />
+                    <circle cx="130" cy="130" r="6" fill="#000000" />
+
+                    {/* 4 PCB Mounting Screws */}
+                    <circle cx="130" cy="10" r="3.5" fill="#475569" stroke="#1e293b" strokeWidth="1" />
+                    <circle cx="250" cy="130" r="3.5" fill="#475569" stroke="#1e293b" strokeWidth="1" />
+                    <circle cx="130" cy="250" r="3.5" fill="#475569" stroke="#1e293b" strokeWidth="1" />
+                    <circle cx="10" cy="130" r="3.5" fill="#475569" stroke="#1e293b" strokeWidth="1" />
+
+                    {/* 12 HIGH POWER LED BULBS */}
+                    {STROBE_BOARD_LEDS.map(led => {
+                      const isActive = (led.type === 'warm' && isWarmActive) || (led.type === 'cool' && isCoolActive);
+                      return (
+                        <g key={led.id} className="transition-all duration-75">
+                          {/* Intense Glowing Flare Halo when Active */}
+                          {isActive && (
+                            <circle
+                              cx={led.cx}
+                              cy={led.cy}
+                              r="32"
+                              fill={led.type === 'warm' ? 'url(#warm-glow-flare)' : 'url(#cool-glow-flare)'}
+                              className="animate-pulse"
+                            />
+                          )}
+
+                          {/* Solder Mounting Metal Pads */}
+                          <rect
+                            x={led.cx - 16}
+                            y={led.cy - 4}
+                            width="32"
+                            height="8"
+                            rx="2"
+                            fill="#475569"
+                            stroke="#1e293b"
+                            strokeWidth="1"
+                          />
+
+                          {/* Base Bulb Seat Rim */}
+                          <circle
+                            cx={led.cx}
+                            cy={led.cy}
+                            r="13"
+                            fill="#1e293b"
+                            stroke="#475569"
+                            strokeWidth="1.5"
+                          />
+
+                          {/* 3D Glass Dome Lens Core */}
+                          <circle
+                            cx={led.cx}
+                            cy={led.cy}
+                            r="11"
+                            fill={
+                              led.type === 'warm'
+                                ? isActive ? 'url(#warm-active-bulb)' : 'url(#warm-idle-bulb)'
+                                : isActive ? 'url(#cool-active-bulb)' : 'url(#cool-idle-bulb)'
+                            }
+                            stroke={isActive ? '#ffffff' : 'rgba(255,255,255,0.4)'}
+                            strokeWidth={isActive ? '2.5' : '1'}
+                            filter={isActive ? (led.type === 'warm' ? 'drop-shadow(0 0 16px #f59e0b)' : 'drop-shadow(0 0 16px #38bdf8)') : 'none'}
+                          />
+
+                          {/* Glass Glint Reflection Highlight */}
+                          <ellipse
+                            cx={led.cx - 3.5}
+                            cy={led.cy - 3.5}
+                            rx="3.5"
+                            ry="2"
+                            fill="#ffffff"
+                            opacity={isActive ? 0.95 : 0.65}
+                          />
+
+                          {/* Small LED Silk Label */}
+                          <text
+                            x={led.cx}
+                            y={led.cy + (led.cy > 130 ? 18 : -14)}
+                            textAnchor="middle"
+                            fontSize="5.5"
+                            fontFamily="monospace"
+                            fontWeight="bold"
+                            fill="#64748b"
+                          >
+                            {led.label}
+                          </text>
+                        </g>
+                      );
+                    })}
+                  </svg>
                 </div>
 
               </div>
@@ -877,24 +1028,44 @@ export default function MediaPreviewModal({
                   <RotateCw size={14} />
                   <span>+10s</span>
                 </button>
+
+                {/* Strobe Quick Jump Button in Playback Bar */}
+                {isStrobe && firstPulseTime !== null && firstPulseTime > 0.5 && (
+                  <button
+                    type="button"
+                    onClick={jumpToFirstPulse}
+                    className="px-3 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all cursor-pointer active:scale-95"
+                    title={`Lompat langsung ke detik ${formatDuration(firstPulseTime)}`}
+                  >
+                    <Zap size={13} className="fill-slate-950 text-slate-950" />
+                    <span>Lompat ({formatDuration(firstPulseTime)})</span>
+                  </button>
+                )}
               </div>
 
-              {/* Volume Slider & Safe Audio Indicator */}
-              <div className="flex items-center gap-2 bg-slate-950/80 px-3 py-2 rounded-xl border border-slate-800">
-                <button onClick={toggleMute} className="text-slate-400 hover:text-white cursor-pointer" title={isMuted ? 'Unmute' : 'Mute'}>
-                  {isMuted || volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
-                </button>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.02"
-                  value={isMuted ? 0 : volume}
-                  onChange={handleVolumeChange}
-                  className={`w-16 sm:w-20 h-1.5 rounded-lg bg-slate-800 ${isStrobe ? 'accent-amber-400' : 'accent-cyan-400'} cursor-pointer appearance-none`}
-                  title={`Volume: ${Math.round(volume * 100)}%`}
-                />
-              </div>
+              {/* Volume Slider for regular Audio / Silent Indicator for Strobe */}
+              {isStrobe ? (
+                <div className="flex items-center gap-1.5 bg-slate-950/80 px-3 py-2 rounded-xl border border-slate-800 text-[10.5px] font-mono text-slate-400">
+                  <VolumeX size={14} className="text-amber-400" />
+                  <span>Audio Muted (Sinyal Lampu)</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 bg-slate-950/80 px-3 py-2 rounded-xl border border-slate-800">
+                  <button onClick={toggleMute} className="text-slate-400 hover:text-white cursor-pointer" title={isMuted ? 'Unmute' : 'Mute'}>
+                    {isMuted || volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
+                  </button>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.02"
+                    value={isMuted ? 0 : volume}
+                    onChange={handleVolumeChange}
+                    className="w-16 sm:w-20 h-1.5 rounded-lg bg-slate-800 accent-cyan-400 cursor-pointer appearance-none"
+                    title={`Volume: ${Math.round(volume * 100)}%`}
+                  />
+                </div>
+              )}
             </div>
           </div>
         )}
