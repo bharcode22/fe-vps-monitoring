@@ -91,6 +91,46 @@ function findFirstPulseTime(envL, envR, thresh = 100) {
   return null;
 }
 
+// Streaming fetch with real-time percentage and byte progress tracker
+async function fetchArrayBufferWithProgress(url, options = {}, onProgress) {
+  const res = await fetch(url, options);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+  const contentLength = res.headers.get('content-length');
+  const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
+
+  if (!res.body || !totalBytes) {
+    const ab = await res.arrayBuffer();
+    if (onProgress) onProgress(100, ab.byteLength, ab.byteLength);
+    return ab;
+  }
+
+  const reader = res.body.getReader();
+  let receivedBytes = 0;
+  const chunks = [];
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    receivedBytes += value.length;
+    if (onProgress) {
+      const pct = Math.min(99, Math.round((receivedBytes / totalBytes) * 100));
+      onProgress(pct, receivedBytes, totalBytes);
+    }
+  }
+
+  const all = new Uint8Array(receivedBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    all.set(chunk, offset);
+    offset += chunk.length;
+  }
+
+  if (onProgress) onProgress(100, receivedBytes, totalBytes);
+  return all.buffer;
+}
+
 // 12 High-Power LED Domes mapped directly from physical LIGHTING STROBE BOARD V2.0 (IMG_7669.jpeg)
 const STROBE_BOARD_LEDS = [
   // 6 COOL LEDs (Perimeter & Cardinal Points - Pale Clear Glass Domes)
@@ -134,6 +174,9 @@ export default function MediaPreviewModal({
   const [isCoolActive, setIsCoolActive] = useState(false);
   const [isDecodingStrobe, setIsDecodingStrobe] = useState(false);
   const [firstPulseTime, setFirstPulseTime] = useState(null);
+  const [downloadProgress, setDownloadProgress] = useState(null); // 0 - 100 %
+  const [downloadStage, setDownloadStage] = useState('idle'); // 'downloading' | 'decoding' | 'ready'
+  const [downloadMB, setDownloadMB] = useState('');
   const envelopesRef = useRef({ envL: null, envR: null });
 
   const category = file?.category || 'other';
@@ -145,44 +188,51 @@ export default function MediaPreviewModal({
   const freqHint = extractFrequencyHint(file?.filename);
   const targetHz = freqHint?.hz || 8.0;
 
-  // 1. Decode Strobe Audio Buffer (Fetch Real WAV from Backend S3 Proxy, Demodulate with 500Hz Difference Engine)
+  // 1. Decode Strobe Audio Buffer with Real-Time Download Progress Stream
   useEffect(() => {
     if (isOpen && file && isStrobe) {
       setIsDecodingStrobe(true);
       setFirstPulseTime(null);
+      setDownloadProgress(0);
+      setDownloadStage('downloading');
+      setDownloadMB('');
       envelopesRef.current = { envL: null, envR: null };
 
       const abortCtrl = new AbortController();
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       const ctx = AudioCtx ? new AudioCtx() : null;
 
-      // 1. Direct AWS S3 fetch (Super fast via AWS Cloud/CDN now that CORS is active)
+      const handleProgress = (pct, loaded, total) => {
+        setDownloadProgress(pct);
+        if (total > 0) {
+          const loadedMB = (loaded / (1024 * 1024)).toFixed(1);
+          const totalMB = (total / (1024 * 1024)).toFixed(1);
+          setDownloadMB(`${loadedMB} / ${totalMB} MB`);
+        }
+      };
+
+      // 1. Direct AWS S3 fetch with progress stream
       // 2. Fallback to Server 8 Backend Proxy if direct CORS ever fails
       const directUrl = file.url;
       const proxyUrl = `${BACKEND_URL}/api/vps/content/s3/proxy-file?url=${encodeURIComponent(file.url)}`;
 
-      fetch(directUrl, { signal: abortCtrl.signal })
-        .then(res => {
-          if (!res.ok) throw new Error(`Direct S3 HTTP error ${res.status}`);
-          return res.arrayBuffer();
-        })
+      fetchArrayBufferWithProgress(directUrl, { signal: abortCtrl.signal }, handleProgress)
         .catch(directErr => {
           if (abortCtrl.signal.aborted) throw directErr;
           console.log('Direct S3 fetch fallback to backend proxy:', directErr.message);
-          return fetch(proxyUrl, { headers: getAuthHeaders(), signal: abortCtrl.signal })
-            .then(res => {
-              if (!res.ok) throw new Error(`Proxy HTTP error ${res.status}`);
-              return res.arrayBuffer();
-            });
+          return fetchArrayBufferWithProgress(proxyUrl, { headers: getAuthHeaders(), signal: abortCtrl.signal }, handleProgress);
         })
         .then(ab => {
+          if (abortCtrl.signal.aborted) return null;
+          setDownloadStage('decoding');
+          setDownloadProgress(100);
           if (ctx) {
             return ctx.decodeAudioData(ab);
           }
           throw new Error('AudioContext unavailable');
         })
         .then(audioBuffer => {
-          if (abortCtrl.signal.aborted) return;
+          if (!audioBuffer || abortCtrl.signal.aborted) return;
           // Extract genuine 500Hz Dual Envelopes (Left = Warm, Right = Cool)
           const envL = extractHighFreqEnvelope(audioBuffer, 0);
           const envR = extractHighFreqEnvelope(audioBuffer, 1);
@@ -191,6 +241,7 @@ export default function MediaPreviewModal({
           // Automatically detect the exact first active pulse timestamp
           const first = findFirstPulseTime(envL, envR, (strobeThreshold / 100) * 255);
           setFirstPulseTime(first);
+          setDownloadStage('ready');
           setIsDecodingStrobe(false);
         })
         .catch(err => {
@@ -510,6 +561,20 @@ export default function MediaPreviewModal({
                     </span>
                   </>
                 )}
+                {isStrobe && isDecodingStrobe && (
+                  <>
+                    <span>&bull;</span>
+                    <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-mono font-bold flex items-center gap-1.5 animate-pulse">
+                      <Loader2 size={10} className="animate-spin text-amber-400" />
+                      <span>
+                        {downloadStage === 'decoding'
+                          ? 'Mendekode Sinyal (500Hz)...'
+                          : `Mengunduh ${downloadProgress !== null ? `${downloadProgress}%` : ''} ${downloadMB ? `(${downloadMB})` : ''}`
+                        }
+                      </span>
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -602,12 +667,29 @@ export default function MediaPreviewModal({
                   </div>
                 </div>
 
-                {/* Strobe Status Badge with Rich Loading UX */}
+                {/* Strobe Status Badge with Rich Progress Bar UX */}
                 <div className="flex items-center gap-2 shrink-0">
                   {isDecodingStrobe ? (
-                    <div className="px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-mono flex items-center gap-2 animate-pulse">
-                      <Loader2 size={13} className="animate-spin text-amber-400" />
-                      <span>Mendekode Sinyal Audio...</span>
+                    <div className="flex flex-col gap-1 min-w-[190px] sm:min-w-[220px]">
+                      <div className="flex items-center justify-between text-[11px] font-mono text-amber-300 font-bold">
+                        <span className="flex items-center gap-1.5">
+                          <Loader2 size={12} className="animate-spin text-amber-400 shrink-0" />
+                          <span>{downloadStage === 'decoding' ? 'Mendekode Sinyal...' : 'Mengunduh Berkas...'}</span>
+                        </span>
+                        <span>{downloadProgress !== null ? `${downloadProgress}%` : ''}</span>
+                      </div>
+                      <div className="w-full h-1.5 rounded-full bg-slate-900 border border-amber-500/30 overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-400 transition-all duration-150 rounded-full"
+                          style={{ width: `${downloadProgress !== null ? Math.max(4, downloadProgress) : 100}%` }}
+                        />
+                      </div>
+                      {downloadMB && (
+                        <div className="flex items-center justify-between text-[9.5px] font-mono text-amber-400/70">
+                          <span>{downloadStage === 'decoding' ? 'Web Audio Context' : 'AWS S3 CDN'}</span>
+                          <span>{downloadMB}</span>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <span className={`px-2.5 py-1.5 rounded-xl text-[10.5px] font-mono font-bold flex items-center gap-1.5 border transition-all ${isPlaying

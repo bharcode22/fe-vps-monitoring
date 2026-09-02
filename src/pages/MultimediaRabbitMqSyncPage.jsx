@@ -37,6 +37,9 @@ import {
   Eye,
   Film
 } from 'lucide-react';
+import io from 'socket.io-client';
+import { SOCKET_URL } from '../config';
+import { deleteCodeOnPodApi } from '../api/modules/storageApi';
 import {
   fetchMasterMultimediaListApi,
   inspectPodsSyncStatusApi,
@@ -61,6 +64,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoadingMaster, setIsLoadingMaster] = useState(false);
   const [masterError, setMasterError] = useState('');
+  const [downloadProgressMap, setDownloadProgressMap] = useState({}); // { [`${serverId}_${filename}`]: progressData }
 
   // Selected SoundScape for Sync
   const [selectedItem, setSelectedItem] = useState(null);
@@ -325,6 +329,89 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
       alert(`Gagal mendownload berkas missing ke ${pod.serverName}: ${err.message}`);
     } finally {
       setActionLoadingMap(prev => ({ ...prev, [dlKey]: false }));
+    }
+  };
+
+  // Listen for real-time S3 to POD download progress via WebSocket
+  useEffect(() => {
+    const socket = io(SOCKET_URL, {
+      transports: ['websocket', 'polling']
+    });
+
+    socket.on('s3_pod_download_progress', (data) => {
+      const key = `${data.serverId}_${data.filename}`;
+      if (data.status === 'downloading' || data.status === 'starting') {
+        setDownloadProgressMap(prev => ({
+          ...prev,
+          [key]: data
+        }));
+      } else if (data.status === 'completed' || data.status === 'failed') {
+        // Clear progress badge after 2.5 seconds to show completion
+        setTimeout(() => {
+          setDownloadProgressMap(prev => {
+            const next = { ...prev };
+            delete next[key];
+            return next;
+          });
+        }, 2500);
+      }
+    });
+
+    socket.on('s3_pod_download_complete', (data) => {
+      const key = `${data.serverId}_${data.filename}`;
+      setTimeout(() => {
+        setDownloadProgressMap(prev => {
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+      }, 2500);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
+  // Delete single file on a specific POD
+  const handleDeleteSingleFileOnPod = async (pod, filename) => {
+    const podId = pod.serverId || pod.id;
+    const soundScape = selectedItem?.sound_scape;
+    if (!soundScape || !filename) return;
+
+    if (!window.confirm(`Hapus file ${filename} di server ${pod.serverName}?`)) return;
+
+    const actionKey = `del_file_${podId}_${filename}`;
+    setActionLoadingMap(prev => ({ ...prev, [actionKey]: true }));
+    try {
+      await deleteCodeOnPodApi(podId, soundScape, [filename]);
+      setSuccessToast(`File ${filename} berhasil dihapus dari ${pod.serverName}`);
+      await handleCheckSinglePodFiles(pod);
+    } catch (err) {
+      alert(`Gagal menghapus file ${filename} di ${pod.serverName}: ${err.message}`);
+    } finally {
+      setActionLoadingMap(prev => ({ ...prev, [actionKey]: false }));
+    }
+  };
+
+  // Delete all files for this code on a specific POD
+  const handleDeleteAllFilesOnPod = async (pod) => {
+    const podId = pod.serverId || pod.id;
+    const soundScape = selectedItem?.sound_scape;
+    if (!soundScape) return;
+
+    if (!window.confirm(`Hapus SEMUA file untuk kode #${soundScape} di server ${pod.serverName}? File fisik akan dibersihkan dari direktori media POD.`)) return;
+
+    const actionKey = `del_pod_${podId}`;
+    setActionLoadingMap(prev => ({ ...prev, [actionKey]: true }));
+    try {
+      await deleteCodeOnPodApi(podId, soundScape, []);
+      setSuccessToast(`Semua file kode #${soundScape} berhasil dihapus dari ${pod.serverName}`);
+      await handleCheckSinglePodFiles(pod);
+    } catch (err) {
+      alert(`Gagal menghapus file di ${pod.serverName}: ${err.message}`);
+    } finally {
+      setActionLoadingMap(prev => ({ ...prev, [actionKey]: false }));
     }
   };
 
@@ -1048,6 +1135,9 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                             const integrityKey = `${podId}_${f.fullPath}`;
                             const isIntegrityChecking = !!actionLoadingMap[`integrity_${podId}_${f.fullPath}`];
                             const integrityData = integrityMap[integrityKey];
+                            const progKey = `${podId}_${f.filename}`;
+                            const progress = downloadProgressMap[progKey];
+                            const isFileDownloading = !!actionLoadingMap[`dl_${podId}_${f.filename}`];
 
                             return (
                               <div
@@ -1104,31 +1194,86 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                                 {integrityData && (
                                   <div
                                     onClick={() => setIntegrityModal({ isOpen: true, data: integrityData, isLoading: false, targetPod: pod, targetFilename: f.filename })}
-                                    className={`mt-0.5 px-2 py-1 rounded-lg text-[9.5px] font-mono flex items-center justify-between gap-1 border cursor-pointer transition-all ${integrityData.isCorrupt
+                                    className={`mt-0.5 px-2 py-1.5 rounded-lg text-[9.5px] font-mono flex flex-col gap-1 border cursor-pointer transition-all ${integrityData.isCorrupt
                                       ? 'bg-rose-950/60 text-rose-300 border-rose-500/40 hover:bg-rose-950/80'
                                       : 'bg-emerald-950/50 text-emerald-300 border-emerald-500/40 hover:bg-emerald-950/70'
                                       }`}
                                     title="Klik untuk melihat laporan diagnostik ffprobe lengkap"
                                   >
-                                    <span className="flex items-center gap-1.5 truncate">
-                                      {integrityData.isCorrupt ? (
-                                        <>
-                                          <AlertTriangle size={10} className="text-rose-400 shrink-0" />
-                                          <b className="text-rose-400">KORUP:</b> {integrityData.message}
-                                        </>
-                                      ) : (
-                                        <>
-                                          <CheckCircle2 size={10} className="text-emerald-400 shrink-0" />
-                                          <span>
-                                            <b>Sehat &amp; Utuh</b>
-                                            {integrityData.durationFormatted ? ` • ${integrityData.durationFormatted}` : ''}
-                                            {integrityData.bitrateFormatted ? ` • ${integrityData.bitrateFormatted}` : ''}
-                                            {integrityData.dimensions ? ` • ${integrityData.dimensions}` : ''}
-                                          </span>
-                                        </>
-                                      )}
-                                    </span>
-                                    <span className="text-[8.5px] text-cyan-300 underline shrink-0">Rincian</span>
+                                    <div className="flex items-center justify-between gap-1 w-full">
+                                      <span className="flex items-center gap-1.5 truncate">
+                                        {integrityData.isCorrupt ? (
+                                          <>
+                                            <AlertTriangle size={10} className="text-rose-400 shrink-0" />
+                                            <b className="text-rose-400">KORUP:</b> {integrityData.message}
+                                          </>
+                                        ) : (
+                                          <>
+                                            <CheckCircle2 size={10} className="text-emerald-400 shrink-0" />
+                                            <span>
+                                              <b>Sehat &amp; Utuh</b>
+                                              {integrityData.durationFormatted ? ` • ${integrityData.durationFormatted}` : ''}
+                                              {integrityData.bitrateFormatted ? ` • ${integrityData.bitrateFormatted}` : ''}
+                                            </span>
+                                          </>
+                                        )}
+                                      </span>
+                                      <span className="text-[8.5px] text-cyan-300 underline shrink-0 font-sans font-bold">Rincian &rsaquo;</span>
+                                    </div>
+
+                                    {/* Action Buttons inside Corrupt File Box */}
+                                    {integrityData.isCorrupt && (
+                                      <div className="flex items-center gap-1.5 mt-1 pt-1.5 border-t border-rose-500/30">
+                                        <button
+                                          type="button"
+                                          disabled={isFileDownloading}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDownloadSingleMissingFile(pod, f.filename);
+                                          }}
+                                          className="flex items-center gap-1 px-2 py-0.5 bg-rose-500/20 hover:bg-rose-500/40 border border-rose-500/40 rounded text-[9px] text-rose-200 font-bold transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                        >
+                                          {isFileDownloading ? <RefreshCw size={10} className="animate-spin" /> : <Download size={10} />}
+                                          <span>{isFileDownloading ? 'Mendownload...' : 'Download Ulang'}</span>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          disabled={isFileDownloading}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteSingleFileOnPod(pod, f.filename);
+                                          }}
+                                          className="flex items-center gap-1 px-2 py-0.5 bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 rounded text-[9px] text-rose-400 font-bold transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                        >
+                                          <Trash2 size={10} />
+                                          <span>Hapus</span>
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Live Progress Bar for Download / Re-download */}
+                                {(progress || isFileDownloading) && (
+                                  <div className="mt-1 pt-1.5 border-t border-sky-500/20 animate-in fade-in duration-200">
+                                    {progress ? (
+                                      <>
+                                        <div className="w-full bg-slate-900/90 rounded-full h-1.5 overflow-hidden border border-slate-800">
+                                          <div
+                                            className="bg-gradient-to-r from-sky-500 via-cyan-400 to-emerald-400 h-1.5 rounded-full transition-all duration-300 ease-out shadow-sm shadow-cyan-400/50"
+                                            style={{ width: `${Math.min(100, Math.max(0, progress.percent || 0))}%` }}
+                                          />
+                                        </div>
+                                        <div className="flex items-center justify-between text-[9.5px] text-slate-400 font-mono mt-1">
+                                          <span>{progress.downloadedFormatted || '0 B'} / {progress.totalFormatted || '...'}</span>
+                                          <span className="text-cyan-300 font-semibold">{progress.speed || '0 KB/s'}</span>
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <div className="flex items-center gap-1.5 text-[10px] text-sky-400 font-mono animate-pulse">
+                                        <RefreshCw size={10} className="animate-spin" /> Menyiapkan download...
+                                      </div>
+                                    )}
                                   </div>
                                 )}
                               </div>
@@ -1138,32 +1283,56 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                           {/* Missing Files on POD */}
                           {podCheck.missingFiles?.map(f => {
                             const filename = typeof f === 'string' ? f : f.filename;
+                            const progKey = `${podId}_${filename}`;
+                            const progress = downloadProgressMap[progKey];
                             const isDownloading = !!actionLoadingMap[`dl_${podId}_${filename}`];
-                            const folderGuess = filename.endsWith('.mp4') ? 'videos' : (filename.endsWith('.jpg') || filename.endsWith('.png') || filename.endsWith('.jpeg')) ? 'images' : 'sounds';
                             return (
                               <div
                                 key={filename}
-                                className="p-1.5 px-2.5 rounded-lg bg-rose-950/20 border border-rose-500/30 flex items-center justify-between gap-1.5 text-[10.5px]"
+                                className="p-2 rounded-xl bg-rose-950/20 border border-rose-500/30 flex flex-col gap-1 text-[10.5px]"
                               >
-                                <div className="flex items-center gap-1.5 min-w-0">
-                                  <AlertTriangle size={12} className="text-rose-400 shrink-0" />
-                                  <span className="font-semibold text-rose-300 truncate font-mono" title={filename}>
-                                    {filename}
-                                  </span>
-                                  <span className="text-[9px] font-mono text-rose-400/70 shrink-0">
-                                    (/{folderGuess})
-                                  </span>
+                                <div className="flex items-center justify-between gap-1.5">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <AlertTriangle size={12} className="text-rose-400 shrink-0" />
+                                    <span className="font-semibold text-rose-300 truncate font-mono" title={filename}>
+                                      {filename}
+                                    </span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDownloadSingleMissingFile(pod, filename)}
+                                    disabled={isDownloading}
+                                    className="px-2 py-0.5 rounded bg-rose-500/20 hover:bg-rose-500/40 border border-rose-500/40 text-[9.5px] font-bold text-rose-200 flex items-center gap-1 transition-all cursor-pointer disabled:opacity-50 shadow-sm shrink-0"
+                                    title={`Download ${filename} langsung ke POD ${pod.serverName}`}
+                                  >
+                                    {isDownloading ? <Loader2 size={10} className="animate-spin" /> : <Download size={10} />}
+                                    <span>{isDownloading ? 'Mendownload...' : 'Unduh'}</span>
+                                  </button>
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDownloadSingleMissingFile(pod, filename)}
-                                  disabled={isDownloading}
-                                  className="px-2 py-0.5 rounded bg-rose-500/20 hover:bg-rose-500/40 border border-rose-500/40 text-[9.5px] font-bold text-rose-200 flex items-center gap-1 transition-all cursor-pointer disabled:opacity-50 shadow-sm shrink-0"
-                                  title={`Download ${filename} langsung ke /home/pod/${folderGuess} di ${pod.serverName}`}
-                                >
-                                  {isDownloading ? <Loader2 size={10} className="animate-spin" /> : <Download size={10} />}
-                                  <span>{isDownloading ? 'Unduh...' : 'Unduh'}</span>
-                                </button>
+
+                                {/* Live Progress Bar for Missing File Download */}
+                                {(progress || isDownloading) && (
+                                  <div className="mt-1 pt-1.5 border-t border-sky-500/20 animate-in fade-in duration-200">
+                                    {progress ? (
+                                      <>
+                                        <div className="w-full bg-slate-900/90 rounded-full h-1.5 overflow-hidden border border-slate-800">
+                                          <div
+                                            className="bg-gradient-to-r from-sky-500 via-cyan-400 to-emerald-400 h-1.5 rounded-full transition-all duration-300 ease-out shadow-sm shadow-cyan-400/50"
+                                            style={{ width: `${Math.min(100, Math.max(0, progress.percent || 0))}%` }}
+                                          />
+                                        </div>
+                                        <div className="flex items-center justify-between text-[9.5px] text-slate-400 font-mono mt-1">
+                                          <span>{progress.downloadedFormatted || '0 B'} / {progress.totalFormatted || '...'}</span>
+                                          <span className="text-cyan-300 font-semibold">{progress.speed || '0 KB/s'}</span>
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <div className="flex items-center gap-1.5 text-[10px] text-sky-400 font-mono animate-pulse">
+                                        <RefreshCw size={10} className="animate-spin" /> Menyiapkan download...
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             );
                           })}
@@ -1187,6 +1356,31 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                             </button>
                           </div>
                         )}
+
+                        {/* Bottom Action Bar for this POD (Periksa Ulang & Hapus di POD Ini) */}
+                        <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => handleCheckSinglePodFiles(pod)}
+                            disabled={!!actionLoadingMap[`files_${podId}`]}
+                            className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 active:scale-95 shadow-sm"
+                            title="Periksa ulang berkas fisik di POD ini"
+                          >
+                            <RefreshCw size={12} className={actionLoadingMap[`files_${podId}`] ? 'animate-spin text-cyan-400' : 'text-slate-400'} />
+                            <span>Periksa Ulang</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAllFilesOnPod(pod)}
+                            disabled={!!actionLoadingMap[`del_pod_${podId}`]}
+                            className="px-3 py-1.5 rounded-xl bg-rose-950/40 hover:bg-rose-950/70 text-rose-300 hover:text-rose-200 border border-rose-500/30 hover:border-rose-500/50 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 active:scale-95 shadow-sm"
+                            title={`Hapus semua berkas kode #${selectedItem?.sound_scape} di ${pod.serverName}`}
+                          >
+                            {actionLoadingMap[`del_pod_${podId}`] ? <Loader2 size={12} className="animate-spin text-rose-400" /> : <Trash2 size={12} className="text-rose-400" />}
+                            <span>Hapus di POD Ini</span>
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
