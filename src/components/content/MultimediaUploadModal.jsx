@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useLanguage } from '../../context/LanguageContext';
 import {
   X,
   UploadCloud,
@@ -41,6 +42,8 @@ function formatDuration(seconds) {
 }
 
 export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
+  const { t } = useLanguage();
+
   // Form Metadata State
   const [metadata, setMetadata] = useState({
     tittle: '',
@@ -159,7 +162,7 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
 
   const handleCloseModal = () => {
     if (isUploading && uploadPhase !== 'completed') {
-      if (!window.confirm('Yakin ingin membatalkan proses upload langsung yang sedang berlangsung?')) {
+      if (!window.confirm(t('multimedia.regularUploadModal.confirmCancel', null, 'Yakin ingin membatalkan proses upload langsung yang sedang berlangsung?'))) {
         return;
       }
       isCancelledRef.current = true;
@@ -190,18 +193,18 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
   const handleStartUpload = async () => {
     // Validation
     if (!metadata.tittle.trim()) {
-      setErrorMessage('Judul Track/Sesi (tittle) wajib diisi');
+      setErrorMessage(t('multimedia.regularUploadModal.validationTitle', null, 'Judul Track/Sesi (tittle) wajib diisi'));
       return;
     }
     if (!files.lamp && !files.video && !files.music && !files.cover_album) {
-      setErrorMessage('Pilih setidaknya salah satu file multimedia untuk diunggah');
+      setErrorMessage(t('multimedia.regularUploadModal.validationFile', null, 'Pilih setidaknya salah satu file multimedia untuk diunggah'));
       return;
     }
 
     setErrorMessage('');
     setIsUploading(true);
     setUploadPhase('auth');
-    setStatusMessage('Mengautentikasi ke Master API...');
+    setStatusMessage(t('multimedia.regularUploadModal.authStatus', null, 'Mengautentikasi ke Master API...'));
     isCancelledRef.current = false;
 
     // Calculate total size
@@ -230,7 +233,7 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
       overallPercent: 0,
       totalSize: grandTotalBytes,
       totalLoaded: 0,
-      message: 'Menunggu respon server...',
+      message: t('multimedia.regularUploadModal.waitingServer', null, 'Menunggu respon server...'),
       files: []
     });
 
@@ -253,7 +256,7 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
 
       // 3. Start direct single-hop upload directly to Master API & AWS S3 with SSE progress
       setUploadPhase('uploading_server');
-      setStatusMessage(`Mengirim ${formatBytes(grandTotalBytes)} langsung ke Master API...`);
+      setStatusMessage(t('multimedia.regularUploadModal.uploadingToServer', { size: formatBytes(grandTotalBytes) }, `Mengirim ${formatBytes(grandTotalBytes)} langsung ke Master API...`));
 
       const uploadStartTime = Date.now();
       let lastRenderTime = 0;
@@ -314,10 +317,10 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
 
           if (eventData.status === 'starting') {
             setUploadPhase('uploading_s3');
-            setStatusMessage(eventData.message || 'Master Server mulai mengunggah file ke AWS S3...');
+            setStatusMessage(eventData.message || t('multimedia.regularUploadModal.startingS3', null, 'Master Server mulai mengunggah file ke AWS S3...'));
           } else if (eventData.status === 'uploading') {
             setUploadPhase('uploading_s3');
-            setStatusMessage(`Master Server streaming ke AWS S3 (${eventData.overallPercent || 0}%)...`);
+            setStatusMessage(t('multimedia.regularUploadModal.streamingS3', { pct: eventData.overallPercent || 0 }, `Master Server streaming ke AWS S3 (${eventData.overallPercent || 0}%)...`));
 
             // Update fileProgressMap with actual S3 progress per file
             if (Array.isArray(eventData.files)) {
@@ -339,7 +342,7 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
             }
           } else if (eventData.status === 'processing') {
             setUploadPhase('processing_db');
-            setStatusMessage(eventData.message || 'Master Server memproses hash SHA-256 & mendaftarkan ke Database...');
+            setStatusMessage(eventData.message || t('multimedia.regularUploadModal.processingDb', null, 'Master Server memproses hash SHA-256 & mendaftarkan ke Database...'));
             setFileProgressMap(prev => {
               const next = { ...prev };
               Object.keys(next).forEach(k => {
@@ -349,7 +352,7 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
             });
           } else if (eventData.status === 'completed') {
             setUploadPhase('completed');
-            setStatusMessage('Multimedia berhasil diunggah dan terdaftar di Master AWS S3 & Database!');
+            setStatusMessage(t('multimedia.regularUploadModal.completedMsg', null, 'Multimedia berhasil diunggah dan terdaftar di Master AWS S3 & Database!'));
             setOverallProgress(100);
           }
         },
@@ -360,7 +363,7 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
 
       // 4. Finished successfully
       setUploadPhase('completed');
-      setStatusMessage('Multimedia berhasil diunggah langsung ke Master API & AWS S3!');
+      setStatusMessage(t('multimedia.regularUploadModal.completedDirectMsg', null, 'Multimedia berhasil diunggah langsung ke Master API & AWS S3!'));
       setOverallProgress(100);
 
       if (onSuccess) {
@@ -370,7 +373,7 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
       if (isCancelledRef.current) return;
       console.error('Error during direct multimedia upload with progress:', err);
       setUploadPhase('error');
-      setErrorMessage(err.message || 'Terjadi kesalahan saat mengunggah langsung ke Master API');
+      setErrorMessage(err.message || t('multimedia.regularUploadModal.uploadErrorFallback', null, 'Terjadi kesalahan saat mengunggah langsung ke Master API'));
     } finally {
       setIsUploading(false);
       activeXhrRef.current = null;
@@ -383,14 +386,14 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
       return;
     }
 
-    if (window.confirm('Yakin ingin membatalkan proses upload langsung yang sedang berlangsung?')) {
+    if (window.confirm(t('multimedia.regularUploadModal.confirmCancel', null, 'Yakin ingin membatalkan proses upload langsung yang sedang berlangsung?'))) {
       isCancelledRef.current = true;
       if (activeXhrRef.current) {
         activeXhrRef.current.abort();
       }
       setIsUploading(false);
       setUploadPhase('idle');
-      setStatusMessage('Upload dibatalkan.');
+      setStatusMessage(t('multimedia.regularUploadModal.uploadCancelled', null, 'Upload dibatalkan.'));
       onClose();
     }
   };
@@ -407,13 +410,13 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-lg font-black text-white">Upload Master Multimedia</h3>
+                <h3 className="text-lg font-black text-white">{t('multimedia.regularUploadModal.title', null, 'Upload Master Multimedia')}</h3>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 flex items-center gap-1">
-                  <Sparkles size={10} /> Direct Master API (Single-Hop)
+                  <Sparkles size={10} /> {t('multimedia.regularUploadModal.subtitle', null, 'Direct Master API (Single-Hop)')}
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Mengunggah langsung dari browser ke Master API (/multimedia/upload-with-progress) dengan pantauan SSE real-time.
+                {t('multimedia.regularUploadModal.desc', null, 'Mengunggah langsung dari browser ke Master API (/multimedia/upload-with-progress) dengan pantauan SSE real-time.')}
               </p>
             </div>
           </div>
@@ -435,7 +438,7 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
             <div className="p-4 rounded-2xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs flex items-start gap-3 animate-in shake">
               <AlertCircle size={18} className="shrink-0 mt-0.5 text-rose-400" />
               <div className="flex-1">
-                <p className="font-bold">Gagal Mengunggah Multimedia</p>
+                <p className="font-bold">{t('multimedia.regularUploadModal.errTitle', null, 'Gagal Mengunggah Multimedia')}</p>
                 <p className="mt-0.5 text-rose-200">{errorMessage}</p>
               </div>
             </div>
@@ -446,9 +449,9 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
             <div className="p-5 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs flex items-start gap-3.5 animate-in zoom-in-95">
               <CheckCircle2 size={22} className="shrink-0 text-emerald-400" />
               <div className="flex-1">
-                <p className="font-black text-sm text-emerald-200">Upload Berhasil & Terintegrasi!</p>
+                <p className="font-black text-sm text-emerald-200">{t('multimedia.regularUploadModal.successTitle', null, 'Upload Berhasil & Terintegrasi!')}</p>
                 <p className="mt-1 text-emerald-300/90">{statusMessage}</p>
-                <p className="mt-2 text-[11px] text-emerald-400">Direktori AWS S3 & Master DB telah diperbarui secara otomatis.</p>
+                <p className="mt-2 text-[11px] text-emerald-400">{t('multimedia.regularUploadModal.successNotice', null, 'Direktori AWS S3 & Master DB telah diperbarui secara otomatis.')}</p>
               </div>
             </div>
           )}
@@ -507,7 +510,7 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
                   <div className="flex-1 min-w-0">
                     <div className="text-[11px] font-bold text-white flex items-center justify-between">
                       <span className="flex items-center gap-1.5">
-                        Tahap 1: Upload ke Master Server
+                        {t('multimedia.regularUploadModal.stage1Title', null, 'Tahap 1: Upload ke Master Server')}
                       </span>
                       <span className="font-mono text-cyan-400">{overallProgress}%</span>
                     </div>
@@ -541,14 +544,14 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
                   <div className="flex-1 min-w-0">
                     <div className="text-[11px] font-bold text-white flex items-center justify-between">
                       <span className="flex items-center gap-1.5">
-                        Tahap 2: Stream AWS S3 & DB
+                        {t('multimedia.regularUploadModal.stage2Title', null, 'Tahap 2: Stream AWS S3 & DB')}
                       </span>
                       <span className="font-mono text-orange-400">
                         {uploadPhase === 'completed' ? '100%' : `${serverS3Progress.overallPercent}%`}
                       </span>
                     </div>
                     <p className="text-[10px] text-slate-400 truncate mt-0.5">
-                      {serverS3Progress.message || (uploadPhase === 'completed' ? 'Tersimpan di S3 & DB' : 'Menunggu data...')}
+                      {serverS3Progress.message || (uploadPhase === 'completed' ? t('multimedia.regularUploadModal.savedS3Db', null, 'Tersimpan di S3 & DB') : t('multimedia.regularUploadModal.waitingData', null, 'Menunggu data...'))}
                     </p>
                   </div>
                 </div>
@@ -567,7 +570,7 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
                 </div>
                 <span className="text-sm font-black text-cyan-400 font-mono shrink-0 whitespace-nowrap">
                   {uploadPhase === 'uploading_s3' || uploadPhase === 'processing_db'
-                    ? `S3 Stream: ${serverS3Progress.overallPercent}%`
+                    ? t('multimedia.regularUploadModal.s3StreamLabel', { pct: serverS3Progress.overallPercent }, `S3 Stream: ${serverS3Progress.overallPercent}%`)
                     : `${overallProgress}% (${formatBytes(uploadedBytesTotal)} / ${formatBytes(totalBytesToUpload)})`}
                 </span>
               </div>
@@ -595,22 +598,22 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
                 <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center gap-2 text-slate-300">
                   <Gauge size={14} className="text-cyan-400 shrink-0" />
                   <div>
-                    <div className="text-[9px] text-slate-500 uppercase font-sans">Kecepatan Client</div>
+                    <div className="text-[9px] text-slate-500 uppercase font-sans">{t('multimedia.regularUploadModal.clientSpeed', null, 'Kecepatan Client')}</div>
                     <div className="font-bold text-cyan-300">{uploadSpeed}</div>
                   </div>
                 </div>
                 <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center gap-2 text-slate-300">
                   <Clock size={14} className="text-amber-400 shrink-0" />
                   <div>
-                    <div className="text-[9px] text-slate-500 uppercase font-sans">Sisa Waktu (ETA)</div>
+                    <div className="text-[9px] text-slate-500 uppercase font-sans">{t('multimedia.regularUploadModal.eta', null, 'Sisa Waktu (ETA)')}</div>
                     <div className="font-bold text-amber-300">{formatDuration(etaSeconds)}</div>
                   </div>
                 </div>
                 <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center gap-2 text-slate-300">
                   <HardDrive size={14} className="text-purple-400 shrink-0" />
                   <div>
-                    <div className="text-[9px] text-slate-500 uppercase font-sans">Jalur Upload</div>
-                    <div className="font-bold text-purple-300 truncate">Direct Master S3</div>
+                    <div className="text-[9px] text-slate-500 uppercase font-sans">{t('multimedia.regularUploadModal.uploadPath', null, 'Jalur Upload')}</div>
+                    <div className="font-bold text-purple-300 truncate">{t('multimedia.regularUploadModal.directMasterS3', null, 'Direct Master S3')}</div>
                   </div>
                 </div>
               </div>
@@ -647,8 +650,8 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
                 <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-200 text-xs flex items-center gap-2.5 animate-in fade-in">
                   <Loader2 size={16} className="animate-spin text-indigo-400 shrink-0" />
                   <div>
-                    <span className="font-bold">Menghitung Hash SHA-256 & Registrasi Master Database...</span>
-                    <p className="text-[11px] text-indigo-300/80 mt-0.5">Semua file telah berhasil sampai di AWS S3. Master backend sedang menyelesaikan registrasi katalog.</p>
+                    <span className="font-bold">{t('multimedia.regularUploadModal.hashingNoticeTitle', null, 'Menghitung Hash SHA-256 & Registrasi Master Database...')}</span>
+                    <p className="text-[11px] text-indigo-300/80 mt-0.5">{t('multimedia.regularUploadModal.hashingNoticeDesc', null, 'Semua file telah berhasil sampai di AWS S3. Master backend sedang menyelesaikan registrasi katalog.')}</p>
                   </div>
                 </div>
               )}
@@ -658,21 +661,21 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
           {/* Section 1: Metadata Inputs */}
           <div className="space-y-4">
             <h4 className="text-xs font-black uppercase tracking-wider text-cyan-400 flex items-center gap-2">
-              <Layers size={14} /> Metadata Konten Multimedia
+              <Layers size={14} /> {t('multimedia.regularUploadModal.metadataSection', null, 'Metadata Konten Multimedia')}
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* Title (tittle) */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-300 flex items-center gap-1">
-                  Judul Track/Sesi (tittle) <span className="text-rose-400">*</span>
+                  {t('multimedia.regularUploadModal.trackTitleLabel', null, 'Judul Track/Sesi (tittle)')} <span className="text-rose-400">*</span>
                 </label>
                 <input
                   type="text"
                   disabled={isUploading}
                   value={metadata.tittle}
                   onChange={e => setMetadata({ ...metadata, tittle: e.target.value })}
-                  placeholder="Misal: Deep Relaxation 5.2"
+                  placeholder={t('multimedia.regularUploadModal.trackTitlePlaceholder', null, 'Misal: Deep Relaxation 5.2')}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 disabled:opacity-50 font-medium"
                 />
               </div>
@@ -680,14 +683,14 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
               {/* Artist */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-300">
-                  Artis (artist)
+                  {t('multimedia.regularUploadModal.artistLabel', null, 'Artis (artist)')}
                 </label>
                 <input
                   type="text"
                   disabled={isUploading}
                   value={metadata.artist}
                   onChange={e => setMetadata({ ...metadata, artist: e.target.value })}
-                  placeholder="Misal: Regenesis Audio Team"
+                  placeholder={t('multimedia.regularUploadModal.artistPlaceholder', null, 'Misal: Regenesis Audio Team')}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 disabled:opacity-50 font-medium"
                 />
               </div>
@@ -695,14 +698,14 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
               {/* Album */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-300">
-                  Album / Kategori (album)
+                  {t('multimedia.regularUploadModal.albumLabel', null, 'Album / Kategori (album)')}
                 </label>
                 <input
                   type="text"
                   disabled={isUploading}
                   value={metadata.album}
                   onChange={e => setMetadata({ ...metadata, album: e.target.value })}
-                  placeholder="Misal: Wellness & Biohack"
+                  placeholder={t('multimedia.regularUploadModal.albumPlaceholder', null, 'Misal: Wellness & Biohack')}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 disabled:opacity-50 font-medium"
                 />
               </div>
@@ -710,7 +713,7 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
               {/* IsShowAtCustom */}
               <div className="space-y-1.5 sm:col-span-2 lg:col-span-3 pt-1">
                 <label className="text-xs font-bold text-slate-300">
-                  Tampilkan di Menu Custom Pod (IsShowAtCustom)
+                  {t('multimedia.regularUploadModal.customMenuLabel', null, 'Tampilkan di Menu Custom Pod (IsShowAtCustom)')}
                 </label>
                 <div className="flex items-center gap-4 pt-1">
                   <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300 hover:text-white">
@@ -723,7 +726,7 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
                       onChange={e => setMetadata({ ...metadata, IsShowAtCustom: e.target.value })}
                       className="accent-cyan-500 cursor-pointer"
                     />
-                    <span>Tampilkan (show)</span>
+                    <span>{t('multimedia.regularUploadModal.showOption', null, 'Tampilkan (show)')}</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-300 hover:text-white">
                     <input
@@ -735,7 +738,7 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
                       onChange={e => setMetadata({ ...metadata, IsShowAtCustom: e.target.value })}
                       className="accent-cyan-500 cursor-pointer"
                     />
-                    <span>Sembunyikan (hide)</span>
+                    <span>{t('multimedia.regularUploadModal.hideOption', null, 'Sembunyikan (hide)')}</span>
                   </label>
                 </div>
               </div>
@@ -745,7 +748,7 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
           {/* Section 2: 4 File Dropzones */}
           <div className="space-y-4 pt-2">
             <h4 className="text-xs font-black uppercase tracking-wider text-cyan-400 flex items-center gap-2">
-              <UploadCloud size={14} /> Berkas File Multimedia (Maks 10 GB)
+              <UploadCloud size={14} /> {t('multimedia.regularUploadModal.filesSection', null, 'Berkas File Multimedia (Maks 10 GB)')}
             </h4>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -773,11 +776,11 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
                     </div>
                     <div>
                       <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                        <span>Lamp / Strobe Sync (lamp)</span>
+                        <span>{t('multimedia.regularUploadModal.strobeTitle', null, 'Lamp / Strobe Sync (lamp)')}</span>
                         {files.lamp && <CheckCircle2 size={13} className="text-emerald-400" />}
                       </div>
                       <p className="text-[11px] text-slate-400 mt-0.5">
-                        File WAV sinyal lighting/strobe session
+                        {t('multimedia.regularUploadModal.strobeDesc', null, 'File WAV sinyal lighting/strobe session')}
                       </p>
                       {files.lamp ? (
                         <div className="mt-2 text-xs font-mono font-bold text-amber-300 flex items-center gap-1.5 bg-amber-500/20 px-2 py-1 rounded-lg">
@@ -786,7 +789,7 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
                         </div>
                       ) : (
                         <div className="mt-2 text-[11px] text-slate-500 flex items-center gap-1">
-                          <UploadCloud size={12} /> Klik untuk pilih file .wav
+                          <UploadCloud size={12} /> {t('multimedia.regularUploadModal.strobePrompt', null, 'Klik untuk pilih file .wav')}
                         </div>
                       )}
                     </div>
@@ -826,11 +829,11 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
                     </div>
                     <div>
                       <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                        <span>Video Footage (video)</span>
+                        <span>{t('multimedia.regularUploadModal.videoTitle', null, 'Video Footage (video)')}</span>
                         {files.video && <CheckCircle2 size={13} className="text-emerald-400" />}
                       </div>
                       <p className="text-[11px] text-slate-400 mt-0.5">
-                        File MP4 footage resolusi tinggi / 4K
+                        {t('multimedia.regularUploadModal.videoDesc', null, 'File MP4 footage resolusi tinggi / 4K')}
                       </p>
                       {files.video ? (
                         <div className="mt-2 text-xs font-mono font-bold text-rose-300 flex items-center gap-1.5 bg-rose-500/20 px-2 py-1 rounded-lg">
@@ -839,7 +842,7 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
                         </div>
                       ) : (
                         <div className="mt-2 text-[11px] text-slate-500 flex items-center gap-1">
-                          <UploadCloud size={12} /> Klik untuk pilih file .mp4
+                          <UploadCloud size={12} /> {t('multimedia.regularUploadModal.videoPrompt', null, 'Klik untuk pilih file .mp4')}
                         </div>
                       )}
                     </div>
@@ -879,11 +882,11 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
                     </div>
                     <div>
                       <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                        <span>Audio Sesi Musik (music)</span>
+                        <span>{t('multimedia.regularUploadModal.musicTitle', null, 'Audio Sesi Musik (music)')}</span>
                         {files.music && <CheckCircle2 size={13} className="text-emerald-400" />}
                       </div>
                       <p className="text-[11px] text-slate-400 mt-0.5">
-                        File WAV musik suara master / sesi audio
+                        {t('multimedia.regularUploadModal.musicDesc', null, 'File WAV musik suara master / sesi audio')}
                       </p>
                       {files.music ? (
                         <div className="mt-2 text-xs font-mono font-bold text-cyan-300 flex items-center gap-1.5 bg-cyan-500/20 px-2 py-1 rounded-lg">
@@ -892,7 +895,7 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
                         </div>
                       ) : (
                         <div className="mt-2 text-[11px] text-slate-500 flex items-center gap-1">
-                          <UploadCloud size={12} /> Klik untuk pilih file .wav
+                          <UploadCloud size={12} /> {t('multimedia.regularUploadModal.musicPrompt', null, 'Klik untuk pilih file .wav')}
                         </div>
                       )}
                     </div>
@@ -940,11 +943,11 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
                     )}
                     <div>
                       <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                        <span>Cover Album Visual (cover_album)</span>
+                        <span>{t('multimedia.regularUploadModal.coverTitle', null, 'Cover Album Visual (cover_album)')}</span>
                         {files.cover_album && <CheckCircle2 size={13} className="text-emerald-400" />}
                       </div>
                       <p className="text-[11px] text-slate-400 mt-0.5">
-                        File JPG / PNG sampul thumbnail album
+                        {t('multimedia.regularUploadModal.coverDesc', null, 'File JPG / PNG sampul thumbnail album')}
                       </p>
                       {files.cover_album ? (
                         <div className="mt-2 text-xs font-mono font-bold text-purple-300 flex items-center gap-1.5 bg-purple-500/20 px-2 py-1 rounded-lg">
@@ -953,7 +956,7 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
                         </div>
                       ) : (
                         <div className="mt-2 text-[11px] text-slate-500 flex items-center gap-1">
-                          <UploadCloud size={12} /> Klik untuk pilih cover .jpg / .png
+                          <UploadCloud size={12} /> {t('multimedia.regularUploadModal.coverPrompt', null, 'Klik untuk pilih cover .jpg / .png')}
                         </div>
                       )}
                     </div>
@@ -979,7 +982,7 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
         <div className="px-6 py-4 border-t border-cyan-500/20 bg-slate-950/80 flex items-center justify-between gap-4">
           <div className="text-[11px] text-slate-400 flex items-center gap-2">
             <Sparkles size={13} className="text-cyan-400" />
-            <span>Direct Upload Single-Hop aktif — Tanpa antrean disk backend lokal</span>
+            <span>{t('multimedia.regularUploadModal.footerNotice', null, 'Direct Upload Single-Hop aktif — Tanpa antrean disk backend lokal')}</span>
           </div>
 
           <div className="flex items-center gap-3">
@@ -988,7 +991,7 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
               disabled={uploadPhase === 'processing_db'}
               className="px-4 py-2 rounded-xl text-xs font-bold text-slate-300 bg-slate-800/80 hover:bg-slate-800 hover:text-white border border-slate-700 transition-all cursor-pointer disabled:opacity-40"
             >
-              {uploadPhase === 'completed' ? 'Tutup' : 'Batal'}
+              {uploadPhase === 'completed' ? t('multimedia.regularUploadModal.close', null, 'Tutup') : t('multimedia.regularUploadModal.cancel', null, 'Batal')}
             </button>
 
             {uploadPhase === 'completed' ? (
@@ -996,7 +999,7 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
                 onClick={handleCloseModal}
                 className="px-5 py-2 rounded-xl text-xs font-bold text-slate-950 bg-emerald-400 hover:bg-emerald-300 transition-all cursor-pointer flex items-center gap-1.5 shadow-lg shadow-emerald-500/20"
               >
-                <CheckCircle2 size={15} /> Selesai & Kembali
+                <CheckCircle2 size={15} /> {t('multimedia.regularUploadModal.finishAndReturn', null, 'Selesai & Kembali')}
               </button>
             ) : (
               <button
@@ -1007,12 +1010,12 @@ export default function MultimediaUploadModal({ isOpen, onClose, onSuccess }) {
                 {isUploading ? (
                   <>
                     <Loader2 size={15} className="animate-spin text-slate-950" />
-                    <span>Mengunggah Berkas...</span>
+                    <span>{t('multimedia.regularUploadModal.uploadingBtn', null, 'Mengunggah Berkas...')}</span>
                   </>
                 ) : (
                   <>
                     <UploadCloud size={15} />
-                    <span>Mulai Upload Multimedia</span>
+                    <span>{t('multimedia.regularUploadModal.startUploadBtn', null, 'Mulai Upload Multimedia')}</span>
                   </>
                 )}
               </button>
