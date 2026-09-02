@@ -6,8 +6,10 @@ import PodTopicStatsCards from '../components/podTopic/PodTopicStatsCards';
 import PodTopicToolbar from '../components/podTopic/PodTopicToolbar';
 import PodTopicMatrixTable from '../components/podTopic/PodTopicMatrixTable';
 import PodTopicSyncModal from '../components/podTopic/PodTopicSyncModal';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function PodTopicDebuggerPage({ onBack }) {
+  const { t } = useLanguage();
   const [matrixData, setMatrixData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');

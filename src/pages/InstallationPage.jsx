@@ -25,9 +25,11 @@ import DeploymentHistoryTab from '../components/installation/DeploymentHistoryTa
 import PodVersionMatrixTab from '../components/installation/PodVersionMatrixTab';
 import BundleVersionTab from '../components/installation/BundleVersionTab';
 import BundleDeploymentTab from '../components/installation/BundleDeploymentTab';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function InstallationPage({ onBack }) {
   const { user } = useAuth();
+  const { t } = useLanguage();
   // Main Tab Navigation State ('backend' | 'frontend' | 'bundles' | 'bundle_deploy' | 'matrix' | 'history' | 'artifacts')
   const [activeTab, setActiveTab] = useState(() => {
     try {

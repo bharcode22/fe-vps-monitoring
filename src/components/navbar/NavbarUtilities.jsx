@@ -38,24 +38,30 @@ export default function NavbarUtilities({
       )}
 
       {/* Language Switcher Pill */}
-      <div className="flex items-center bg-slate-900 p-0.5 rounded-lg border border-slate-800 ml-0.5">
+      <div className="flex items-center bg-slate-900/90 p-0.5 rounded-lg border border-slate-700/60 ml-1 shadow-inner">
         <button
           onClick={() => changeLanguage('id')}
-          className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold transition-colors cursor-pointer ${
-            lang === 'id' ? 'bg-cyan-500/25 text-cyan-300' : 'text-slate-500 hover:text-slate-300'
+          className={`px-2 py-1 rounded-md text-[11px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
+            lang === 'id'
+              ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-300 border border-cyan-500/50 shadow-sm'
+              : 'text-slate-400 hover:text-slate-200'
           }`}
-          title="Bahasa Indonesia"
+          title="Beralih ke Bahasa Indonesia"
         >
-          ID
+          <span>🇮🇩</span>
+          <span>ID</span>
         </button>
         <button
           onClick={() => changeLanguage('en')}
-          className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold transition-colors cursor-pointer ${
-            lang === 'en' ? 'bg-cyan-500/25 text-cyan-300' : 'text-slate-500 hover:text-slate-300'
+          className={`px-2 py-1 rounded-md text-[11px] font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
+            lang === 'en'
+              ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-300 border border-cyan-500/50 shadow-sm'
+              : 'text-slate-400 hover:text-slate-200'
           }`}
-          title="English"
+          title="Switch to English"
         >
-          EN
+          <span>🇬🇧</span>
+          <span>EN</span>
         </button>
       </div>
     </div>

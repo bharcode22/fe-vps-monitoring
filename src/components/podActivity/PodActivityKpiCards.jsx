@@ -1,5 +1,6 @@
 import React from 'react';
 import { Server, UserCheck, UserX, Radio } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function PodActivityKpiCards({
   isLoading,
@@ -8,6 +9,8 @@ export default function PodActivityKpiCards({
   vacantCount = 0,
   brokersConnected = 0
 }) {
+  const { t } = useLanguage();
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* Card 1: Total Armada POD V3 */}
@@ -17,21 +20,21 @@ export default function PodActivityKpiCards({
             <div className="p-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
               <Server size={14} />
             </div>
-            Armada POD V3
+            {t('podActivity.kpi.totalPods', null, 'Armada POD V3')}
           </span>
           <span className="text-[10px] font-mono px-2 py-0.5 bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 rounded-full font-bold">
-            Terdaftar
+            {t('common.online', null, 'Online')}
           </span>
         </div>
         <div className="my-3">
           <div className="text-3xl font-mono font-black text-white tracking-tight">
-            {isLoading ? '...' : totalPods} <span className="text-xs font-sans text-slate-400 font-semibold">Unit</span>
+            {isLoading ? '...' : totalPods} <span className="text-xs font-sans text-slate-400 font-semibold">Units</span>
           </div>
-          <span className="text-[11px] text-slate-400 font-medium">Seluruh armada terintegrasi</span>
+          <span className="text-[11px] text-slate-400 font-medium">Fleet integration active</span>
         </div>
         <div className="text-[10px] text-slate-500 font-mono flex items-center gap-1.5 pt-2 border-t border-slate-800/60">
           <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-          {brokersConnected} dari {totalPods} Broker Online
+          {brokersConnected} / {totalPods} Brokers Online
         </div>
       </div>
 
@@ -43,7 +46,7 @@ export default function PodActivityKpiCards({
             <div className="p-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-emerald-400">
               <UserCheck size={14} />
             </div>
-            Occupied (In-Use)
+            {t('podActivity.kpi.occupied', null, 'Occupied (In-Use)')}
           </span>
           <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-full font-bold">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> POB = 1
@@ -51,13 +54,13 @@ export default function PodActivityKpiCards({
         </div>
         <div className="my-3 z-10">
           <div className="text-3xl font-mono font-black text-emerald-300 tracking-tight">
-            {isLoading ? '...' : occupiedCount} <span className="text-xs font-sans text-slate-400 font-semibold">Unit</span>
+            {isLoading ? '...' : occupiedCount} <span className="text-xs font-sans text-slate-400 font-semibold">Units</span>
           </div>
-          <span className="text-[11px] text-emerald-400/80 font-medium">Sesi pengguna aktif terdeteksi</span>
+          <span className="text-[11px] text-emerald-400/80 font-medium">Active user session detected</span>
         </div>
         <div className="text-[10px] text-slate-500 z-10 flex items-center gap-1.5 pt-2 border-t border-slate-800/60 font-mono">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-          Sensor mod_chair aktif
+          Sensor mod_chair active
         </div>
       </div>
 
@@ -68,7 +71,7 @@ export default function PodActivityKpiCards({
             <div className="p-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-400">
               <UserX size={14} />
             </div>
-            Available (Standby)
+            {t('podActivity.kpi.vacant', null, 'Available (Standby)')}
           </span>
           <span className="text-[10px] font-mono px-2 py-0.5 bg-slate-800 text-slate-300 border border-slate-700 rounded-full font-bold">
             POB = 0
@@ -76,13 +79,13 @@ export default function PodActivityKpiCards({
         </div>
         <div className="my-3">
           <div className="text-3xl font-mono font-black text-slate-200 tracking-tight">
-            {isLoading ? '...' : vacantCount} <span className="text-xs font-sans text-slate-400 font-semibold">Unit</span>
+            {isLoading ? '...' : vacantCount} <span className="text-xs font-sans text-slate-400 font-semibold">Units</span>
           </div>
-          <span className="text-[11px] text-slate-400 font-medium">Unit siaga / siap digunakan</span>
+          <span className="text-[11px] text-slate-400 font-medium">Standby / ready for next session</span>
         </div>
         <div className="text-[10px] text-slate-500 font-mono flex items-center gap-1.5 pt-2 border-t border-slate-800/60">
           <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
-          Sensor mod_chair siaga
+          Sensor mod_chair idle
         </div>
       </div>
 
@@ -93,7 +96,7 @@ export default function PodActivityKpiCards({
             <div className="p-1.5 rounded-lg bg-indigo-500/15 border border-indigo-500/30 text-indigo-400">
               <Radio size={14} />
             </div>
-            Broker MQTT
+            {t('podActivity.kpi.connectedBrokers', null, 'Broker MQTT')}
           </span>
           <span className="text-[10px] font-mono px-2 py-0.5 bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 rounded-full font-bold">
             Port 1883
@@ -103,7 +106,7 @@ export default function PodActivityKpiCards({
           <div className="text-3xl font-mono font-black text-indigo-300 tracking-tight">
             {isLoading ? '...' : `${brokersConnected}/${totalPods}`}
           </div>
-          <span className="text-[11px] text-slate-400 font-medium">Broker POD V3 terhubung</span>
+          <span className="text-[11px] text-slate-400 font-medium">POD V3 brokers connected</span>
         </div>
         <div className="text-[10px] text-slate-500 font-mono flex items-center gap-1.5 pt-2 border-t border-slate-800/60">
           <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />

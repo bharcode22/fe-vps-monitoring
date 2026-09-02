@@ -27,6 +27,7 @@ import {
   Activity
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { fetchSettingsApi, saveSettingApi } from '../api/vpsApi';
 import { useSocket } from '../hooks/useSocket';
 import {
@@ -44,6 +45,7 @@ export default function SettingsPage({
   onToggleTvMode
 }) {
   const { user, isSuperAdmin, logout } = useAuth();
+  const { lang, changeLanguage, t } = useLanguage();
   const { isConnected } = useSocket();
 
   // Active sub-tab inside settings
@@ -309,8 +311,48 @@ export default function SettingsPage({
         <div className="space-y-6">
           <div className="bg-slate-950/80 border border-purple-500/20 rounded-3xl p-6 shadow-xl space-y-6">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <Monitor size={16} className="text-purple-400" /> Preferensi Tampilan Layar
+              <Monitor size={16} className="text-purple-400" /> Preferensi Tampilan Layar &amp; Bahasa
             </h3>
+
+            {/* 0. Language Selector */}
+            <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-900/70 border border-slate-800 gap-4 flex-wrap">
+              <div className="flex items-start gap-3">
+                <div className="p-2.5 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 shrink-0">
+                  <Globe size={20} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white">Bahasa Antarmuka (Application Language)</h4>
+                  <p className="text-xs text-slate-400 mt-0.5 max-w-xl leading-relaxed">
+                    Pilih bahasa tampilan untuk seluruh modul, tabel, navigasi, dan dialog sistem.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800 shrink-0">
+                <button
+                  onClick={() => changeLanguage('id')}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    lang === 'id'
+                      ? 'bg-cyan-500/25 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span>🇮🇩</span>
+                  <span>Bahasa Indonesia</span>
+                </button>
+                <button
+                  onClick={() => changeLanguage('en')}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    lang === 'en'
+                      ? 'bg-cyan-500/25 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span>🇬🇧</span>
+                  <span>English</span>
+                </button>
+              </div>
+            </div>
 
             {/* 1. TV Mode Switch */}
             <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-900/70 border border-slate-800 gap-4">

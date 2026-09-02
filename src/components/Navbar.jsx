@@ -73,6 +73,8 @@ export default function Navbar({
                 currentView === item.id ||
                 (item.aliases && item.aliases.includes(currentView));
 
+              const itemLabel = item.labelKey ? t(item.labelKey, null, item.label) : item.label;
+
               return (
                 <button
                   key={item.id}
@@ -86,7 +88,7 @@ export default function Navbar({
                     size={14}
                     className={isActive ? 'text-cyan-400' : 'text-slate-500'}
                   />
-                  <span>{item.label}</span>
+                  <span>{itemLabel}</span>
                 </button>
               );
             })}
@@ -136,7 +138,8 @@ export default function Navbar({
             onToggle={handleToggleUserMenu}
             onClose={() => setIsUserMenuOpen(false)}
             onOpenUserModal={onOpenUserModal}
-            onOpenSettings={() => onNavigateView && onNavigateView('settings')}
+            onOpenSettings={(view) => onNavigateView && onNavigateView(view || 'settings')}
+            onNavigateView={onNavigateView}
             onNavigateHome={() => onNavigateView && onNavigateView('dashboard')}
           />
         </div>

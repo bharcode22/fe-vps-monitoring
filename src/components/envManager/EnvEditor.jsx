@@ -13,6 +13,7 @@ import {
   Copy,
   Check
 } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function EnvEditor({
   file,
@@ -21,6 +22,7 @@ export default function EnvEditor({
   isDirty,
   onReset
 }) {
+  const { t } = useLanguage();
   const [editorMode, setEditorMode] = useState('grid'); // 'grid' or 'raw'
   const [showSecrets, setShowSecrets] = useState(false);
   const [filterQuery, setFilterQuery] = useState('');
@@ -99,18 +101,22 @@ export default function EnvEditor({
     setRawContent(text);
   };
 
-  // Add new variable
   const handleAddNewVariable = () => {
     const newId = Date.now();
-    const newRow = { id: newId, type: 'variable', key: 'NEW_VARIABLE', value: '' };
+    const newRow = {
+      id: newId,
+      type: 'variable',
+      key: 'NEW_VARIABLE_KEY',
+      value: '',
+      raw: 'NEW_VARIABLE_KEY='
+    };
     const updated = [...parsedRows, newRow];
     setParsedRows(updated);
 
-    const text = (rawContent ? rawContent + '\n' : '') + 'NEW_VARIABLE=';
+    const text = (rawContent ? rawContent + '\n' : '') + 'NEW_VARIABLE_KEY=';
     setRawContent(text);
   };
 
-  // Delete variable row
   const handleDeleteRow = (id) => {
     const updated = parsedRows.filter(r => r.id !== id);
     setParsedRows(updated);
@@ -161,9 +167,11 @@ export default function EnvEditor({
         <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 text-slate-500 mb-4">
           <Table size={32} />
         </div>
-        <h3 className="text-base font-bold text-white mb-1">Pilih File Konfigurasi .env</h3>
+        <h3 className="text-base font-bold text-white mb-1">
+          {t('envManager.editor.selectPromptTitle', null, 'Pilih File Konfigurasi .env')}
+        </h3>
         <p className="text-slate-400 text-xs max-w-sm">
-          Pilih salah satu file dari panel sebelah kiri untuk melihat, mengedit variabel, atau beralih ke tab Diff Comparator.
+          {t('envManager.editor.selectPromptDesc', null, 'Pilih salah satu file dari panel sebelah kiri untuk melihat, mengedit variabel, atau beralih ke tab Diff Comparator.')}
         </p>
       </div>
     );
@@ -176,11 +184,11 @@ export default function EnvEditor({
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-white">{file.name}</span>
           <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 border border-slate-700">
-            {variableRowsCount} Variabel
+            {variableRowsCount} {t('envManager.editor.addVariable', null, 'Variabel').replace('Tambah ', '')}
           </span>
           {isDirty && (
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse">
-              Ada perubahan belum disimpan
+              {t('envManager.editor.unsavedChanges', null, 'Ada perubahan belum disimpan')}
             </span>
           )}
         </div>
@@ -197,7 +205,7 @@ export default function EnvEditor({
               }`}
             >
               <Table size={13} />
-              <span>Grid Form</span>
+              <span>{t('envManager.editor.gridMode', null, 'Grid Form')}</span>
             </button>
             <button
               onClick={() => setEditorMode('raw')}
@@ -208,7 +216,7 @@ export default function EnvEditor({
               }`}
             >
               <Code size={13} />
-              <span>Raw Text</span>
+              <span>{t('envManager.editor.rawMode', null, 'Raw Text')}</span>
             </button>
           </div>
 
@@ -217,7 +225,7 @@ export default function EnvEditor({
             <button
               onClick={() => setShowSecrets(!showSecrets)}
               className="p-1.5 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg border border-slate-800 transition-colors cursor-pointer text-xs flex items-center gap-1"
-              title={showSecrets ? 'Sensor nilai rahasia' : 'Tampilkan nilai rahasia'}
+              title={showSecrets ? t('envManager.editor.maskSecret', null, 'Sensor nilai rahasia') : t('envManager.editor.unmaskSecret', null, 'Tampilkan nilai rahasia')}
             >
               {showSecrets ? <EyeOff size={14} /> : <Eye size={14} />}
             </button>
@@ -228,7 +236,7 @@ export default function EnvEditor({
             <button
               onClick={onReset}
               className="p-1.5 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg border border-slate-800 transition-colors cursor-pointer text-xs flex items-center gap-1"
-              title="Batalkan perubahan"
+              title={t('envManager.editor.resetChanges', null, 'Batalkan perubahan')}
             >
               <RotateCcw size={14} />
             </button>
@@ -247,7 +255,7 @@ export default function EnvEditor({
                 type="text"
                 value={filterQuery}
                 onChange={(e) => setFilterQuery(e.target.value)}
-                placeholder="Filter variabel..."
+                placeholder={t('envManager.editor.filterPlaceholder', null, 'Filter variabel...')}
                 className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-8 pr-2.5 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50"
               />
             </div>
@@ -257,7 +265,7 @@ export default function EnvEditor({
               className="px-3 py-1 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <Plus size={13} />
-              <span>Tambah Variabel</span>
+              <span>{t('envManager.editor.addVariable', null, 'Tambah Variabel')}</span>
             </button>
           </div>
 
@@ -267,16 +275,16 @@ export default function EnvEditor({
               <thead className="bg-slate-950/80 sticky top-0 border-b border-slate-800 text-slate-400 text-[11px] uppercase tracking-wider font-mono">
                 <tr>
                   <th className="py-2.5 px-3 w-12 text-center">#</th>
-                  <th className="py-2.5 px-3 w-1/3">Variable Key</th>
-                  <th className="py-2.5 px-3">Variable Value</th>
-                  <th className="py-2.5 px-3 w-16 text-center">Aksi</th>
+                  <th className="py-2.5 px-3 w-1/3">{t('envManager.editor.keyHeader', null, 'Variable Key')}</th>
+                  <th className="py-2.5 px-3">{t('envManager.editor.valHeader', null, 'Variable Value')}</th>
+                  <th className="py-2.5 px-3 w-16 text-center">{t('envManager.editor.actionsHeader', null, 'Aksi')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 font-mono">
                 {filteredRows.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="py-8 text-center text-slate-500 italic">
-                      Tidak ada variabel yang sesuai.
+                      {t('envManager.editor.noMatch', null, 'Tidak ada variabel yang sesuai.')}
                     </td>
                   </tr>
                 ) : (
@@ -322,7 +330,7 @@ export default function EnvEditor({
                             <button
                               onClick={() => handleCopyValue(row.key, row.value)}
                               className="p-1 text-slate-500 hover:text-slate-300 rounded transition-colors cursor-pointer"
-                              title="Salin nilai"
+                              title={t('envManager.editor.copyVal', null, 'Salin nilai')}
                             >
                               {copiedKey === row.key ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
                             </button>
@@ -332,7 +340,7 @@ export default function EnvEditor({
                           <button
                             onClick={() => handleDeleteRow(row.id)}
                             className="p-1 text-slate-600 hover:text-rose-400 rounded transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
-                            title="Hapus variabel ini"
+                            title={t('envManager.editor.deleteRow', null, 'Hapus variabel ini')}
                           >
                             <Trash2 size={13} />
                           </button>

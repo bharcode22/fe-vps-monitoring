@@ -26,6 +26,7 @@ import UserManagerPage from './pages/UserManagerPage';
 import PodLogsSyncPage from './pages/PodLogsSyncPage';
 import PodActivityPage from './pages/PodActivityPage';
 import SettingsPage from './pages/SettingsPage';
+import UserActivityLogsPage from './pages/UserActivityLogsPage';
 import { useServers } from './hooks/useServers';
 import { useSocket } from './hooks/useSocket';
 import { fetchSettingsApi, saveSettingApi } from './api/vpsApi';
@@ -147,7 +148,7 @@ export default function App() {
     handleReorder
   } = useServers();
 
-  const { isConnected } = useSocket(handleMetricsUpdate, fetchServers);
+  const { isConnected } = useSocket(handleMetricsUpdate, fetchServers, currentView);
 
   // Drag & Drop gesture handlers
   const handleDragStart = (e, idx) => {
@@ -157,18 +158,17 @@ export default function App() {
     }
   };
 
-  const handleDragOver = (e) => {
+  const handleDragOver = (e, idx) => {
     e.preventDefault();
     if (e.dataTransfer) {
       e.dataTransfer.dropEffect = 'move';
     }
   };
 
-  const handleDrop = (e, dropIdx) => {
+  const handleDrop = (e, targetIndex) => {
     e.preventDefault();
-    if (draggedIndex !== null && draggedIndex !== dropIdx) {
-      handleReorder(draggedIndex, dropIdx, displayedServers);
-    }
+    if (draggedIndex === null || draggedIndex === targetIndex) return;
+    handleReorder(draggedIndex, targetIndex);
     setDraggedIndex(null);
   };
 
@@ -176,7 +176,6 @@ export default function App() {
     setDraggedIndex(null);
   };
 
-  // Keep detail modal server object updated with latest live metrics
   const activeDetailServer = selectedDetailServerId
     ? ((allServers && allServers.length > 0 ? allServers : servers).find(s => s.id === selectedDetailServerId) || servers.find(s => s.id === selectedDetailServerId))
     : null;
@@ -195,6 +194,11 @@ export default function App() {
   const isMultimediaSyncView = ['multimedia-sync', 'rabbitmq-pod-sync', 're-save-sync'].includes(currentView);
 
   const isFullWidthView = isTvMode || isMultimediaSyncView || [
+    'user-activity',
+    'audit-logs',
+    'activity-logs',
+    'pod-activity',
+    'pod-occupancy',
     'pod-topic-debugger',
     'pod-topics',
     'master-pod-sync',
@@ -242,6 +246,8 @@ export default function App() {
           isTvMode={isTvMode}
           onToggleTvMode={handleToggleTvMode}
         />
+      ) : currentView === 'user-activity' || currentView === 'audit-logs' || currentView === 'activity-logs' ? (
+        <UserActivityLogsPage onBack={() => handleNavigateView('dashboard')} />
       ) : currentView === 'database-users' || currentView === 'db-users' || currentView === 'user-manager' ? (
         <UserManagerPage onBack={() => handleNavigateView('dashboard')} />
       ) : currentView === 'pod-activity' || currentView === 'pod-occupancy' ? (

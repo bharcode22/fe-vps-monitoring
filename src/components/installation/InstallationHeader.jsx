@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowLeft, Layers, Clock, RefreshCw } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function InstallationHeader({
   onBack,
@@ -8,6 +9,7 @@ export default function InstallationHeader({
   activeTab,
   onRefreshVersions
 }) {
+  const { t } = useLanguage();
   const displayTimer = typeof formatTimer === 'function'
     ? formatTimer(elapsedSeconds)
     : `${String(Math.floor((elapsedSeconds || 0) / 60)).padStart(2, '0')}:${String((elapsedSeconds || 0) % 60).padStart(2, '0')}`;
@@ -18,7 +20,7 @@ export default function InstallationHeader({
         <button
           onClick={onBack}
           className="p-2.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700/60 transition-all cursor-pointer shadow-md"
-          title="Kembali ke Dashboard"
+          title={t('common.back', null, 'Kembali')}
         >
           <ArrowLeft size={18} />
         </button>
@@ -29,13 +31,13 @@ export default function InstallationHeader({
           </div>
           <div>
             <h1 className="text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
-              Jenkins CI/CD Pipeline Dashboard
+              {t('installation.title', null, 'Jenkins CI/CD Pipeline Dashboard')}
               <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-md bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 font-mono">
                 #BUILD-105
               </span>
             </h1>
             <p className="text-xs text-slate-400">
-              Visualisasi Karboe Pipeline Stage Matrix, download paralel & streaming log WebSockets real-time
+              {t('installation.subtitle', null, 'Visualisasi Karboe Pipeline Stage Matrix, download paralel & streaming log WebSockets real-time')}
             </p>
           </div>
         </div>
@@ -45,7 +47,7 @@ export default function InstallationHeader({
       <div className="flex items-center gap-3 self-end md:self-auto">
         <div className="flex items-center gap-2 bg-slate-950/80 px-3.5 py-2 rounded-xl border border-slate-800 font-mono text-xs text-slate-300">
           <Clock size={15} className="text-cyan-400 animate-pulse" />
-          <span>Elapsed: <strong className="text-cyan-300">{displayTimer}</strong></span>
+          <span>{t('installation.elapsed', null, 'Elapsed')}: <strong className="text-cyan-300">{displayTimer}</strong></span>
         </div>
 
         {onRefreshVersions && (
@@ -54,7 +56,7 @@ export default function InstallationHeader({
             className="hidden sm:flex items-center gap-2 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 font-semibold text-xs transition-all cursor-pointer"
           >
             <RefreshCw size={14} className="text-cyan-400" />
-            <span>Refresh Versi MinIO</span>
+            <span>{t('installation.refreshMinio', null, 'Refresh Versi MinIO')}</span>
           </button>
         )}
       </div>

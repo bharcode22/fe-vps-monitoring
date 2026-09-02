@@ -1,0 +1,42 @@
+{
+  "title": "VPS & POD Monitor",
+  "subtitle": "Monitoring Real-time Bandwidth, CPU, RAM & GPU Server",
+  "summary": {
+    "totalDownload": "Total Kecepatan Download",
+    "totalUpload": "Total Kecepatan Upload",
+    "avgCpu": "Rata-rata CPU Load",
+    "avgGpu": "Rata-rata GPU Load",
+    "onlineServers": "Status Server Online"
+  },
+  "filter": {
+    "searchPlaceholder": "Cari server, IP, GPU, POD...",
+    "all": "Semua",
+    "vps": "🖥️ VPS",
+    "allPods": "📦 POD Semua",
+    "podV3": "⚡ POD v3",
+    "podV2": "🐢 POD v2",
+    "postgresql": "🐘 PostgreSQL",
+    "storage": "🗄️ Storage S3"
+  },
+  "card": {
+    "used": "Terpakai",
+    "free": "Sisa",
+    "totalCapacity": "Kapasitas Total",
+    "cpuLoad": "CPU Load",
+    "ramMemory": "RAM Memory",
+    "diskStorage": "Disk Storage",
+    "bandwidthSpeed": "Kecepatan Bandwidth",
+    "gpuHardware": "GPU Hardware",
+    "download": "Download",
+    "upload": "Upload",
+    "hideChart": "Sembunyikan Grafik",
+    "showChart": "Tampilkan Grafik Real-time",
+    "editConfig": "Edit Konfigurasi",
+    "deleteServer": "Hapus Server",
+    "noGpu": "Tidak Ada GPU Hardware",
+    "sshTerminal": "Terminal SSH",
+    "dockerLogs": "Log Docker",
+    "pm2Logs": "Log PM2",
+    "storageManager": "Storage Manager"
+  }
+}

@@ -7,7 +7,8 @@ import {
   Tv,
   LogOut,
   Users,
-  Settings
+  Settings,
+  ShieldCheck
 } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { useLanguage } from '../../context/LanguageContext';
@@ -43,14 +44,15 @@ export default function NavbarMobileDrawer({
 
   return (
     <div className="lg:hidden mt-3 pt-3 border-t border-slate-800 flex flex-col gap-3.5 animate-in fade-in slide-in-from-top-2 duration-200">
-      {/* 1. Primary Navigation Views */}
-      <div className="grid grid-cols-2 gap-2 bg-slate-950/70 p-2 rounded-2xl border border-slate-800">
+      {/* 1. Primary Direct Navigation Buttons */}
+      <div className="grid grid-cols-2 gap-2">
         {PRIMARY_NAV_ITEMS.map((item) => {
           if (item.authRequired && !isAuthenticated) return null;
           const ItemIcon = item.icon;
           const isActive =
             currentView === item.id ||
             (item.aliases && item.aliases.includes(currentView));
+          const itemLabel = item.labelKey ? t(item.labelKey, null, item.label) : item.label;
 
           return (
             <button
@@ -66,7 +68,7 @@ export default function NavbarMobileDrawer({
               }`}
             >
               <ItemIcon size={15} />
-              <span>{item.label}</span>
+              <span>{itemLabel}</span>
             </button>
           );
         })}
@@ -76,10 +78,11 @@ export default function NavbarMobileDrawer({
       {isAuthenticated && (
         <div className="flex flex-col gap-3 bg-slate-950/70 p-2.5 rounded-2xl border border-slate-800">
           {NAV_DROPDOWN_GROUPS.map((group) => {
+            const groupLabel = group.labelKey ? t(group.labelKey, null, group.label) : group.label;
             return (
               <div key={group.groupId} className="flex flex-col gap-1">
                 <div className="px-2 py-0.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-                  <span>{group.label}</span>
+                  <span>{groupLabel}</span>
                   {group.badge && (
                     <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">
                       {group.badge}
@@ -89,10 +92,14 @@ export default function NavbarMobileDrawer({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                   {group.items.map((item) => {
+                    if (item.superAdminOnly && !isSuperAdmin) return null;
+
                     const ItemIcon = item.icon;
                     const isItemActive =
                       currentView === item.id ||
                       (item.aliases && item.aliases.includes(currentView));
+                    const itemLabel = item.labelKey ? t(item.labelKey, null, item.label) : item.label;
+                    const itemDesc = item.descKey ? t(item.descKey, null, item.desc) : item.desc;
 
                     return (
                       <button
@@ -109,10 +116,10 @@ export default function NavbarMobileDrawer({
                       >
                         <ItemIcon size={15} className={`${item.colorClass} shrink-0`} />
                         <div className="flex-1 overflow-hidden">
-                          <div className="truncate">{item.label}</div>
-                          {item.desc && (
+                          <div className="truncate">{itemLabel}</div>
+                          {itemDesc && (
                             <div className="text-[10px] text-slate-400 font-normal truncate">
-                              {item.desc}
+                              {itemDesc}
                             </div>
                           )}
                         </div>
@@ -134,10 +141,10 @@ export default function NavbarMobileDrawer({
               onOpenAddModal();
               onClose();
             }}
-            className="bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-cyan-500/20 cursor-pointer"
+            className="bg-gradient-to-r from-emerald-400 to-emerald-600 text-white px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20 cursor-pointer"
           >
             <Plus size={15} />
-            <span>+ VPS / POD</span>
+            <span>{t('navbar.addMenu.addVpsPod', null, '+ VPS / POD')}</span>
           </button>
 
           <button
@@ -148,7 +155,7 @@ export default function NavbarMobileDrawer({
             className="bg-gradient-to-r from-sky-400 to-sky-600 text-white px-3 py-2.5 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-sky-500/20 cursor-pointer"
           >
             <Plus size={15} />
-            <span>+ DB &amp; Storage</span>
+            <span>{t('navbar.addMenu.addDbStorage', null, '+ DB & Storage')}</span>
           </button>
         </div>
       )}
@@ -179,16 +186,29 @@ export default function NavbarMobileDrawer({
               </div>
 
               {isSuperAdmin && (
-                <button
-                  onClick={() => {
-                    onOpenUserModal();
-                    onClose();
-                  }}
-                  className="px-2.5 py-1.5 bg-slate-800 text-cyan-400 rounded-lg border border-slate-700 flex items-center gap-1 text-[11px] font-bold cursor-pointer"
-                >
-                  <Users size={13} />
-                  <span>Users</span>
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => {
+                      onNavigateView('user-activity');
+                      onClose();
+                    }}
+                    className="px-2.5 py-1.5 bg-slate-800 text-amber-300 rounded-lg border border-amber-500/30 flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+                    title="Audit & Active Users"
+                  >
+                    <ShieldCheck size={13} className="text-amber-400" />
+                    <span>Audit</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      onOpenUserModal();
+                      onClose();
+                    }}
+                    className="px-2.5 py-1.5 bg-slate-800 text-cyan-400 rounded-lg border border-slate-700 flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+                  >
+                    <Users size={13} />
+                    <span>Users</span>
+                  </button>
+                </div>
               )}
             </div>
 
@@ -200,7 +220,7 @@ export default function NavbarMobileDrawer({
               className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-cyan-300 rounded-xl border border-cyan-500/30 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer mb-2"
             >
               <Settings size={14} />
-              <span>Pengaturan &amp; Profil</span>
+              <span>{t('navbar.userProfile.settings', null, 'Pengaturan & Profil')}</span>
             </button>
 
             <button
@@ -212,7 +232,7 @@ export default function NavbarMobileDrawer({
               className="w-full py-2 bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 rounded-xl border border-rose-500/30 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer"
             >
               <LogOut size={14} />
-              <span>Keluar / Logout</span>
+              <span>{t('navbar.userProfile.logout', null, 'Keluar / Logout')}</span>
             </button>
           </div>
         ) : (
@@ -229,7 +249,7 @@ export default function NavbarMobileDrawer({
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
             </svg>
-            <span>Login Google Admin</span>
+            <span>{t('navbar.userProfile.loginGoogle', null, 'Login Google Admin')}</span>
           </button>
         )}
       </div>

@@ -1,7 +1,8 @@
 import React, { useRef, useEffect } from 'react';
-import { ChevronDown, Users, LogOut, Lock, Settings } from 'lucide-react';
+import { ChevronDown, Users, LogOut, Lock, Settings, ShieldCheck } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function NavbarUserProfile({
   isOpen,
@@ -9,10 +10,12 @@ export default function NavbarUserProfile({
   onClose,
   onOpenUserModal,
   onOpenSettings,
+  onNavigateView,
   onNavigateHome
 }) {
   const userMenuRef = useRef(null);
   const { user, isAuthenticated, isSuperAdmin, loginWithGoogle, logout } = useAuth();
+  const { t } = useLanguage();
 
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: (tokenResponse) => {
@@ -42,7 +45,7 @@ export default function NavbarUserProfile({
       <div className="flex items-center gap-1.5">
         <div className="bg-amber-500/15 border border-amber-500/30 px-2 py-1 rounded-xl text-[10px] text-amber-400 flex items-center gap-1 font-semibold">
           <Lock size={12} />
-          <span className="hidden lg:inline">Read-Only</span>
+          <span className="hidden lg:inline">{t('common.readOnly', null, 'Read-Only')}</span>
         </div>
 
         <button
@@ -55,7 +58,7 @@ export default function NavbarUserProfile({
             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
           </svg>
-          <span>Login</span>
+          <span>{t('navbar.userProfile.loginGoogle', null, 'Login')}</span>
         </button>
       </div>
     );
@@ -131,14 +134,15 @@ export default function NavbarUserProfile({
           {/* Settings & Profile Navigation */}
           <button
             onClick={() => {
-              if (onOpenSettings) onOpenSettings();
+              if (onNavigateView) onNavigateView('settings');
+              else if (onOpenSettings) onOpenSettings('settings');
               onClose();
             }}
             className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs font-bold text-slate-200 hover:bg-slate-800 hover:text-cyan-300 transition-colors cursor-pointer mb-1"
           >
             <div className="flex items-center gap-2.5">
               <Settings size={15} className="text-cyan-400" />
-              <span>Pengaturan &amp; Profil</span>
+              <span>{t('navbar.userProfile.settings', null, 'Pengaturan & Profil')}</span>
             </div>
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300">
               Settings
@@ -147,21 +151,40 @@ export default function NavbarUserProfile({
 
           {/* Super Admin Control: Manage Users */}
           {isSuperAdmin && (
-            <button
-              onClick={() => {
-                onOpenUserModal();
-                onClose();
-              }}
-              className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs font-bold text-slate-200 hover:bg-slate-800 hover:text-cyan-300 transition-colors cursor-pointer mb-1"
-            >
-              <div className="flex items-center gap-2.5">
-                <Users size={15} className="text-cyan-400" />
-                <span>Kelola Persetujuan User</span>
-              </div>
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300">
-                Approval
-              </span>
-            </button>
+            <>
+              <button
+                onClick={() => {
+                  if (onNavigateView) onNavigateView('user-activity');
+                  else if (onOpenSettings) onOpenSettings('user-activity');
+                  onClose();
+                }}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs font-bold text-slate-200 hover:bg-slate-800 hover:text-amber-300 transition-colors cursor-pointer mb-1"
+              >
+                <div className="flex items-center gap-2.5">
+                  <ShieldCheck size={15} className="text-amber-400" />
+                  <span>{t('navbar.userProfile.auditLogs', null, 'Audit & Active Users')}</span>
+                </div>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">
+                  Audit
+                </span>
+              </button>
+
+              <button
+                onClick={() => {
+                  onOpenUserModal();
+                  onClose();
+                }}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs font-bold text-slate-200 hover:bg-slate-800 hover:text-cyan-300 transition-colors cursor-pointer mb-1"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Users size={15} className="text-cyan-400" />
+                  <span>{t('navbar.userProfile.userApproval', null, 'Kelola Persetujuan User')}</span>
+                </div>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300">
+                  Approval
+                </span>
+              </button>
+            </>
           )}
 
           <div className="h-px bg-slate-800 my-1" />
@@ -176,7 +199,7 @@ export default function NavbarUserProfile({
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-bold text-rose-400 hover:bg-rose-500/15 transition-colors cursor-pointer"
           >
             <LogOut size={15} />
-            <span>Keluar / Logout</span>
+            <span>{t('navbar.userProfile.logout', null, 'Keluar / Logout')}</span>
           </button>
         </div>
       )}

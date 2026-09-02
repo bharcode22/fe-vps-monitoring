@@ -29,8 +29,10 @@ import PodLogsFleetTable from '../components/podLogs/PodLogsFleetTable';
 import PodLogsExplorerTab from '../components/podLogs/PodLogsExplorerTab';
 import PodLogsJsonPreviewModal from '../components/podLogs/PodLogsJsonPreviewModal';
 import PodLogsDiffModal from '../components/podLogs/PodLogsDiffModal';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function PodLogsSyncPage() {
+  const { t } = useLanguage();
   // Navigation View Tab: 'sync' (Audit & Pull) | 'explorer' (Master Data Explorer)
   const [activeTab, setActiveTab] = useState('sync');
 

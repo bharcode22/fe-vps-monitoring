@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import io from 'socket.io-client';
 import { SOCKET_URL } from '../config';
 import {
@@ -15,8 +15,11 @@ import PodActivityToolbar from '../components/podActivity/PodActivityToolbar';
 import PodActivityCardGrid from '../components/podActivity/PodActivityCardGrid';
 import PodActivityTableView from '../components/podActivity/PodActivityTableView';
 import PodActivityDetailPage from '../components/podActivity/PodActivityDetailPage';
+import PodFleetHeartbeatMatrix from '../components/podActivity/PodFleetHeartbeatMatrix';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function PodActivityPage({ onBack }) {
+  const { t } = useLanguage();
   const [data, setData] = useState({ summary: {}, pods: [], recentLogs: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -50,6 +53,7 @@ export default function PodActivityPage({ onBack }) {
 
   // Live raw MQTT log feed
   const [mqttActivityFeed, setMqttActivityFeed] = useState([]);
+  const socketRef = useRef(null);
 
   // Live timer tick for real-time elapsed seconds update
   const [nowTimestamp, setNowTimestamp] = useState(Date.now());
@@ -70,6 +74,7 @@ export default function PodActivityPage({ onBack }) {
     const socket = io(SOCKET_URL, {
       transports: ['websocket', 'polling']
     });
+    socketRef.current = socket;
 
     socket.on('connect', () => {
       setIsSocketConnected(true);
@@ -237,6 +242,16 @@ export default function PodActivityPage({ onBack }) {
       ? summary.brokersConnected
       : (data.pods || []).filter((p) => p.brokerConnected).length;
 
+  const handlePublish = (subTopic, payload) => {
+    if (!socketRef.current) return;
+    const token = localStorage.getItem('vps_monitoring_token') || localStorage.getItem('token') || '';
+    socketRef.current.emit('mqtt:inject-packet', {
+      token,
+      topic: subTopic,
+      payload: String(payload)
+    });
+  };
+
   if (selectedPodForTopicModal) {
     return (
       <PodActivityDetailPage
@@ -247,7 +262,7 @@ export default function PodActivityPage({ onBack }) {
   }
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-[1700px] mx-auto px-2 sm:px-4 lg:px-6 py-4 animate-in fade-in duration-200">
+    <div className="flex flex-col gap-6 w-full animate-in fade-in duration-200">
       {/* 1. Header & Actions */}
       <PodActivityHeader
         isSocketConnected={isSocketConnected}
@@ -291,7 +306,7 @@ export default function PodActivityPage({ onBack }) {
         onToggleMqttFeed={() => setShowMqttFeed(!showMqttFeed)}
       />
 
-      {/* 5. Main View: Live Cards Grid or Table */}
+      {/* 5. Main View: Live Cards Grid, Table, or Fleet Heartbeat Matrix */}
       {viewMode === 'cards' ? (
         <PodActivityCardGrid
           isLoading={isLoading}
@@ -300,11 +315,18 @@ export default function PodActivityPage({ onBack }) {
           formatDuration={formatDuration}
           onSelectPod={setSelectedPodForTopicModal}
         />
-      ) : (
+      ) : viewMode === 'table' ? (
         <PodActivityTableView
           filteredPods={filteredPods}
           formatDuration={formatDuration}
           onSelectPod={setSelectedPodForTopicModal}
+        />
+      ) : (
+        <PodFleetHeartbeatMatrix
+          pods={data.pods || []}
+          mqttFeed={mqttActivityFeed}
+          onSelectPod={setSelectedPodForTopicModal}
+          onPublish={handlePublish}
         />
       )}
     </div>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Server, Box, Database, HardDrive, ChevronUp, ChevronDown, Edit3, Trash2, GripVertical, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function ServerHeader({
   server,
@@ -15,6 +16,7 @@ export default function ServerHeader({
   isLast
 }) {
   const { isAuthenticated } = useAuth();
+  const { t } = useLanguage();
   const [showHost, setShowHost] = useState(false);
   const podVersionText = server.pod_version ? server.pod_version.toUpperCase() : 'V3';
 
@@ -63,7 +65,7 @@ export default function ServerHeader({
             <GripVertical
               size={16}
               className="text-slate-600 cursor-grab opacity-50 hover:opacity-100 transition-opacity shrink-0"
-              title="Tahan & geser untuk mengubah urutan"
+              title={t('dashboard.card.dragToReorder', null, 'Tahan & geser untuk mengubah urutan')}
             />
           )}
 
@@ -89,7 +91,6 @@ export default function ServerHeader({
             : 'bg-red-500/10 border-red-500/25 text-red-400 shadow-[0_0_10px_rgba(239,68,68,0.12)]'
             }`}>
             <span className={`live-dot ${isOnline ? 'online' : 'offline'} w-1.5 h-1.5`}></span>
-            {/* <span className="tracking-wide">{isOnline ? 'ONLINE' : 'OFFLINE'}</span> */}
             {isOnline && (
               <span className="font-mono text-[9px] opacity-75 ml-0.5">({pingMs}ms)</span>
             )}
@@ -110,7 +111,7 @@ export default function ServerHeader({
           {/* Host IP / Port */}
           {isAuthenticated ? (
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="font-mono text-slate-300 truncate text-[15px] font-medium" title={showHost ? `${server.host}${server.port ? `:${server.port}` : ''}` : 'Host tersembunyi'}>
+              <span className="font-mono text-slate-300 truncate text-[15px] font-medium" title={showHost ? `${server.host}${server.port ? `:${server.port}` : ''}` : 'Host hidden'}>
                 {showHost ? `${server.host}${server.port ? `:${server.port}` : ''}` : '••••.••••'}
               </span>
               <button
@@ -120,7 +121,7 @@ export default function ServerHeader({
                   setShowHost(!showHost);
                 }}
                 className="p-1 text-slate-400 hover:text-slate-200 transition-colors rounded cursor-pointer shrink-0"
-                title={showHost ? "Sembunyikan Host" : "Tampilkan Host"}
+                title={showHost ? t('dashboard.card.hideHost', null, "Sembunyikan Host") : t('dashboard.card.showHost', null, "Tampilkan Host")}
               >
                 {showHost ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
@@ -144,7 +145,7 @@ export default function ServerHeader({
               onClick={(e) => { e.stopPropagation(); onMoveUp(); }}
               disabled={isFirst}
               className={`w-6 h-6 flex items-center justify-center rounded transition-all cursor-pointer ${isFirst ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}
-              title="Geser Posisi Ke Atas/Kiri"
+              title={t('dashboard.card.moveUp', null, "Geser Posisi Ke Atas")}
             >
               <ChevronUp size={14} />
             </button>
@@ -152,7 +153,7 @@ export default function ServerHeader({
               onClick={(e) => { e.stopPropagation(); onMoveDown(); }}
               disabled={isLast}
               className={`w-6 h-6 flex items-center justify-center rounded transition-all cursor-pointer ${isLast ? 'text-slate-700 cursor-not-allowed' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}
-              title="Geser Posisi Ke Bawah/Kanan"
+              title={t('dashboard.card.moveDown', null, "Geser Posisi Ke Bawah")}
             >
               <ChevronDown size={14} />
             </button>
@@ -164,14 +165,14 @@ export default function ServerHeader({
                 <button
                   onClick={(e) => { e.stopPropagation(); onEdit(server); }}
                   className="w-6 h-6 flex items-center justify-center rounded transition-all cursor-pointer text-slate-400 hover:text-cyan-400 hover:bg-cyan-500/20"
-                  title="Edit Konfigurasi Server"
+                  title={t('dashboard.card.editConfig', null, "Edit Konfigurasi Server")}
                 >
                   <Edit3 size={13} />
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); onDelete(server.id, server.name, server.type); }}
                   className="w-6 h-6 flex items-center justify-center rounded transition-all cursor-pointer text-slate-400 hover:text-red-400 hover:bg-red-500/20"
-                  title="Hapus Layanan"
+                  title={t('dashboard.card.deleteServer', null, "Hapus Layanan")}
                 >
                   <Trash2 size={13} />
                 </button>

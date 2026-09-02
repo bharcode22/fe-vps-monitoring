@@ -1,0 +1,24 @@
+{
+  "title": "Multimedia Sync Management",
+  "subtitle": "Master API Content Consolidation & RabbitMQ Dispatch to POD Fleet",
+  "searchPlaceholder": "Search song title, soundscape ID, or name...",
+  "uploadNew": "Upload New Multimedia",
+  "triggerResave": "Trigger RabbitMQ Sync",
+  "inspectFleet": "Inspect POD Fleet Status",
+  "batchActions": "Batch Actions",
+  "wakeAll": "Start All Containers",
+  "restartAll": "Restart All Containers",
+  "stopAll": "Stop All Containers",
+  "deleteMedia": "Delete Multimedia",
+  "deleteConfirm": "Are you sure you want to delete soundscape content #{code} from Master API?",
+  "fileStatus": {
+    "synced": "Synced",
+    "missing": "Missing",
+    "checking": "Checking..."
+  },
+  "containerStatus": {
+    "running": "Running",
+    "exited": "Exited",
+    "not_found": "Not Found"
+  }
+}

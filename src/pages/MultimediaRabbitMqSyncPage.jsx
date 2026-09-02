@@ -55,10 +55,12 @@ import {
 import DockerLogModal from '../components/server/DockerLogModal';
 import MultimediaUploadModal from '../components/content/MultimediaUploadModal';
 import { useDirectS3Upload } from '../context/DirectS3UploadContext';
+import { useLanguage } from '../context/LanguageContext';
 import FileIntegrityModal from '../components/content/FileIntegrityModal';
 import MediaPreviewModal from '../components/content/MediaPreviewModal';
 
 export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
+  const { t } = useLanguage();
   // 1. Master Multimedia State
   const [multimediaItems, setMultimediaItems] = useState([]);
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10, totalPages: 1 });
@@ -566,7 +568,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
             className="p-2 bg-slate-900 hover:bg-slate-800 text-purple-400 rounded-xl border border-purple-500/30 transition-all cursor-pointer shadow-lg shadow-purple-500/5 flex items-center gap-1.5 text-xs font-bold shrink-0"
           >
             <ArrowLeft size={15} />
-            <span>Kembali</span>
+            <span>{t('common.back', null, 'Kembali')}</span>
           </button>
           <div>
             <div className="flex items-center gap-2.5">
@@ -575,13 +577,13 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
               </div>
               <div>
                 <h1 className="text-lg font-black text-white tracking-tight flex items-center gap-2">
-                  Content Management
+                  {t('multimedia.title', null, 'Content Management')}
                   <span className="px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 uppercase">
                     Master API ➔ RabbitMQ ➔ POD V3
                   </span>
                 </h1>
                 <p className="text-[11px] text-slate-400 mt-0.5">
-                  Pilih konten multimedia di panel kiri, pantau container <code className="text-purple-300 font-mono">mobile-synch</code> di panel kanan, lalu kirim trigger sinkronisasi.
+                  {t('multimedia.subtitle', null, 'Konsolidasi Konten Master API & Sinkronisasi RabbitMQ ke Armada POD')}
                 </p>
               </div>
             </div>

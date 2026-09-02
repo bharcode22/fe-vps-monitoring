@@ -10,6 +10,7 @@ import {
   Play
 } from 'lucide-react';
 import { POD_APPS } from './constants';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function BackendInstallationTab({
   podV3Servers,
@@ -35,6 +36,8 @@ export default function BackendInstallationTab({
   onStartDeploy,
   totalBatchCombinations
 }) {
+  const { t } = useLanguage();
+
   return (
     <>
       {/* Step 1: Select Target POD v3 Servers */}
@@ -43,7 +46,7 @@ export default function BackendInstallationTab({
           <div className="flex items-center gap-2.5">
             <Server size={18} className="text-cyan-400" />
             <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">
-              1. Pilih Server POD Target (Khusus POD v3)
+              {t('installation.step1.title', null, '1. PILIH SERVER POD TARGET (KHUSUS POD V3)')}
             </h3>
           </div>
 
@@ -53,13 +56,13 @@ export default function BackendInstallationTab({
                 onClick={() => setSelectedServerIds(podV3Servers.map(s => String(s.id)))}
                 className="text-[11px] font-bold text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 px-2.5 py-1 rounded-lg border border-cyan-500/30 transition-colors cursor-pointer"
               >
-                Pilih Semua ({podV3Servers.length})
+                {t('installation.step1.selectAll', { count: podV3Servers.length }, `Pilih Semua (${podV3Servers.length})`)}
               </button>
               <button
                 onClick={() => setSelectedServerIds([])}
                 className="text-[11px] font-bold text-slate-400 hover:text-slate-200 bg-slate-800 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
               >
-                Hapus Semua
+                {t('installation.step1.clearAll', null, 'Hapus Semua')}
               </button>
             </div>
           )}
@@ -68,7 +71,7 @@ export default function BackendInstallationTab({
         {podV3Servers.length === 0 ? (
           <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-400 text-xs flex items-center gap-2">
             <AlertTriangle size={16} />
-            <span>Belum ada server berkategori <strong>POD v3</strong> (`pod_version === 'v3'`) di database.</span>
+            <span>Tidak ada server tipe POD v3 yang terdaftar. Tambahkan server POD di menu Dashboard terlebih dahulu.</span>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -77,26 +80,24 @@ export default function BackendInstallationTab({
               return (
                 <div
                   key={srv.id}
-                  onClick={() => toggleServerSelect(String(srv.id))}
-                  className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-3 ${isSelected
-                      ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border-cyan-500/50 text-white shadow-lg shadow-cyan-500/10'
+                  onClick={() => toggleServerSelect(srv.id)}
+                  className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between ${isSelected
+                      ? 'bg-cyan-500/20 border-cyan-500/50 text-white shadow-lg shadow-cyan-500/10'
                       : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 text-slate-400'
                     }`}
                 >
-                  <div className={`p-1 rounded-md ${isSelected ? 'text-cyan-400' : 'text-slate-600'}`}>
-                    {isSelected ? <CheckSquare size={20} /> : <Square size={20} />}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-extrabold text-sm text-white">{srv.name}</span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
-                        POD V3
-                      </span>
+                  <div className="flex items-center gap-3">
+                    <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-600'}`}>
+                      {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
                     </div>
-                    <div className="text-xs text-slate-400 font-mono mt-0.5">
-                      {srv.host}:{srv.port || 22}
+                    <div>
+                      <div className="font-extrabold text-sm text-white">{srv.name}</div>
+                      <div className="text-xs text-slate-400 font-mono">{srv.host || '127.0.0.1'}:{srv.port || 22}</div>
                     </div>
                   </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+                    POD V3
+                  </span>
                 </div>
               );
             })}
@@ -104,20 +105,21 @@ export default function BackendInstallationTab({
         )}
       </div>
 
-      {/* Step 2: Select Backend Apps & Environment */}
+      {/* Step 2: Select Backend Applications */}
       <div className="glass-card p-5 sm:p-6 rounded-2xl border border-cyan-500/20 bg-slate-900/60 backdrop-blur-md shadow-xl">
         <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
           <div className="flex items-center gap-2.5">
             <Box size={18} className="text-cyan-400" />
             <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">
-              2. Pilih Aplikasi Backend POD & Environment
+              {t('installation.step2.title', null, '2. PILIH APLIKASI BACKEND POD & ENVIRONMENT')}
             </h3>
           </div>
 
-          <div className="flex items-center bg-black/50 p-1 rounded-xl border border-slate-800">
+          {/* Environment Switcher Dev vs Release */}
+          <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
             <button
               onClick={() => setEnv('dev')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${env === 'dev'
+              className={`px-3 py-1 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${env === 'dev'
                   ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-400 border border-cyan-500/40 shadow-sm'
                   : 'text-slate-400 hover:text-white'
                 }`}
@@ -126,7 +128,7 @@ export default function BackendInstallationTab({
             </button>
             <button
               onClick={() => setEnv('release')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${env === 'release'
+              className={`px-3 py-1 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${env === 'release'
                   ? 'bg-gradient-to-r from-purple-500/30 to-pink-500/30 text-purple-400 border border-purple-500/40 shadow-sm'
                   : 'text-slate-400 hover:text-white'
                 }`}
@@ -143,13 +145,13 @@ export default function BackendInstallationTab({
               onClick={() => setSelectedAppIds(POD_APPS.map(a => a.id))}
               className="text-[11px] font-bold text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 px-2.5 py-1 rounded-lg border border-cyan-500/30 transition-colors cursor-pointer"
             >
-              Pilih Semua Apps
+              {t('installation.step2.selectAll', null, 'Pilih Semua Apps')}
             </button>
             <button
               onClick={() => setSelectedAppIds([])}
               className="text-[11px] font-bold text-slate-400 hover:text-slate-200 bg-slate-800 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
             >
-              Hapus Semua
+              {t('installation.step2.clearAll', null, 'Hapus Semua')}
             </button>
           </div>
         </div>
@@ -218,77 +220,81 @@ export default function BackendInstallationTab({
               const currentVersion = selectedAppVersions[appId] || '';
               const isLoadingVersions = Boolean(isAppVersionsLoadingMap[appId]);
 
-              const currentEnvFile = appEnvMapping[appId] || '';
-              const isPrismaActive = Boolean(appPrismaMapping[appId]);
-
               return (
-                <div key={appId} className="p-4 bg-slate-950/80 border border-slate-800 rounded-2xl flex flex-col gap-3.5">
-                  <div className="flex items-center justify-between pb-2.5 border-b border-slate-800">
-                    <div className="flex items-center gap-2.5">
-                      <div className="p-1.5 rounded-lg bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
-                        <Box size={16} />
-                      </div>
-                      <div>
-                        <div className="text-xs font-extrabold text-white">{label}</div>
-                        <div className="text-[10px] text-slate-400 font-mono">
-                          deploybox/{minioFolder}/{env}/
-                        </div>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => setAppPrismaMapping(prev => ({ ...prev, [appId]: !prev[appId] }))}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${isPrismaActive
-                          ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-400 border border-cyan-500/40 shadow-sm'
-                          : 'bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700'
-                        }`}
-                    >
-                      {isPrismaActive ? <CheckSquare size={15} /> : <Square size={15} />}
-                      <span>Prisma Migrate</span>
-                    </button>
+                <div key={appId} className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-xs text-white flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-cyan-400" />
+                      {label}
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-500">
+                      Bucket: deploybox/{minioFolder}/{env}/
+                    </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {/* Select Version (.tar.gz from MinIO) */}
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-400 mb-1">
-                        Versi Artefak MinIO ({label}):
+                      <label className="block text-[11px] text-slate-400 mb-1 font-medium">
+                        Versi Artefak MinIO:
                       </label>
                       <select
                         value={currentVersion}
-                        onChange={(e) => setSelectedAppVersions(prev => ({ ...prev, [appId]: e.target.value }))}
-                        disabled={isLoadingVersions || appVersions.length === 0}
-                        className="w-full bg-slate-900 border border-cyan-500/30 rounded-lg px-2.5 py-2 text-xs text-white font-mono focus:outline-none focus:border-cyan-400 cursor-pointer"
+                        onChange={(e) => setSelectedAppVersions({ ...selectedAppVersions, [appId]: e.target.value })}
+                        disabled={isLoadingVersions}
+                        className="w-full bg-slate-900 border border-slate-700 text-xs font-mono text-cyan-300 px-3 py-2 rounded-xl outline-none focus:border-cyan-400 cursor-pointer disabled:opacity-50"
                       >
                         {isLoadingVersions ? (
-                          <option value="">Memuat versi MinIO...</option>
+                          <option value="">Memuat dari MinIO...</option>
                         ) : appVersions.length === 0 ? (
-                          <option value="">Tidak ada versi ditemukan</option>
+                          <option value="">Tidak ada artefak ditemukan</option>
                         ) : (
-                          appVersions.map((ver, idx) => (
-                            <option key={idx} value={ver}>
-                              {ver} {idx === 0 ? '(Terbaru)' : ''}
+                          appVersions.map(v => (
+                            <option key={v.version || v.name} value={v.version || v.name}>
+                              {v.version || v.name}
                             </option>
                           ))
                         )}
                       </select>
                     </div>
 
+                    {/* Select Environment File (.env) */}
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-400 mb-1">
-                        File .env (backend/envoirment):
+                      <label className="block text-[11px] text-slate-400 mb-1 font-medium">
+                        File Konfigurasi (.env):
                       </label>
                       <select
-                        value={currentEnvFile}
-                        onChange={(e) => setAppEnvMapping(prev => ({ ...prev, [appId]: e.target.value }))}
-                        className="w-full bg-slate-900 border border-cyan-500/30 rounded-lg px-2.5 py-2 text-xs text-cyan-300 font-mono focus:outline-none focus:border-cyan-400 cursor-pointer"
+                        value={appEnvMapping[appId] || ''}
+                        onChange={(e) => setAppEnvMapping({ ...appEnvMapping, [appId]: e.target.value })}
+                        className="w-full bg-slate-900 border border-slate-700 text-xs font-mono text-amber-300 px-3 py-2 rounded-xl outline-none focus:border-cyan-400 cursor-pointer"
                       >
-                        <option value="">-- Tanpa File .env --</option>
-                        {envFiles.map(f => (
-                          <option key={f.name} value={f.name}>
-                            {f.name}
-                          </option>
-                        ))}
+                        <option value="">Gunakan file .env default server</option>
+                        {envFiles.map((f, idx) => {
+                          const fname = typeof f === 'string' ? f : (f.name || f.filename || `env-${idx}`);
+                          return (
+                            <option key={fname} value={fname}>{fname}</option>
+                          );
+                        })}
                       </select>
+                    </div>
+
+                    {/* Prisma Migration Toggle */}
+                    <div>
+                      <label className="block text-[11px] text-slate-400 mb-1 font-medium">
+                        Database Migration:
+                      </label>
+                      <button
+                        onClick={() => setAppPrismaMapping({ ...appPrismaMapping, [appId]: !appPrismaMapping[appId] })}
+                        className={`w-full py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-between ${appPrismaMapping[appId]
+                            ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+                            : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-slate-200'
+                          }`}
+                      >
+                        <span>Prisma Migrate</span>
+                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold ${appPrismaMapping[appId] ? 'bg-emerald-500/30 text-emerald-300' : 'bg-slate-800 text-slate-500'}`}>
+                          {appPrismaMapping[appId] ? 'YES' : 'NO'}
+                        </span>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -296,29 +302,6 @@ export default function BackendInstallationTab({
             })}
           </div>
         )}
-
-        <div className="mt-5">
-          <button
-            onClick={onStartDeploy}
-            disabled={isDeploying || selectedServerIds.length === 0 || selectedAppIds.length === 0}
-            className={`w-full py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer ${isDeploying || selectedServerIds.length === 0 || selectedAppIds.length === 0
-                ? 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-60'
-                : 'bg-gradient-to-r from-cyan-400 via-sky-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 shadow-cyan-500/25'
-              }`}
-          >
-            {isDeploying ? (
-              <>
-                <RefreshCw size={18} className="animate-spin" />
-                <span>Mengeksekusi Jenkins CI/CD Backend Pipeline Stream...</span>
-              </>
-            ) : (
-              <>
-                <Play size={18} className="fill-slate-950" />
-                <span>Jalankan Jenkins Pipeline Backend ({totalBatchCombinations} Target)</span>
-              </>
-            )}
-          </button>
-        </div>
       </div>
     </>
   );

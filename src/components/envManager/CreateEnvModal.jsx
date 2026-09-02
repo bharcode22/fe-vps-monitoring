@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Plus, FileCode, Copy, AlertTriangle, RotateCw } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function CreateEnvModal({
   isOpen,
@@ -8,6 +9,7 @@ export default function CreateEnvModal({
   initialCloneFile = null,
   onCreate
 }) {
+  const { t } = useLanguage();
   const [filename, setFilename] = useState('');
   const [templateSource, setTemplateSource] = useState(initialCloneFile ? initialCloneFile.name : 'empty');
   const [initialContent, setInitialContent] = useState('');
@@ -79,10 +81,10 @@ export default function CreateEnvModal({
             </div>
             <div>
               <h3 className="text-base font-extrabold text-white">
-                {initialCloneFile ? 'Kloning File Konfigurasi .env' : 'Buat File .env Baru'}
+                {initialCloneFile ? t('envManager.modal.cloneTitle', null, 'Kloning File Konfigurasi .env') : t('envManager.modal.createTitle', null, 'Buat File .env Baru')}
               </h3>
               <p className="text-[11px] text-slate-400">
-                File akan disimpan di folder <span className="font-mono text-cyan-300">backend/envoirment/</span>
+                {t('envManager.modal.savedLocation', null, 'File akan disimpan di folder')} <span className="font-mono text-cyan-300">backend/envoirment/</span>
               </p>
             </div>
           </div>
@@ -105,14 +107,14 @@ export default function CreateEnvModal({
           {/* File Name Input */}
           <div>
             <label className="block text-xs font-bold text-slate-300 mb-1">
-              Nama File <span className="text-rose-400">*</span>
+              {t('envManager.modal.filenameLabel', null, 'Nama File')} <span className="text-rose-400">*</span>
             </label>
             <div className="relative">
               <input
                 type="text"
                 value={filename}
                 onChange={(e) => setFilename(e.target.value)}
-                placeholder="misal: mobile-consume-dev.env"
+                placeholder={t('envManager.modal.filenamePlaceholder', null, 'misal: mobile-consume-dev.env')}
                 className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/60"
                 required
               />
@@ -125,14 +127,14 @@ export default function CreateEnvModal({
           {/* Template Selection */}
           <div>
             <label className="block text-xs font-bold text-slate-300 mb-1">
-              Salin dari Template (Opsional)
+              {t('envManager.modal.templateLabel', null, 'Salin dari Template (Opsional)')}
             </label>
             <select
               value={templateSource}
               onChange={(e) => handleTemplateChange(e.target.value)}
               className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/60 cursor-pointer"
             >
-              <option value="empty">-- File Kosong (Tanpa Variabel) --</option>
+              <option value="empty">{t('envManager.modal.emptyTemplate', null, '-- File Kosong (Tanpa Variabel) --')}</option>
               {existingFiles.map(f => (
                 <option key={f.name} value={f.name}>Salin dari {f.name} ({f.variableCount} variabel)</option>
               ))}
@@ -160,7 +162,7 @@ export default function CreateEnvModal({
               onClick={onClose}
               className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl text-xs font-bold transition-colors cursor-pointer"
             >
-              Batal
+              {t('envManager.modal.cancel', null, 'Batal')}
             </button>
             <button
               type="submit"
@@ -170,12 +172,12 @@ export default function CreateEnvModal({
               {isSubmitting ? (
                 <>
                   <RotateCw size={14} className="animate-spin" />
-                  <span>Membuat...</span>
+                  <span>{t('envManager.modal.creating', null, 'Membuat...')}</span>
                 </>
               ) : (
                 <>
                   <Plus size={14} />
-                  <span>Buat File .env</span>
+                  <span>{initialCloneFile ? t('envManager.modal.cloneBtn', null, 'Kloning File Sekarang') : t('envManager.modal.createBtn', null, 'Buat File .env')}</span>
                 </>
               )}
             </button>

@@ -1,0 +1,88 @@
+{
+  "header": {
+    "title": "Environment Manager & Comparison",
+    "subtitle": "Kelola file .env, edit konfigurasi variabel, dan bandingkan nilai antar environment secara visual",
+    "editorTab": "File Editor",
+    "compareTab": "Diff Comparator",
+    "refreshTooltip": "Segarkan data file .env",
+    "createBtn": "Buat File .env",
+    "saveChanges": "Simpan Perubahan",
+    "saving": "Menyimpan...",
+    "saved": "Tersimpan"
+  },
+  "sidebar": {
+    "searchPlaceholder": "Cari file / nama variabel...",
+    "fileCount": "File Environment ({count})",
+    "noFiles": "Tidak ada file .env ditemukan.",
+    "cloneTooltip": "Kloning file .env ini",
+    "deleteTooltip": "Hapus file .env ini",
+    "varsAndLines": "{vars} Variabel • {lines} Baris"
+  },
+  "editor": {
+    "selectPromptTitle": "Pilih File Konfigurasi .env",
+    "selectPromptDesc": "Pilih salah satu file dari panel sebelah kiri untuk melihat, mengedit variabel, atau beralih ke tab Diff Comparator.",
+    "unsavedChanges": "Ada perubahan belum disimpan",
+    "gridMode": "Grid Form",
+    "rawMode": "Raw Text",
+    "maskSecret": "Sensor nilai rahasia",
+    "unmaskSecret": "Tampilkan nilai rahasia",
+    "resetChanges": "Batalkan perubahan",
+    "filterPlaceholder": "Filter variabel...",
+    "addVariable": "Tambah Variabel",
+    "keyHeader": "NAMA VARIABEL (KEY)",
+    "valHeader": "NILAI KONFIGURASI (VALUE)",
+    "actionsHeader": "AKSI",
+    "noMatch": "Tidak ada variabel yang cocok dengan filter.",
+    "comment": "Komentar / Catatan",
+    "empty": "Baris Kosong",
+    "deleteRow": "Hapus baris ini",
+    "copyVal": "Salin nilai"
+  },
+  "comparator": {
+    "sourceA": "Source File A (Kiri)",
+    "sourceB": "Source File B (Kanan)",
+    "swapTooltip": "Tukar Posisi File A ⇄ B",
+    "comparing": "Membandingkan...",
+    "compareBtn": "Bandingkan Ulang",
+    "stats": {
+      "total": "Total Variabel",
+      "identical": "Nilai Sama (Identik)",
+      "diff": "Nilai Berbeda",
+      "onlyA": "Hanya di File A",
+      "onlyB": "Hanya di File B"
+    },
+    "filters": {
+      "all": "Semua ({count})",
+      "diffOnly": "Hanya Perbedaan ({count})",
+      "mismatch": "Nilai Beda ({count})",
+      "onlyA": "Hanya File A ({count})",
+      "onlyB": "Hanya File B ({count})"
+    },
+    "searchPlaceholder": "Filter key / value perbandingan...",
+    "table": {
+      "varName": "Nama Variabel",
+      "fileA": "File A: {name}",
+      "fileB": "File B: {name}",
+      "status": "Status Diff"
+    },
+    "statusBadges": {
+      "identical": "IDENTIK",
+      "mismatch": "BEDA NILAI",
+      "onlyA": "HANYA DI A",
+      "onlyB": "HANYA DI B"
+    }
+  },
+  "modal": {
+    "createTitle": "Buat File .env Baru",
+    "cloneTitle": "Kloning File Konfigurasi .env",
+    "savedLocation": "File akan disimpan di folder",
+    "filenameLabel": "Nama File .env:",
+    "filenamePlaceholder": "misal: custom-prod.env",
+    "templateLabel": "Template Isi Awal:",
+    "emptyTemplate": "(Kosong - Mulai dari Nol)",
+    "cancel": "Batal",
+    "creating": "Membuat...",
+    "createBtn": "Buat File Sekarang",
+    "cloneBtn": "Kloning File Sekarang"
+  }
+}

@@ -10,6 +10,7 @@ import {
   Layers,
   Server
 } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function DockerCleanupModal({
   isOpen,
@@ -21,6 +22,8 @@ export default function DockerCleanupModal({
   onCleanTypeChange,
   cleanupResult
 }) {
+  const { t } = useLanguage();
+
   if (!isOpen) return null;
 
   const isBatch = targetServers.length > 1;
@@ -29,33 +32,33 @@ export default function DockerCleanupModal({
   const cleanOptions = [
     {
       id: 'safe',
-      title: 'Safe Prune (Sangat Direkomendasikan)',
-      desc: 'Membersihkan BuildKit cache, dangling images (<none>), dan container mati. Tidak menyentuh image/container aktif sama sekali.',
-      badge: '100% Aman',
+      title: t('storage.cleanupModal.safeTitle', null, 'Safe Prune (Sangat Direkomendasikan)'),
+      desc: t('storage.cleanupModal.safeDesc', null, 'Membersihkan BuildKit cache, dangling images (<none>), dan container mati. Tidak menyentuh image/container aktif sama sekali.'),
+      badge: t('storage.cleanupModal.safeBadge', null, '100% Aman'),
       badgeColor: 'emerald',
       icon: ShieldCheck
     },
     {
       id: 'deep',
-      title: 'Deep Image Clean (Pembersihan Menyeluruh)',
-      desc: 'Menghapus semua image versi lama yang tidak sedang digunakan oleh container aktif di server.',
-      badge: 'Bebaskan Maksimal',
+      title: t('storage.cleanupModal.deepTitle', null, 'Deep Image Clean (Pembersihan Menyeluruh)'),
+      desc: t('storage.cleanupModal.deepDesc', null, 'Menghapus semua image versi lama yang tidak sedang digunakan oleh container aktif di server.'),
+      badge: t('storage.cleanupModal.deepBadge', null, 'Bebaskan Maksimal'),
       badgeColor: 'purple',
       icon: Layers
     },
     {
       id: 'logs',
-      title: 'Truncate Container Logs',
-      desc: 'Mengosongkan file log container yang membengkak di /var/lib/docker/containers/ tanpa restart container.',
-      badge: 'Log Rotation',
+      title: t('storage.cleanupModal.logsTitle', null, 'Truncate Container Logs'),
+      desc: t('storage.cleanupModal.logsDesc', null, 'Mengosongkan file log container yang membengkak di /var/lib/docker/containers/ tanpa restart container.'),
+      badge: t('storage.cleanupModal.logsBadge', null, 'Log Rotation'),
       badgeColor: 'sky',
       icon: FileText
     },
     {
       id: 'all',
-      title: 'Bersihkan Semua (Safe + Deep + Logs)',
-      desc: 'Menjalankan pembersihan menyeluruh pada BuildKit cache, seluruh image lama, dan mengosongkan log container.',
-      badge: 'Semua Sampah',
+      title: t('storage.cleanupModal.allTitle', null, 'Bersihkan Semua (Safe + Deep + Logs)'),
+      desc: t('storage.cleanupModal.allDesc', null, 'Menjalankan pembersihan menyeluruh pada BuildKit cache, seluruh image lama, dan mengosongkan log container.'),
+      badge: t('storage.cleanupModal.allBadge', null, 'Semua Sampah'),
       badgeColor: 'rose',
       icon: Zap
     }
@@ -73,11 +76,11 @@ export default function DockerCleanupModal({
             <div className="min-w-0">
               <h3 className="text-base font-extrabold text-white truncate">
                 {isBatch
-                  ? `Bersihkan Sampah Docker di ${targetServers.length} Server POD`
-                  : `Bersihkan Sampah Docker: ${singleServer?.serverName || 'POD'}`}
+                  ? t('storage.cleanupModal.batchTitle', { count: targetServers.length }, `Bersihkan Sampah Docker di ${targetServers.length} Server POD`)
+                  : t('storage.cleanupModal.singleTitle', { server: singleServer?.serverName || 'POD' }, `Bersihkan Sampah Docker: ${singleServer?.serverName || 'POD'}`)}
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                {isBatch ? 'Eksekusi pembersihan massal ke armada server POD v3' : `Target: ${singleServer?.serverName}`}
+                {isBatch ? t('storage.cleanupModal.batchSubtitle', null, 'Eksekusi pembersihan massal ke armada server POD v3') : t('storage.cleanupModal.singleSubtitle', { server: singleServer?.serverName }, `Target: ${singleServer?.serverName}`)}
               </p>
             </div>
           </div>
@@ -98,9 +101,11 @@ export default function DockerCleanupModal({
               <div className="p-5 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 flex items-start gap-3">
                 <CheckCircle2 size={24} className="text-emerald-400 shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="font-extrabold text-sm text-white mb-1">Pembersihan Selesai Berhasil!</h4>
+                  <h4 className="font-extrabold text-sm text-white mb-1">
+                    {t('storage.cleanupModal.successTitle', null, 'Pembersihan Selesai Berhasil!')}
+                  </h4>
                   <p className="text-xs text-emerald-300">
-                    Total ruang disk yang berhasil dibebaskan:{' '}
+                    {t('storage.cleanupModal.totalFreed', null, 'Total ruang disk yang berhasil dibebaskan:')}{' '}
                     <strong className="text-white text-sm font-mono">{cleanupResult.totalFreedFormatted || cleanupResult.freedFormatted || '0 B'}</strong>
                   </p>
                 </div>
@@ -109,7 +114,9 @@ export default function DockerCleanupModal({
               {/* Breakdown details */}
               {cleanupResult.data && Array.isArray(cleanupResult.data) && (
                 <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Hasil per Server:</span>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    {t('storage.cleanupModal.perServer', null, 'Hasil per Server:')}
+                  </span>
                   {cleanupResult.data.map(item => (
                     <div
                       key={item.serverId}
@@ -127,7 +134,7 @@ export default function DockerCleanupModal({
               {/* Option Selector */}
               <div className="space-y-2.5">
                 <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                  Pilih Mode Pembersihan:
+                  {t('storage.cleanupModal.selectMode', null, 'Pilih Mode Pembersihan:')}
                 </span>
 
                 {cleanOptions.map(opt => {
@@ -177,9 +184,9 @@ export default function DockerCleanupModal({
                 <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-400 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Server size={14} className="text-cyan-400" />
-                    <span>Target Eksekusi: <strong className="text-white">{targetServers.length} Unit POD v3</strong></span>
+                    <span>{t('storage.cleanupModal.executeTarget', null, 'Target Eksekusi:')} <strong className="text-white">{t('storage.cleanupModal.targetUnits', { count: targetServers.length }, `${targetServers.length} Unit POD v3`)}</strong></span>
                   </div>
-                  <span className="text-[10.5px] font-mono text-cyan-300 font-bold">Paralel SSH</span>
+                  <span className="text-[10.5px] font-mono text-cyan-300 font-bold">{t('storage.cleanupModal.parallelSsh', null, 'Paralel SSH')}</span>
                 </div>
               )}
             </>
@@ -193,7 +200,7 @@ export default function DockerCleanupModal({
             disabled={isExecuting}
             className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold cursor-pointer disabled:opacity-50"
           >
-            {cleanupResult ? 'Tutup' : 'Batal'}
+            {cleanupResult ? t('storage.cleanupModal.close', null, 'Tutup') : t('storage.cleanupModal.cancel', null, 'Batal')}
           </button>
 
           {!cleanupResult && (
@@ -205,12 +212,12 @@ export default function DockerCleanupModal({
               {isExecuting ? (
                 <>
                   <RefreshCw size={14} className="animate-spin" />
-                  <span>Sedang Membersihkan ({isBatch ? 'Semua POD' : 'Server'})...</span>
+                  <span>{t('storage.cleanupModal.cleaning', { target: isBatch ? t('storage.cleanupModal.allPodsTarget', null, 'Semua POD') : t('storage.cleanupModal.serverTarget', null, 'Server') }, `Sedang Membersihkan (${isBatch ? 'Semua POD' : 'Server'})...`)}</span>
                 </>
               ) : (
                 <>
                   <Trash2 size={14} />
-                  <span>Jalankan Pembersihan Sekarang</span>
+                  <span>{t('storage.cleanupModal.cleanNow', null, 'Jalankan Pembersihan Sekarang')}</span>
                 </>
               )}
             </button>

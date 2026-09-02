@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Search, Trash2, RefreshCw, AlertTriangle, ShieldCheck, Server, HardDrive, Filter, X } from 'lucide-react';
 import { scanRogueFilesApi, cleanupRogueFilesApi } from '../../api/vpsApi';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function RogueMediaScannerView() {
+  const { t } = useLanguage();
   const [isScanning, setIsScanning] = useState(false);
   const [scanResults, setScanResults] = useState(null);
   const [selectedServerId, setSelectedServerId] = useState('all');
@@ -49,9 +51,6 @@ export default function RogueMediaScannerView() {
             }
             return s;
           }));
-
-          // We rely on optimistic update above, no need to rescan completely to save time.
-          // handleScan();
         } catch (err) {
           alert(`Gagal membersihkan file liar: ${err.message}`);
         } finally {
@@ -83,8 +82,6 @@ export default function RogueMediaScannerView() {
             }
             return s;
           }));
-
-          // handleScan();
         } catch (err) {
           alert(`Gagal menghapus file: ${err.message}`);
         } finally {
@@ -114,8 +111,8 @@ export default function RogueMediaScannerView() {
               <Search size={20} />
             </div>
             <div>
-              <h2 className="text-xl font-black text-white">Rogue Media Scanner</h2>
-              <p className="text-sm text-slate-400">Pindai file media fisik di POD yang tidak dikenali AWS S3 maupun Database Master.</p>
+              <h2 className="text-xl font-black text-white">{t('storage.rogueScanner.title', null, 'Rogue Media Scanner')}</h2>
+              <p className="text-sm text-slate-400">{t('storage.rogueScanner.subtitle', null, 'Pindai file media fisik di POD yang tidak dikenali AWS S3 maupun Database Master.')}</p>
             </div>
           </div>
 
@@ -126,7 +123,7 @@ export default function RogueMediaScannerView() {
               className="px-6 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-600 text-white font-bold flex items-center gap-2 transition-colors disabled:opacity-50 cursor-pointer"
             >
               <RefreshCw size={18} className={isScanning ? 'animate-spin' : ''} />
-              <span>{isScanning ? 'Scanning...' : 'Scan Rogue File'}</span>
+              <span>{isScanning ? t('storage.rogueScanner.scanning', null, 'Scanning...') : t('storage.rogueScanner.scanBtn', null, 'Scan Rogue File')}</span>
             </button>
 
             {scanResults && (
@@ -137,7 +134,7 @@ export default function RogueMediaScannerView() {
                   onChange={(e) => setSelectedServerId(e.target.value)}
                   className="bg-slate-950 border border-slate-800 text-sm text-white rounded-xl px-3 py-2 outline-none focus:border-cyan-500"
                 >
-                  <option value="all">Semua POD ({scanResults.length})</option>
+                  <option value="all">{t('storage.rogueScanner.allPods', { count: scanResults.length }, `Semua POD (${scanResults.length})`)}</option>
                   {scanResults.map(r => (
                     <option key={r.serverId} value={r.serverId}>{r.serverName}</option>
                   ))}
@@ -153,17 +150,17 @@ export default function RogueMediaScannerView() {
           <div className="glass-card p-5 rounded-2xl border border-rose-500/20 flex flex-col items-center justify-center text-center">
             <HardDrive size={24} className="text-rose-400 mb-2" />
             <span className="text-3xl font-black text-white font-mono">{totalRogueCount}</span>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">Total File Liar</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">{t('storage.rogueScanner.totalRogue', null, 'Total File Liar')}</span>
           </div>
           <div className="glass-card p-5 rounded-2xl border border-rose-500/20 flex flex-col items-center justify-center text-center">
             <AlertTriangle size={24} className="text-rose-500 mb-2" />
             <span className="text-3xl font-black text-rose-400 font-mono">{(totalRogueBytes / (1024 * 1024 * 1024)).toFixed(2)} GB</span>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">Total Kapasitas Terbuang</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">{t('storage.rogueScanner.wastedSpace', null, 'Total Kapasitas Terbuang')}</span>
           </div>
           <div className="glass-card p-5 rounded-2xl border border-emerald-500/20 flex flex-col items-center justify-center text-center">
             <ShieldCheck size={24} className="text-emerald-400 mb-2" />
             <span className="text-3xl font-black text-white font-mono">{scanResults.length}</span>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">POD Dipindai</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">{t('storage.rogueScanner.scannedPods', null, 'POD Dipindai')}</span>
           </div>
         </div>
       )}
@@ -180,9 +177,9 @@ export default function RogueMediaScannerView() {
                   <div>
                     <h3 className="font-bold text-white text-lg">{server.serverName}</h3>
                     <div className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
-                      <span>{server.totalFiles} Total File Fisik</span>
+                      <span>{t('storage.rogueScanner.totalPhysical', { count: server.totalFiles }, `${server.totalFiles} Total File Fisik`)}</span>
                       <span>&bull;</span>
-                      <span className="text-rose-400 font-bold">{server.rogueFilesCount} File Liar ({server.rogueTotalFormatted})</span>
+                      <span className="text-rose-400 font-bold">{t('storage.rogueScanner.rogueFiles', { count: server.rogueFilesCount, size: server.rogueTotalFormatted }, `${server.rogueFilesCount} File Liar (${server.rogueTotalFormatted})`)}</span>
                     </div>
                   </div>
                 </div>
@@ -194,7 +191,7 @@ export default function RogueMediaScannerView() {
                     className="px-4 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 hover:text-white border border-rose-500/40 text-sm font-bold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
                   >
                     {cleaningServers[server.serverId] ? <RefreshCw size={16} className="animate-spin" /> : <Trash2 size={16} />}
-                    <span>Bersihkan {server.rogueTotalFormatted}</span>
+                    <span>{t('storage.rogueScanner.cleanRogue', { size: server.rogueTotalFormatted }, `Bersihkan ${server.rogueTotalFormatted}`)}</span>
                   </button>
                 )}
               </div>

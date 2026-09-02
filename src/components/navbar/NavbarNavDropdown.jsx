@@ -1,6 +1,8 @@
 import React, { useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { isGroupActive, getActiveGroupItemLabel } from './navConfig';
+import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function NavbarNavDropdown({
   group,
@@ -10,10 +12,12 @@ export default function NavbarNavDropdown({
   onToggle,
   onClose
 }) {
+  const { isSuperAdmin } = useAuth();
+  const { t } = useLanguage();
   const dropdownRef = useRef(null);
   const GroupIcon = group.icon;
   const active = isGroupActive(group, currentView);
-  const activeLabel = getActiveGroupItemLabel(group, currentView);
+  const activeLabel = getActiveGroupItemLabel(group, currentView, t);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -41,6 +45,8 @@ export default function NavbarNavDropdown({
     purple: 'text-purple-400'
   }[group.color] || 'text-cyan-400';
 
+  const groupLabel = group.labelKey ? t(group.labelKey, null, group.label) : group.label;
+
   return (
     <div className="relative" ref={dropdownRef}>
       {/* Dropdown Button */}
@@ -52,7 +58,7 @@ export default function NavbarNavDropdown({
           }`}
       >
         <GroupIcon size={14} className={active ? iconColor : 'text-slate-500'} />
-        <span>{active ? activeLabel : group.label}</span>
+        <span>{active ? activeLabel : groupLabel}</span>
         <ChevronDown
           size={12}
           className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
@@ -64,7 +70,7 @@ export default function NavbarNavDropdown({
         <div className="absolute left-0 mt-2 w-64 bg-slate-900/95 border border-slate-700/60 rounded-2xl shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-xl">
           {/* Section Header */}
           <div className="px-2.5 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-            <span>{group.label}</span>
+            <span>{groupLabel}</span>
             {group.badge && (
               <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">
                 {group.badge}
@@ -75,10 +81,14 @@ export default function NavbarNavDropdown({
           {/* Group Items */}
           <div className="flex flex-col gap-0.5 mt-0.5">
             {group.items.map((item) => {
+              if (item.superAdminOnly && !isSuperAdmin) return null;
+
               const ItemIcon = item.icon;
               const isItemActive =
                 currentView === item.id ||
                 (item.aliases && item.aliases.includes(currentView));
+              const itemLabel = item.labelKey ? t(item.labelKey, null, item.label) : item.label;
+              const itemDesc = item.descKey ? t(item.descKey, null, item.desc) : item.desc;
 
               return (
                 <button
@@ -94,10 +104,10 @@ export default function NavbarNavDropdown({
                 >
                   <ItemIcon size={15} className={`${item.colorClass} shrink-0`} />
                   <div className="flex-1 overflow-hidden">
-                    <div className="truncate">{item.label}</div>
-                    {item.desc && (
+                    <div className="truncate">{itemLabel}</div>
+                    {itemDesc && (
                       <div className="text-[10px] text-slate-400 font-normal truncate">
-                        {item.desc}
+                        {itemDesc}
                       </div>
                     )}
                   </div>

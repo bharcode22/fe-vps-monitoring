@@ -7,6 +7,7 @@ import {
 import SyncProgressReportModal from '../components/masterPodSync/SyncProgressReportModal';
 import MasterDataEditor from '../components/masterPodSync/MasterDataEditor';
 import TncPodDiffSyncView from '../components/masterPodSync/TncPodDiffSyncView';
+import { useLanguage } from '../context/LanguageContext';
 
 const WORKSPACE_PARTS = {
   1: {
@@ -36,6 +37,7 @@ const WORKSPACE_PARTS = {
 };
 
 export default function TncManagerPage() {
+  const { t } = useLanguage();
   const [masterDatabases, setMasterDatabases] = useState([]);
   const [selectedMasterId, setSelectedMasterId] = useState('');
   const [error, setError] = useState('');

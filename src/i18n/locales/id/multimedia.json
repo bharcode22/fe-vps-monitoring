@@ -1,0 +1,24 @@
+{
+  "title": "Multimedia Sync Management",
+  "subtitle": "Konsolidasi Konten Master API & Sinkronisasi RabbitMQ ke Armada POD",
+  "searchPlaceholder": "Cari judul lagu, ID soundscape, atau nama...",
+  "uploadNew": "Unggah Multimedia Baru",
+  "triggerResave": "Trigger Sinkronisasi RabbitMQ",
+  "inspectFleet": "Inspeksi Status Armada POD",
+  "batchActions": "Aksi Batch",
+  "wakeAll": "Nyalakan Semua Container",
+  "restartAll": "Restart Semua Container",
+  "stopAll": "Hentikan Semua Container",
+  "deleteMedia": "Hapus Multimedia",
+  "deleteConfirm": "Yakin ingin menghapus konten soundscape #{code} dari Master API?",
+  "fileStatus": {
+    "synced": "Tersinkron",
+    "missing": "Belum Ada",
+    "checking": "Memeriksa..."
+  },
+  "containerStatus": {
+    "running": "Berjalan (Running)",
+    "exited": "Berhenti (Exited)",
+    "not_found": "Tidak Ditemukan"
+  }
+}

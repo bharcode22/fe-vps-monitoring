@@ -1,0 +1,45 @@
+{
+  "title": "Jenkins CI/CD Pipeline Dashboard",
+  "subtitle": "Visualisasi Karboe Pipeline Stage Matrix, download paralel & streaming log WebSockets real-time",
+  "refreshMinio": "Refresh Versi MinIO",
+  "elapsed": "Elapsed",
+  "tabs": {
+    "backend": "Backend",
+    "frontend": "Frontend Screens",
+    "bundles": "Versi Bundle",
+    "matrix": "Matriks Versi",
+    "history": "Riwayat Rilis",
+    "artifacts": "MinIO Storage",
+    "deployCount": "7 Apps Deploy",
+    "bundleBadge": "Bundle"
+  },
+  "step1": {
+    "title": "1. PILIH SERVER POD TARGET (KHUSUS POD V3)",
+    "selectAll": "Pilih Semua ({count})",
+    "clearAll": "Hapus Semua"
+  },
+  "step2": {
+    "title": "2. PILIH APLIKASI BACKEND POD & ENVIRONMENT",
+    "selectAll": "Pilih Semua Apps",
+    "clearAll": "Hapus Semua"
+  },
+  "step3": {
+    "title": "2. PILIH APLIKASI FRONTEND SCREEN & ENVIRONMENT",
+    "selectAll": "Pilih Semua Frontend",
+    "clearAll": "Hapus Semua"
+  },
+  "summary": {
+    "title": "RINGKASAN PEMETAAN CONFIG BATCH",
+    "backendTitle": "RINGKASAN PEMETAAN CONFIG BATCH (BACKEND)",
+    "frontendTitle": "RINGKASAN PEMETAAN CONFIG BATCH (FRONTEND)",
+    "targetServer": "Server Target (POD v3):",
+    "selectedApps": "Aplikasi Terpilih:",
+    "environment": "Environment:",
+    "configDetail": "DETAIL CONFIG PER APP:",
+    "consoleLog": "Jenkins Console Log",
+    "allLogs": "Semua Log",
+    "consolePlaceholder": "Konsol log Jenkins WebSockets akan tampil di sini saat pipeline dijalankan.",
+    "executeBtn": "JALANKAN PIPELINE INSTALASI BATCH",
+    "abortBtn": "BATALKAN PIPELINE"
+  }
+}

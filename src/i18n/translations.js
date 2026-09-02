@@ -1,5 +1,53 @@
+// Modular Locales (Indonesian)
+import idCommon from './locales/id/common.json';
+import idNavbar from './locales/id/navbar.json';
+import idDashboard from './locales/id/dashboard.json';
+import idServerModal from './locales/id/serverModal.json';
+import idPodActivity from './locales/id/podActivity.json';
+import idMultimedia from './locales/id/multimedia.json';
+import idStorage from './locales/id/storage.json';
+import idMasterSync from './locales/id/masterSync.json';
+import idPodLogs from './locales/id/podLogs.json';
+import idUserActivity from './locales/id/userActivity.json';
+import idDiagnostics from './locales/id/diagnostics.json';
+import idDatabaseSync from './locales/id/databaseSync.json';
+import idInstallation from './locales/id/installation.json';
+import idEnvManager from './locales/id/envManager.json';
+
+// Modular Locales (English)
+import enCommon from './locales/en/common.json';
+import enNavbar from './locales/en/navbar.json';
+import enDashboard from './locales/en/dashboard.json';
+import enServerModal from './locales/en/serverModal.json';
+import enPodActivity from './locales/en/podActivity.json';
+import enMultimedia from './locales/en/multimedia.json';
+import enStorage from './locales/en/storage.json';
+import enMasterSync from './locales/en/masterSync.json';
+import enPodLogs from './locales/en/podLogs.json';
+import enUserActivity from './locales/en/userActivity.json';
+import enDiagnostics from './locales/en/diagnostics.json';
+import enDatabaseSync from './locales/en/databaseSync.json';
+import enInstallation from './locales/en/installation.json';
+import enEnvManager from './locales/en/envManager.json';
+
 export const translations = {
   id: {
+    common: idCommon,
+    navbar: idNavbar,
+    dashboard: idDashboard,
+    serverModal: idServerModal,
+    podActivity: idPodActivity,
+    multimedia: idMultimedia,
+    storage: idStorage,
+    masterSync: idMasterSync,
+    podLogs: idPodLogs,
+    userActivity: idUserActivity,
+    diagnostics: idDiagnostics,
+    databaseSync: idDatabaseSync,
+    installation: idInstallation,
+    envManager: idEnvManager,
+
+    // Legacy Flat Keys for Backward Compatibility
     appTitle: "VPS & POD Monitor",
     appSubtitle: "Monitoring Real-time Bandwidth, CPU, RAM & GPU Server",
     totalDownloadSpeed: "Total Kecepatan Download",
@@ -43,7 +91,6 @@ export const translations = {
     language: "Bahasa",
     editServerTitle: "Edit Konfigurasi Server",
     addServerTitle: "Tambah Target VPS / POD",
-    infrastructureType: "Tipe Infrastruktur",
     vpsServer: "🖥️ VPS Server",
     podContainer: "📦 POD Container",
     podVersion: "Versi POD",
@@ -71,6 +118,22 @@ export const translations = {
     saveVps: "Simpan Server"
   },
   en: {
+    common: enCommon,
+    navbar: enNavbar,
+    dashboard: enDashboard,
+    serverModal: enServerModal,
+    podActivity: enPodActivity,
+    multimedia: enMultimedia,
+    storage: enStorage,
+    masterSync: enMasterSync,
+    podLogs: enPodLogs,
+    userActivity: enUserActivity,
+    diagnostics: enDiagnostics,
+    databaseSync: enDatabaseSync,
+    installation: enInstallation,
+    envManager: enEnvManager,
+
+    // Legacy Flat Keys for Backward Compatibility
     appTitle: "VPS & POD Monitor",
     appSubtitle: "Real-time Server Bandwidth, CPU, RAM & GPU Monitoring",
     totalDownloadSpeed: "Total Download Speed",

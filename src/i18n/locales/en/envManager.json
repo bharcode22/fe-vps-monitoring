@@ -1,0 +1,88 @@
+{
+  "header": {
+    "title": "Environment Manager & Comparison",
+    "subtitle": "Manage .env files, edit variable configurations, and visually compare values across environments",
+    "editorTab": "File Editor",
+    "compareTab": "Diff Comparator",
+    "refreshTooltip": "Refresh .env files",
+    "createBtn": "Create .env File",
+    "saveChanges": "Save Changes",
+    "saving": "Saving...",
+    "saved": "Saved"
+  },
+  "sidebar": {
+    "searchPlaceholder": "Search files / variable names...",
+    "fileCount": "Environment Files ({count})",
+    "noFiles": "No .env files found.",
+    "cloneTooltip": "Clone this .env file",
+    "deleteTooltip": "Delete this .env file",
+    "varsAndLines": "{vars} Variables • {lines} Lines"
+  },
+  "editor": {
+    "selectPromptTitle": "Select an Environment File",
+    "selectPromptDesc": "Select a file from the left panel to inspect, edit variables, or switch to Diff Comparator.",
+    "unsavedChanges": "Unsaved changes",
+    "gridMode": "Grid Form",
+    "rawMode": "Raw Text",
+    "maskSecret": "Mask secret values",
+    "unmaskSecret": "Unmask secret values",
+    "resetChanges": "Reset changes",
+    "filterPlaceholder": "Filter variables...",
+    "addVariable": "Add Variable",
+    "keyHeader": "VARIABLE NAME (KEY)",
+    "valHeader": "CONFIG VALUE",
+    "actionsHeader": "ACTIONS",
+    "noMatch": "No variables match the filter.",
+    "comment": "Comment / Note",
+    "empty": "Empty Line",
+    "deleteRow": "Delete this row",
+    "copyVal": "Copy value"
+  },
+  "comparator": {
+    "sourceA": "Source File A (Left)",
+    "sourceB": "Source File B (Right)",
+    "swapTooltip": "Swap File A ⇄ B",
+    "comparing": "Comparing...",
+    "compareBtn": "Re-compare",
+    "stats": {
+      "total": "Total Variables",
+      "identical": "Identical Values",
+      "diff": "Value Mismatch",
+      "onlyA": "Only in File A",
+      "onlyB": "Only in File B"
+    },
+    "filters": {
+      "all": "All ({count})",
+      "diffOnly": "Differences Only ({count})",
+      "mismatch": "Mismatches ({count})",
+      "onlyA": "Only File A ({count})",
+      "onlyB": "Only File B ({count})"
+    },
+    "searchPlaceholder": "Filter comparison key / value...",
+    "table": {
+      "varName": "Variable Name",
+      "fileA": "File A: {name}",
+      "fileB": "File B: {name}",
+      "status": "Diff Status"
+    },
+    "statusBadges": {
+      "identical": "IDENTICAL",
+      "mismatch": "MISMATCH",
+      "onlyA": "ONLY IN A",
+      "onlyB": "ONLY IN B"
+    }
+  },
+  "modal": {
+    "createTitle": "Create New .env File",
+    "cloneTitle": "Clone .env Config File",
+    "savedLocation": "File will be saved under",
+    "filenameLabel": "File Name (.env):",
+    "filenamePlaceholder": "e.g., custom-prod.env",
+    "templateLabel": "Initial Content Template:",
+    "emptyTemplate": "(Empty - Start from scratch)",
+    "cancel": "Cancel",
+    "creating": "Creating...",
+    "createBtn": "Create File Now",
+    "cloneBtn": "Clone File Now"
+  }
+}

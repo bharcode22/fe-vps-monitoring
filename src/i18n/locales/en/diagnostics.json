@@ -1,0 +1,21 @@
+{
+  "title": "RabbitMQ Message Broker Monitor",
+  "subtitle": "Message Broker Monitoring, Queues, Consumers, and Firehose Real-time Tracer",
+  "queues": "Queues",
+  "consumers": "Active Consumers",
+  "messages": "Delivered Messages",
+  "unacked": "Unacknowledged Messages",
+  "firehose": "Firehose Live Tracer",
+  "ssh": {
+    "title": "Interactive SSH Terminal",
+    "connecting": "Connecting to server via SSH...",
+    "connected": "Connected to SSH",
+    "disconnected": "SSH session disconnected"
+  },
+  "logs": {
+    "dockerTitle": "Docker Container Live Logs",
+    "pm2Title": "PM2 Process Live Logs",
+    "clear": "Clear Screen",
+    "autoScroll": "Auto Scroll"
+  }
+}

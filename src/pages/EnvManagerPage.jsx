@@ -10,8 +10,10 @@ import EnvSidebar from '../components/envManager/EnvSidebar';
 import EnvEditor from '../components/envManager/EnvEditor';
 import EnvComparator from '../components/envManager/EnvComparator';
 import CreateEnvModal from '../components/envManager/CreateEnvModal';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function EnvManagerPage({ onBack }) {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('editor'); // 'editor' or 'compare'
   const [files, setFiles] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);

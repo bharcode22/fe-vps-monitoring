@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Activity, Server, Radio, Cpu } from 'lucide-react';
+import { ArrowLeft, Activity, Server, Radio, Cpu, Sliders } from 'lucide-react';
 import io from 'socket.io-client';
 import { SOCKET_URL } from '../../config';
 import PodActivityTopicCards from './PodActivityTopicCards';
+import PodHeartbeatDetailTab from './PodHeartbeatDetailTab';
 
 function parseOccupancy(payload) {
   if (payload === null || payload === undefined) return null;
@@ -25,6 +26,7 @@ function parseOccupancy(payload) {
 }
 
 export default function PodActivityDetailPage({ pod, onBack }) {
+  const [activeTab, setActiveTab] = useState('activity'); // 'activity' | 'heartbeat'
   const [mqttActivityFeed, setMqttActivityFeed] = useState([]);
   const [mqttStatus, setMqttStatus] = useState({ connected: false });
   const [occupancyState, setOccupancyState] = useState(pod?.stateValue ?? null);
@@ -68,7 +70,7 @@ export default function PodActivityDetailPage({ pod, onBack }) {
         }
       }
 
-      // Format the packet to match what PodActivityTopicCards expects:
+      // Format the packet to match what PodActivityTopicCards and PodHeartbeatDetailTab expect:
       // { topic: string, payload: string, timestamp: number, serverId: number, serverName: string }
       setMqttActivityFeed((prev) => {
         const newLog = {
@@ -158,12 +160,12 @@ export default function PodActivityDetailPage({ pod, onBack }) {
 
   return (
     <div className="flex flex-col h-full space-y-6 pb-12">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/80 p-5 rounded-2xl border border-slate-800 backdrop-blur-md shadow-xl">
+      {/* Page Header & Tab Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/80 p-5 rounded-2xl border border-slate-800 backdrop-blur-md shadow-xl">
         <div className="flex items-center gap-4">
           <button
             onClick={onBack}
-            className="p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition-all text-slate-300 hover:text-white border border-slate-700/60 shadow"
+            className="p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition-all text-slate-300 hover:text-white border border-slate-700/60 shadow cursor-pointer"
             title="Kembali ke Dashboard Activity"
           >
             <ArrowLeft size={18} />
@@ -193,8 +195,8 @@ export default function PodActivityDetailPage({ pod, onBack }) {
                   <>
                     <span className="text-slate-600">•</span>
                     <span className={`inline-flex items-center gap-1.5 text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-md border ${occupancyState === 1
-                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                        : 'bg-slate-800/90 text-slate-300 border-slate-700'
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                      : 'bg-slate-800/90 text-slate-300 border-slate-700'
                       }`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${occupancyState === 1 ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
                       {occupancyState === 1 ? 'OCCUPIED (1)' : 'AVAILABLE (0)'}
@@ -210,15 +212,48 @@ export default function PodActivityDetailPage({ pod, onBack }) {
             </div>
           </div>
         </div>
+
+        {/* Tab Switcher Controls */}
+        <div className="flex items-center gap-1.5 bg-slate-950/90 p-1.5 rounded-2xl border border-slate-800 shadow-inner">
+          <button
+            onClick={() => setActiveTab('activity')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${activeTab === 'activity'
+              ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-500/10'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+              }`}
+          >
+            <Activity size={15} className={activeTab === 'activity' ? 'text-cyan-400' : ''} />
+            <span>Activity Detail</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('heartbeat')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${activeTab === 'heartbeat'
+              ? 'bg-gradient-to-r from-indigo-500/25 to-purple-500/25 text-indigo-300 border border-indigo-500/40 shadow-lg shadow-indigo-500/10'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+              }`}
+          >
+            <Cpu size={15} className={activeTab === 'heartbeat' ? 'text-indigo-400 animate-pulse' : ''} />
+            <span>Heartbeat Detail</span>
+          </button>
+        </div>
       </div>
 
-      {/* Main Content: MQTT Cards */}
-      <PodActivityTopicCards
-        show={true}
-        feed={mqttActivityFeed}
-        pods={[pod]}
-        onPublish={handlePublish}
-      />
+      {/* Main Content Area based on Active Tab */}
+      {activeTab === 'activity' ? (
+        <PodActivityTopicCards
+          show={true}
+          feed={mqttActivityFeed}
+          pods={[pod]}
+          onPublish={handlePublish}
+        />
+      ) : (
+        <PodHeartbeatDetailTab
+          pod={pod}
+          feed={mqttActivityFeed}
+          mqttStatus={mqttStatus}
+          onPublish={handlePublish}
+        />
+      )}
     </div>
   );
 }

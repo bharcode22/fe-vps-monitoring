@@ -1,0 +1,19 @@
+{
+  "title": "POD Logs Sync Management",
+  "subtitle": "High-Volume Activity Log Extraction from POD V3 Fleet to Master Database",
+  "tabs": {
+    "sync": "Audit & Pull Logs",
+    "explorer": "Master Data Explorer"
+  },
+  "pullConfig": {
+    "title": "Log Pull Configuration",
+    "targetScope": "Target POD",
+    "allPods": "Entire POD V3 Fleet",
+    "mode": "Pull Mode",
+    "modeIdDiff": "ID Difference (Recommended)",
+    "modeDateRange": "Date Range",
+    "batchSize": "Batch Size (Rows per Request)",
+    "markSynced": "Mark logs as synced on POD",
+    "executePull": "Execute Log Extraction"
+  }
+}

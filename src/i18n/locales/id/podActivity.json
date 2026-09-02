@@ -1,0 +1,123 @@
+{
+  "title": "POD Activity MQTT Monitor",
+  "subtitle": "Monitoring Real-Time Okupansi & Status POB (mod_chair/pob_state)",
+  "liveBadge": "Armada V3",
+  "topicLabel": "Topik",
+  "statusLabel": "Status",
+  "occupied": "OCCUPIED",
+  "available": "AVAILABLE (STANDBY)",
+  "vacant": "VACANT",
+  "reconnectMqtt": "Reconnect Broker",
+  "simulator": "Packet Simulator",
+  "kpi": {
+    "totalPods": "Armada POD V3",
+    "occupied": "Occupied (In-Use)",
+    "vacant": "Available (Standby)",
+    "connectedBrokers": "Broker MQTT"
+  },
+  "toolbar": {
+    "searchPlaceholder": "Cari nama unit POD V3, nomor kode (#35), atau IP LAN...",
+    "all": "Semua ({count})",
+    "occupiedFilter": "Occupied ({count})",
+    "vacantFilter": "Standby ({count})",
+    "viewCards": "Cards",
+    "viewTable": "Table",
+    "viewMatrix": "Matrix",
+    "mqttFeed": "Live Packet Feed"
+  },
+  "earlyWarning": {
+    "title": "PERINGATAN DINI: {count} MODUL MATI PADA FLEET POD!",
+    "desc": "Ditemukan modul yang kehilangan detak heartbeat (>12s). Segera periksa koneksi kabel USB & daya hardware pada unit berikut:",
+    "pingAll": "Ping Semua Modul Mati",
+    "moreModules": "+{count} modul lainnya..."
+  },
+  "matrixKpi": {
+    "totalPods": "Total Pod Unit",
+    "totalPodsDesc": "Terdaftar dalam jaringan",
+    "healthyModules": "Modul Berdetak Sehat",
+    "deadModules": "Modul Mati / Timeout",
+    "needFix": "⚠️ Butuh perbaikan",
+    "allActive": "Semua hardware aktif",
+    "totalPackets": "Total Paket Diterima",
+    "throughput": "Real-time throughput feed"
+  },
+  "matrixToolbar": {
+    "searchPlaceholder": "Cari nama Pod, IP LAN, kode...",
+    "allPods": "Semua Pod ({count})",
+    "issuesOnly": "Ada Modul Mati ({count})",
+    "healthyOnly": "100% Sehat ({count})",
+    "statusGuide": "Panduan Status",
+    "alarmOn": "Alarm ON",
+    "alarmOff": "Alarm OFF"
+  },
+  "matrixTable": {
+    "unitPod": "Unit Pod",
+    "statusHealth": "Status Health",
+    "noMatch": "Tidak ada unit Pod yang cocok dengan pencarian atau filter ini.",
+    "deadBadge": "DEAD",
+    "liveBadge": "live",
+    "delayBadge": "delay",
+    "frozenBadge": "frozen",
+    "activeCount": "{active}/{total} Aktif",
+    "podDead": "Pod Mati"
+  },
+  "legend": {
+    "green": "Hijau: Live (≤4s)",
+    "yellow": "Kuning: Delay (5-12s)",
+    "red": "Merah: Dead (>12s)",
+    "purple": "Ungu: Frozen",
+    "viewFullGuide": "Lihat Panduan Lengkap"
+  },
+  "legendModal": {
+    "title": "Panduan Indikator & Keterangan Status Modul Heartbeat",
+    "subtitle": "Arti warna, ambang batas waktu (threshold), penyebab, dan panduan penanganan",
+    "thresholdLabel": "Ambang Batas:",
+    "meaningLabel": "📖 Artinya",
+    "causeLabel": "🔍 Penyebab Umum",
+    "actionLabel": "🛠️ Tindakan Teknisi",
+    "tips": "💡 Tips: Anda dapat membunyikan alarm otomatis (*Sound Alarm*) saat status berubah menjadi merah.",
+    "closeBtn": "Tutup Panduan",
+    "items": {
+      "live": {
+        "colorName": "Hijau (Emerald)",
+        "label": "🟢 ACTIVE / LIVE",
+        "threshold": "<= 4 Detik",
+        "meaning": "Modul hardware berdetak normal dan sehat.",
+        "cause": "Komunikasi serial USB dan broker MQTT berjalan lancar tanpa kendala.",
+        "action": "Tidak perlu tindakan apa pun. Sistem dalam kondisi prima."
+      },
+      "delay": {
+        "colorName": "Kuning (Amber)",
+        "label": "🟡 WARNING / DELAY",
+        "threshold": "5 - 12 Detik",
+        "meaning": "Terjadi keterlambatan/latensi pengiriman paket heartbeat.",
+        "cause": "Beban jaringan LAN tinggi, traffic MQTT padat, atau modul sedikit lambat merespons.",
+        "action": "Pantau terus. Jika kembali hijau secara otomatis, aman. Jika berlanjut >12 detik, akan berubah menjadi merah (Dead)."
+      },
+      "dead": {
+        "colorName": "Merah (Rose)",
+        "label": "🔴 DEAD / TIMEOUT",
+        "threshold": "> 12 Detik / No Data",
+        "meaning": "Modul mati total / tidak ada detak heartbeat masuk.",
+        "cause": "Kabel USB serial kendor/terlepas, power supply modul mati, atau port ttyUSB crash.",
+        "action": "1. Klik tombol \"Ping Status\" / \"Reset\".\n2. Jika tetap merah, periksa fisik kabel USB / colokan hardware pada Pod."
+      },
+      "frozen": {
+        "colorName": "Ungu (Purple)",
+        "label": "🟣 FROZEN / STALLED",
+        "threshold": "> 15 Detik (HB Macet)",
+        "meaning": "Paket MQTT masuk, namun angka counter HB tidak pernah bertambah (stuck).",
+        "cause": "Firmware microcontroller hang/freeze di loop serial program.",
+        "action": "Kirim perintah \"RESET\" dari dashboard atau restart power board microcontroller."
+      },
+      "flash": {
+        "colorName": "Cyan (Biru Muda)",
+        "label": "⚡ PACKET FLASH",
+        "threshold": "Realtime Flash (0.7s)",
+        "meaning": "Animasi kilau penanda ada paket data baru yang baru saja diterima saat itu juga.",
+        "cause": "Data MQTT baru saja mendarat di broker dan ditangkap dashboard.",
+        "action": "Indikator visual bahwa aliran data realtime sedang berlangsung."
+      }
+    }
+  }
+}
