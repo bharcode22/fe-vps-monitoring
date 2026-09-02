@@ -54,6 +54,7 @@ import {
 } from '../api/vpsApi';
 import DockerLogModal from '../components/server/DockerLogModal';
 import MultimediaUploadModal from '../components/content/MultimediaUploadModal';
+import { useDirectS3Upload } from '../context/DirectS3UploadContext';
 import FileIntegrityModal from '../components/content/FileIntegrityModal';
 import MediaPreviewModal from '../components/content/MediaPreviewModal';
 
@@ -85,6 +86,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
   // 4. Log Modal & Upload Modal State
   const [logModalPod, setLogModalPod] = useState(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const { openDirectS3Modal } = useDirectS3Upload();
 
   // 5. On-Demand POD Physical Files Matrix State
   const [podFilesMatrix, setPodFilesMatrix] = useState({}); // { [serverId]: { fileStatus, foundCount, totalExpected, totalBytes, totalFormatted, files, missingFiles } }
@@ -589,12 +591,21 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
         {/* Global Toolbar */}
         <div className="flex items-center gap-2 shrink-0">
           <button
+            onClick={openDirectS3Modal}
+            className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs flex items-center gap-1.5 cursor-pointer shadow-lg shadow-amber-500/20 active:scale-95 shrink-0"
+            title="Upload Berkecepatan Tinggi Langsung ke AWS S3 + Auto SHA-256 Forensik & Simpan ke Master DB"
+          >
+            <Zap size={14} className="fill-slate-950 text-slate-950" />
+            <span>Direct S3 Upload (Forensik)</span>
+          </button>
+
+          <button
             onClick={() => setIsUploadModalOpen(true)}
-            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white border border-purple-400/30 transition-all text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-lg shadow-purple-500/20 active:scale-95 shrink-0"
-            title="Unggah Konten Multimedia Master Baru ke AWS S3 & Master DB"
+            className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-purple-300 hover:text-white border border-purple-400/30 transition-all text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-md active:scale-95 shrink-0"
+            title="Unggah Konten Multimedia Master (Cara Reguler)"
           >
             <UploadCloud size={14} />
-            <span>Upload Multimedia</span>
+            <span>Upload Reguler</span>
           </button>
         </div>
       </div>
@@ -1581,7 +1592,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
         />
       )}
 
-      {/* 6. Multimedia Batch Chunk Upload Modal */}
+      {/* 6b. Multimedia Batch Chunk Upload Modal (Legacy Reguler) */}
       <MultimediaUploadModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}

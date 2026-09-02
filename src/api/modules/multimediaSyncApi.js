@@ -280,3 +280,38 @@ export async function deleteMasterMultimediaApi(soundScapeCode) {
   }
   return data;
 }
+
+/**
+ * Request AWS S3 Presigned URLs for Direct Browser Upload
+ */
+export async function getDirectS3PresignedUrlsApi(soundScape, files = []) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/direct-s3/presigned-urls`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ sound_scape: soundScape, files })
+  });
+
+  const data = await res.json();
+  if (!data.success) {
+    throw new Error(data.error || 'Gagal membuat URL Presigned S3');
+  }
+  return data;
+}
+
+/**
+ * Save direct multimedia metadata to `multimedia` and `media_forensik` (SHA-256) tables
+ */
+export async function saveDirectS3MultimediaMetadataApi(payload) {
+  const res = await fetch(`${BACKEND_URL}/api/vps/direct-s3/save-metadata`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload)
+  });
+
+  const data = await res.json();
+  if (!data.success) {
+    throw new Error(data.error || 'Gagal menyimpan metadata ke database Master');
+  }
+  return data;
+}
+

@@ -31,6 +31,7 @@ import { useSocket } from './hooks/useSocket';
 import { fetchSettingsApi, saveSettingApi } from './api/vpsApi';
 import { useAuth } from './context/AuthContext';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import DirectS3UploadModal from './components/content/DirectS3UploadModal';
 import { Server, Database, HardDrive, Cpu, ShieldCheck } from 'lucide-react';
 
 export default function App() {
@@ -550,6 +551,9 @@ export default function App() {
         isOpen={isUserModalOpen}
         onClose={() => setIsUserModalOpen(false)}
       />
+
+      {/* Global Direct S3 Upload Modal & Background Floating Widget */}
+      <DirectS3UploadModal />
 
     </div>
   );
