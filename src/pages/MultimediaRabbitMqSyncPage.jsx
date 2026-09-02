@@ -22,7 +22,20 @@ import {
   Square,
   UploadCloud,
   Check,
-  Trash2
+  Trash2,
+  FileText,
+  ChevronDown,
+  ChevronUp,
+  Download,
+  CloudDownload,
+  FolderOpen,
+  Stethoscope,
+  ShieldCheck,
+  ShieldAlert,
+  Info,
+  Copy,
+  Eye,
+  Film
 } from 'lucide-react';
 import {
   fetchMasterMultimediaListApi,
@@ -30,10 +43,16 @@ import {
   inspectSinglePodSyncStatusApi,
   controlPodSyncContainerApi,
   triggerMasterResaveApi,
-  deleteMasterMultimediaApi
+  deleteMasterMultimediaApi,
+  checkCodeOnPodsApi,
+  downloadCodeFilesToPodApi,
+  fetchS3FolderFilesApi,
+  checkPodFileIntegrityApi
 } from '../api/vpsApi';
 import DockerLogModal from '../components/server/DockerLogModal';
 import MultimediaUploadModal from '../components/content/MultimediaUploadModal';
+import FileIntegrityModal from '../components/content/FileIntegrityModal';
+import MediaPreviewModal from '../components/content/MediaPreviewModal';
 
 export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
   // 1. Master Multimedia State
@@ -62,6 +81,77 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
   // 4. Log Modal & Upload Modal State
   const [logModalPod, setLogModalPod] = useState(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+
+  // 5. On-Demand POD Physical Files Matrix State
+  const [podFilesMatrix, setPodFilesMatrix] = useState({}); // { [serverId]: { fileStatus, foundCount, totalExpected, totalBytes, totalFormatted, files, missingFiles } }
+  const [expandedPodFiles, setExpandedPodFiles] = useState({}); // { [serverId]: boolean }
+  const [isCheckingAllFiles, setIsCheckingAllFiles] = useState(false);
+  const [s3FolderFilesMap, setS3FolderFilesMap] = useState({}); // { [soundScape]: { files: [...] } }
+
+  // 6. File Integrity Diagnostic State (ffprobe & stat)
+  const [integrityMap, setIntegrityMap] = useState({}); // { [`${podId}_${filePath}`]: data }
+  const [integrityModal, setIntegrityModal] = useState({
+    isOpen: false,
+    data: null,
+    isLoading: false,
+    targetPod: null,
+    targetFilename: ''
+  });
+
+  // 7. Track Master Metadata Detail Modal State
+  const [trackInfoModalItem, setTrackInfoModalItem] = useState(null);
+  const [copiedJson, setCopiedJson] = useState(false);
+
+  // 8. Media Preview Modal State (AWS S3 & POD Stream Player)
+  const [previewModal, setPreviewModal] = useState({
+    isOpen: false,
+    file: null
+  });
+
+  const handleOpenMediaPreview = (file) => {
+    setPreviewModal({
+      isOpen: true,
+      file
+    });
+  };
+
+  const handleCloseMediaPreview = () => {
+    setPreviewModal({
+      isOpen: false,
+      file: null
+    });
+  };
+
+  const handleCopyTrackJson = (item) => {
+    if (!item) return;
+    const payload = {
+      music: item.music || '',
+      video: item.video || '',
+      lamp: item.lamp || '',
+      album: item.album || ''
+    };
+    navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+    setCopiedJson(true);
+    setTimeout(() => setCopiedJson(false), 2000);
+  };
+
+  // Fetch or retrieve cached actual filenames for this sound scape from AWS S3
+  const getOrFetchS3Filenames = async (soundScape) => {
+    if (s3FolderFilesMap[soundScape]?.files) {
+      return s3FolderFilesMap[soundScape].files.map(f => f.filename);
+    }
+    try {
+      const filesData = await fetchS3FolderFilesApi(soundScape);
+      if (filesData) {
+        setS3FolderFilesMap(prev => ({ ...prev, [soundScape]: filesData }));
+        return (filesData.files || []).map(f => f.filename);
+      }
+      return [];
+    } catch (err) {
+      console.warn(`Gagal mengambil rincian file S3 #${soundScape}:`, err.message);
+      return [];
+    }
+  };
 
   // Load initial Master Multimedia & Fleet ONCE on mount
   useEffect(() => {
@@ -130,6 +220,147 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= pagination.totalPages) {
       loadMasterMultimedia(newPage, searchQuery);
+    }
+  };
+
+  // Select track and reset old file checks so new track is clean
+  const handleSelectTrack = (item) => {
+    setSelectedItem(item);
+    setPodFilesMatrix({});
+    setExpandedPodFiles({});
+    if (item?.sound_scape) {
+      getOrFetchS3Filenames(item.sound_scape);
+    }
+  };
+
+  // Check physical files for a single POD on-demand (~300ms)
+  const handleCheckSinglePodFiles = async (pod) => {
+    const podId = pod.serverId || pod.id;
+    const soundScape = selectedItem?.sound_scape;
+    if (!soundScape) return;
+
+    const actionKey = `files_${podId}`;
+    setActionLoadingMap(prev => ({ ...prev, [actionKey]: true }));
+
+    try {
+      // 1. Resolve EXACT real filenames from AWS S3 (just like Storage Manager)
+      const realFilenames = await getOrFetchS3Filenames(soundScape);
+
+      // 2. Query the POD for these exact filenames
+      const matrix = await checkCodeOnPodsApi(soundScape, realFilenames, [podId]);
+      if (matrix && matrix[podId]) {
+        setPodFilesMatrix(prev => ({ ...prev, [podId]: matrix[podId] }));
+        setExpandedPodFiles(prev => ({ ...prev, [podId]: true }));
+      }
+    } catch (err) {
+      console.warn(`Gagal memeriksa berkas di POD ${pod.serverName}:`, err.message);
+    } finally {
+      setActionLoadingMap(prev => ({ ...prev, [actionKey]: false }));
+    }
+  };
+
+  // Toggle open/close accordion for single POD file details
+  const handleToggleExpandPodFiles = (podId) => {
+    setExpandedPodFiles(prev => ({
+      ...prev,
+      [podId]: !prev[podId]
+    }));
+  };
+
+  // Optional: Check physical files across all PODs on-demand
+  const handleCheckAllPodsFiles = async () => {
+    const soundScape = selectedItem?.sound_scape;
+    if (!soundScape) return;
+
+    setIsCheckingAllFiles(true);
+    try {
+      // 1. Resolve EXACT real filenames from AWS S3
+      const realFilenames = await getOrFetchS3Filenames(soundScape);
+
+      // 2. Query all PODs for these exact filenames
+      const matrix = await checkCodeOnPodsApi(soundScape, realFilenames);
+      if (matrix) {
+        setPodFilesMatrix(matrix);
+      }
+    } catch (err) {
+      console.warn('Gagal memeriksa berkas seluruh POD:', err.message);
+    } finally {
+      setIsCheckingAllFiles(false);
+    }
+  };
+
+  // Download a single missing file to a specific POD
+  const handleDownloadSingleMissingFile = async (pod, filename) => {
+    const podId = pod.serverId || pod.id;
+    const soundScape = selectedItem?.sound_scape;
+    if (!soundScape || !filename) return;
+
+    const dlKey = `dl_${podId}_${filename}`;
+    setActionLoadingMap(prev => ({ ...prev, [dlKey]: true }));
+    try {
+      await downloadCodeFilesToPodApi(podId, soundScape, [filename]);
+      setSuccessToast(`Download ${filename} ke ${pod.serverName} selesai! Memperbarui status...`);
+      await handleCheckSinglePodFiles(pod);
+    } catch (err) {
+      alert(`Gagal mendownload ${filename} ke ${pod.serverName}: ${err.message}`);
+    } finally {
+      setActionLoadingMap(prev => ({ ...prev, [dlKey]: false }));
+    }
+  };
+
+  // Download all missing files for a specific POD
+  const handleDownloadAllMissingForPod = async (pod) => {
+    const podId = pod.serverId || pod.id;
+    const soundScape = selectedItem?.sound_scape;
+    const podCheck = podFilesMatrix[podId];
+    if (!soundScape || !podCheck?.missingFiles || podCheck.missingFiles.length === 0) return;
+
+    const dlKey = `dl_all_${podId}`;
+    setActionLoadingMap(prev => ({ ...prev, [dlKey]: true }));
+    try {
+      await downloadCodeFilesToPodApi(podId, soundScape, podCheck.missingFiles);
+      setSuccessToast(`Download ${podCheck.missingFiles.length} berkas ke ${pod.serverName} berhasil!`);
+      await handleCheckSinglePodFiles(pod);
+    } catch (err) {
+      alert(`Gagal mendownload berkas missing ke ${pod.serverName}: ${err.message}`);
+    } finally {
+      setActionLoadingMap(prev => ({ ...prev, [dlKey]: false }));
+    }
+  };
+
+  // Check file health & integrity using ffprobe directly on the POD
+  const handleCheckFileIntegrity = async (pod, filePath, filename) => {
+    const podId = pod.serverId || pod.id;
+    const key = `${podId}_${filePath}`;
+    const actionKey = `integrity_${podId}_${filePath}`;
+
+    setActionLoadingMap(prev => ({ ...prev, [actionKey]: true }));
+    setIntegrityModal({
+      isOpen: true,
+      data: null,
+      isLoading: true,
+      targetPod: pod,
+      targetFilename: filename
+    });
+
+    try {
+      const data = await checkPodFileIntegrityApi(podId, filePath);
+      setIntegrityMap(prev => ({
+        ...prev,
+        [key]: data
+      }));
+      setIntegrityModal(prev => ({
+        ...prev,
+        isOpen: true,
+        data,
+        isLoading: false
+      }));
+    } catch (err) {
+      console.error(`Error checking integrity of ${filename}:`, err.message);
+      alert(`Gagal memeriksa integritas file ${filename}: ${err.message}`);
+      setIntegrityModal(prev => ({ ...prev, isOpen: false, isLoading: false }));
+    } finally {
+      setActionLoadingMap(prev => ({ ...prev, [actionKey]: false }));
     }
   };
 
@@ -297,7 +528,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                   <Layers size={15} />
                 </div>
                 <h2 className="text-xs sm:text-sm font-black text-white truncate">
-                  File at S3 AWS
+                  File at Cloud
                 </h2>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0">
                   {pagination.total} Track
@@ -377,93 +608,126 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                 return (
                   <div
                     key={item.id || item.sound_scape}
-                    onClick={() => setSelectedItem(item)}
-                    className={`p-2.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 group select-none ${isSelected
+                    onClick={() => handleSelectTrack(item)}
+                    className={`p-2.5 rounded-2xl border transition-all cursor-pointer flex flex-col gap-2 group select-none ${isSelected
                       ? 'bg-gradient-to-r from-purple-500/25 via-indigo-500/20 to-purple-500/10 border-purple-500/70 shadow-lg shadow-purple-500/15 ring-1 ring-purple-500/40'
                       : 'bg-slate-950/60 border-slate-800/80 hover:border-purple-500/40 hover:bg-slate-900/80'
                       }`}
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      {coverUrl ? (
-                        <img
-                          src={coverUrl}
-                          alt="Cover"
-                          className="w-10 h-10 rounded-xl object-cover border border-slate-700 shrink-0 bg-slate-900"
-                          onError={(e) => { e.target.style.display = 'none'; }}
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400 flex items-center justify-center shrink-0">
-                          <Music size={16} />
-                        </div>
-                      )}
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {coverUrl ? (
+                          <img
+                            src={coverUrl}
+                            alt="Cover"
+                            className="w-10 h-10 rounded-xl object-cover border border-slate-700 shrink-0 bg-slate-900"
+                            onError={(e) => { e.target.style.display = 'none'; }}
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400 flex items-center justify-center shrink-0">
+                            <Music size={16} />
+                          </div>
+                        )}
 
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono text-[11px] font-black text-purple-300">
-                            #{item.sound_scape}
-                          </span>
-                          {isSelected && (
-                            <span className="px-1.5 py-0.2 rounded text-[8.5px] font-bold bg-purple-500 text-slate-950 flex items-center gap-0.5">
-                              <Check size={9} />
-                              TERPILIH
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-[11px] font-black text-purple-300">
+                              #{item.sound_scape}
                             </span>
-                          )}
+                            {isSelected && (
+                              <span className="px-1.5 py-0.2 rounded text-[8.5px] font-bold bg-purple-500 text-slate-950 flex items-center gap-0.5">
+                                <Check size={9} />
+                                TERPILIH
+                              </span>
+                            )}
+                          </div>
+                          <h3 className="text-xs font-bold text-white truncate group-hover:text-purple-200 mt-0.5">
+                            {title}
+                          </h3>
+                          <p className="text-[10px] text-slate-400 truncate">
+                            {artist} • {item.album || 'Master Session'}
+                          </p>
                         </div>
-                        <h3 className="text-xs font-bold text-white truncate group-hover:text-purple-200 mt-0.5">
-                          {title}
-                        </h3>
-                        <p className="text-[10px] text-slate-400 truncate">
-                          {artist} • {item.album || 'Master Session'}
-                        </p>
                       </div>
-                    </div>
 
-                    {/* Right Actions: File Indicators & Delete Button */}
-                    <div className="flex items-center gap-1 shrink-0">
-                      {item.video && (
-                        <span className="p-1 rounded-md bg-rose-500/15 text-rose-300 border border-rose-500/30 text-[9px]" title="Video Ready">
-                          <FileVideo size={11} />
-                        </span>
-                      )}
-                      {item.music && (
-                        <span className="p-1 rounded-md bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-[9px]" title="Musik WAV Ready">
-                          <Music size={11} />
-                        </span>
-                      )}
-                      {item.lamp && (
-                        <span className="p-1 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[9px]" title="Strobe Lamp Ready">
-                          <Zap size={11} />
-                        </span>
-                      )}
-
-                      {/* Workspace Detail Button */}
-                      {onNavigateView && (
+                      {/* Right Actions: File Indicators, Info Modal & Delete Button */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        {/* Info Payload Modal Button */}
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            onNavigateView('storage-manager', { code: String(item.sound_scape), returnView: 'multimedia-sync' });
+                            setTrackInfoModalItem(item);
                           }}
-                          className="p-1 rounded-md bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 hover:text-purple-300 border border-purple-500/30 transition-all cursor-pointer ml-1"
-                          title={`Buka Pengelolaan Konten Kode #${item.sound_scape} di Storage Manager`}
+                          className="p-1 rounded-md bg-purple-500/15 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 transition-all cursor-pointer shadow-sm"
+                          title="Lihat Struktur Data Berkas Master API (music, video, lamp, album)"
                         >
-                          <Layers size={11} />
+                          <Info size={11} />
                         </button>
-                      )}
 
-                      {/* Delete from Master API Button */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeleteTargetItem(item);
-                        }}
-                        className="p-1 rounded-md bg-slate-900/90 hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 border border-slate-800 hover:border-rose-500/40 transition-all cursor-pointer ml-0.5"
-                        title={`Hapus #${item.sound_scape} dari Master API`}
-                      >
-                        <Trash2 size={11} />
-                      </button>
+                        {/* Workspace Detail Button */}
+                        {onNavigateView && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onNavigateView('storage-manager', { code: String(item.sound_scape), returnView: 'multimedia-sync' });
+                            }}
+                            className="p-1 rounded-md bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 hover:text-purple-300 border border-purple-500/30 transition-all cursor-pointer ml-0.5"
+                            title={`Buka Pengelolaan Konten Kode #${item.sound_scape} di Storage Manager`}
+                          >
+                            <Layers size={11} />
+                          </button>
+                        )}
+
+                        {/* Delete from Master API Button */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteTargetItem(item);
+                          }}
+                          className="p-1 rounded-md bg-slate-900/90 hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 border border-slate-800 hover:border-rose-500/40 transition-all cursor-pointer ml-0.5"
+                          title={`Hapus #${item.sound_scape} dari Master API`}
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      </div>
                     </div>
+
+                    {/* Expandable File Details for Selected Track */}
+                    {isSelected && (
+                      <div className="pt-2 border-t border-purple-500/20 grid grid-cols-1 gap-1 text-[9.5px] font-mono animate-in fade-in duration-150">
+                        {item.music && (
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-950/60 border border-slate-800/80 text-cyan-300 min-w-0">
+                            <Music size={10} className="text-cyan-400 shrink-0" />
+                            <span className="text-slate-400 font-sans shrink-0 font-semibold">music:</span>
+                            <span className="truncate" title={item.music}>{item.music}</span>
+                          </div>
+                        )}
+                        {item.video && (
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-950/60 border border-slate-800/80 text-rose-300 min-w-0">
+                            <FileVideo size={10} className="text-rose-400 shrink-0" />
+                            <span className="text-slate-400 font-sans shrink-0 font-semibold">video:</span>
+                            <span className="truncate" title={item.video}>{item.video}</span>
+                          </div>
+                        )}
+                        {item.lamp && (
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-950/60 border border-slate-800/80 text-amber-300 min-w-0">
+                            <Zap size={10} className="text-amber-400 shrink-0" />
+                            <span className="text-slate-400 font-sans shrink-0 font-semibold">lamp:</span>
+                            <span className="truncate" title={item.lamp}>{item.lamp}</span>
+                          </div>
+                        )}
+                        {item.album && (
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-950/60 border border-slate-800/80 text-purple-300 min-w-0">
+                            <Layers size={10} className="text-purple-400 shrink-0" />
+                            <span className="text-slate-400 font-sans shrink-0 font-semibold">album:</span>
+                            <span className="truncate" title={item.album}>{item.album}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })
@@ -537,13 +801,32 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                 </div>
               </div>
 
-              {/* Action Buttons: Status Check */}
-              <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+              {/* Action Buttons: Status Check & All File Check */}
+              <div className="flex items-center gap-2 shrink-0 self-end sm:self-center flex-wrap">
+                {selectedItem?.sound_scape && (
+                  <button
+                    onClick={handleCheckAllPodsFiles}
+                    disabled={isCheckingAllFiles || !onlinePodsCount}
+                    className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 active:scale-95 group ${isCheckingAllFiles
+                      ? 'bg-purple-500/30 border-purple-400/60 text-purple-200 shadow-lg shadow-purple-500/20 animate-pulse'
+                      : 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border-purple-500/40 hover:border-purple-400/60'
+                      }`}
+                    title="Periksa ketersediaan berkas multimedia fisik di seluruh unit POD secara serentak"
+                  >
+                    {isCheckingAllFiles ? (
+                      <Loader2 size={13} className="animate-spin text-purple-300 shrink-0" />
+                    ) : (
+                      <HardDrive size={13} className="text-purple-400 shrink-0 group-hover:scale-110 transition-transform" />
+                    )}
+                    <span>{isCheckingAllFiles ? 'Memindai Berkas POD...' : 'Cek Berkas Semua POD'}</span>
+                  </button>
+                )}
+
                 <button
                   onClick={() => inspectFleet(selectedItem?.sound_scape || '')}
                   disabled={isLoadingFleet}
                   className="px-3 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 active:scale-95"
-                  title="Periksa status container mobile-synch & direktori disk di seluruh unit POD V3"
+                  title="Periksa status container mobile-synch di seluruh unit POD V3"
                 >
                   <RefreshCw size={13} className={isLoadingFleet ? 'animate-spin text-cyan-400' : ''} />
                   <span>Cek Status Matriks POD</span>
@@ -594,149 +877,389 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
               </div>
             ) : (
               fleetPods.map(pod => {
+                const podId = pod.serverId || pod.id;
                 const isExited = pod.isOnline && pod.containerState === 'exited';
                 const isRunning = pod.isOnline && pod.containerState === 'running';
-                const isStartLoading = !!actionLoadingMap[`start_${pod.serverId}`];
-                const isRestartLoading = !!actionLoadingMap[`restart_${pod.serverId}`];
-                const isStopLoading = !!actionLoadingMap[`stop_${pod.serverId}`];
-                const isInspectLoading = !!actionLoadingMap[`inspect_${pod.serverId}`];
+                const isStartLoading = !!actionLoadingMap[`start_${podId}`];
+                const isRestartLoading = !!actionLoadingMap[`restart_${podId}`];
+                const isStopLoading = !!actionLoadingMap[`stop_${podId}`];
+                const isInspectLoading = !!actionLoadingMap[`inspect_${podId}`];
+                const isCheckingThisPodFiles = !!actionLoadingMap[`files_${podId}`];
+                const podCheck = podFilesMatrix[podId];
+                const isExpanded = !!expandedPodFiles[podId];
 
                 return (
                   <div
-                    key={pod.serverId}
-                    className={`p-3 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 ${!pod.isOnline
+                    key={podId}
+                    className={`p-3 rounded-2xl border transition-all flex flex-col gap-2.5 ${!pod.isOnline
                       ? 'bg-slate-950/40 border-slate-800/60 opacity-60'
                       : isExited
                         ? 'bg-amber-950/15 border-amber-500/40 shadow-sm'
                         : 'bg-slate-950/60 border-slate-800 hover:border-cyan-500/30'
                       }`}
                   >
-                    {/* POD Info & IP */}
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className={`p-2 rounded-xl border shrink-0 ${!pod.isOnline
-                        ? 'bg-slate-900 border-slate-800 text-slate-500'
-                        : isRunning
-                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                          : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-                        }`}>
-                        <Server size={15} />
-                      </div>
+                    {/* Top Row: POD Info & Controls */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                      {/* POD Info & IP */}
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className={`p-2 rounded-xl border shrink-0 ${!pod.isOnline
+                          ? 'bg-slate-900 border-slate-800 text-slate-500'
+                          : isRunning
+                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                            : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                          }`}>
+                          <Server size={15} />
+                        </div>
 
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-black text-xs text-white">
-                            {pod.serverName}
-                          </span>
-                          <span className="font-mono text-[10px] text-slate-400">
-                            ({pod.host})
-                          </span>
-                          {pod.pingMs && (
-                            <span className="text-[9px] font-mono text-slate-500">
-                              {pod.pingMs}ms
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-black text-xs text-white">
+                              {pod.serverName}
                             </span>
-                          )}
-                        </div>
+                            <span className="font-mono text-[10px] text-slate-400">
+                              ({pod.host})
+                            </span>
+                            {pod.pingMs && (
+                              <span className="text-[9px] font-mono text-slate-500">
+                                {pod.pingMs}ms
+                              </span>
+                            )}
+                          </div>
 
-                        {/* Badges: Container Status */}
-                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                          <span className={`px-1.5 py-0.5 rounded-md text-[9.5px] font-bold flex items-center gap-1 border ${!pod.isOnline
-                            ? 'bg-slate-800 text-slate-400 border-slate-700'
-                            : isRunning
-                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                              : isExited
-                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                                : 'bg-rose-500/20 text-rose-300 border-rose-500/40'
-                            }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${isRunning ? 'bg-emerald-400 animate-pulse' : isExited ? 'bg-amber-400' : 'bg-rose-400'
-                              }`} />
-                            <span>{pod.containerStatus || pod.containerState}</span>
-                          </span>
+                          {/* Badges: Container Status & On-demand File Status */}
+                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                            {/* Container Status */}
+                            <span className={`px-1.5 py-0.5 rounded-md text-[9.5px] font-bold flex items-center gap-1 border ${!pod.isOnline
+                              ? 'bg-slate-800 text-slate-400 border-slate-700'
+                              : isRunning
+                                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                                : isExited
+                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                  : 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                              }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${isRunning ? 'bg-emerald-400 animate-pulse' : isExited ? 'bg-amber-400' : 'bg-rose-400'
+                                }`} />
+                              <span>{pod.containerStatus || pod.containerState}</span>
+                            </span>
+
+                            {/* Physical File Check Status (On-demand) */}
+                            {selectedItem?.sound_scape && (
+                              <>
+                                {isCheckingThisPodFiles ? (
+                                  <span className="px-2 py-0.5 rounded-md text-[9.5px] font-mono font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 flex items-center gap-1 shadow-sm">
+                                    <Loader2 size={10} className="animate-spin text-cyan-400" />
+                                    <span>Memeriksa Berkas...</span>
+                                  </span>
+                                ) : !podCheck ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCheckSinglePodFiles(pod)}
+                                    disabled={!pod.isOnline || isCheckingThisPodFiles}
+                                    className="px-2 py-0.5 rounded-md text-[9.5px] font-mono font-bold bg-slate-900 hover:bg-cyan-500/20 text-cyan-400 hover:text-cyan-200 border border-slate-700 hover:border-cyan-500/40 flex items-center gap-1 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-sm active:scale-95"
+                                    title="Klik untuk memeriksa ketersediaan berkas fisik di POD ini"
+                                  >
+                                    <HardDrive size={10} />
+                                    <span>📁 Cek Berkas</span>
+                                  </button>
+                                ) : (
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleExpandPodFiles(podId)}
+                                      className={`px-2 py-0.5 rounded-md text-[9.5px] font-mono font-bold flex items-center gap-1 border transition-all cursor-pointer shadow-sm active:scale-95 ${podCheck.fileStatus === 'all'
+                                        ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/40'
+                                        : podCheck.foundCount > 0
+                                          ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border-amber-500/40'
+                                          : 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border-rose-500/40'
+                                        }`}
+                                      title="Klik untuk melihat/menutup rincian berkas"
+                                    >
+                                      <HardDrive size={10} />
+                                      <span>
+                                        {podCheck.fileStatus === 'all'
+                                          ? `Lengkap (${podCheck.foundCount}/${podCheck.totalExpected} Berkas • ${podCheck.totalFormatted})`
+                                          : podCheck.foundCount > 0
+                                            ? `Sebagian (${podCheck.foundCount}/${podCheck.totalExpected} Berkas)`
+                                            : `Kosong (0/${podCheck.totalExpected || 0})`}
+                                      </span>
+                                      {isExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCheckSinglePodFiles(pod)}
+                                      disabled={isCheckingThisPodFiles}
+                                      className="p-1 rounded-md bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-cyan-300 border border-slate-700 hover:border-cyan-500/40 transition-colors cursor-pointer disabled:opacity-50"
+                                      title="Periksa ulang berkas pada POD ini"
+                                    >
+                                      <RefreshCw size={10} className={isCheckingThisPodFiles ? 'animate-spin text-cyan-400' : ''} />
+                                    </button>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
                         </div>
+                      </div>
+
+                      {/* Individual Action Controls per POD */}
+                      <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
+                        {/* Start Container Button (if Exited) */}
+                        {isExited && (
+                          <button
+                            onClick={() => handleControlSinglePod(pod, 'start')}
+                            disabled={isStartLoading}
+                            className={`px-2.5 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[10.5px] font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 active:scale-95 ${isStartLoading ? 'animate-pulse' : ''
+                              }`}
+                            title="Nyalakan container mobile-synch pada POD ini"
+                          >
+                            {isStartLoading ? (
+                              <Loader2 size={11} className="animate-spin text-emerald-300" />
+                            ) : (
+                              <Play size={10} className="fill-emerald-400 text-emerald-400" />
+                            )}
+                            <span>{isStartLoading ? 'Memulai...' : 'Start'}</span>
+                          </button>
+                        )}
+
+                        {/* Restart Container Button (if Online) */}
+                        {pod.isOnline && (
+                          <button
+                            onClick={() => handleControlSinglePod(pod, 'restart')}
+                            disabled={isRestartLoading}
+                            className={`p-1.5 rounded-xl bg-slate-900 hover:bg-purple-500/20 text-slate-300 hover:text-purple-300 border border-slate-700 hover:border-purple-500/40 transition-all cursor-pointer disabled:opacity-50 active:scale-95 ${isRestartLoading ? 'border-purple-500/60 bg-purple-500/10' : ''
+                              }`}
+                            title="Restart container mobile-synch pada POD ini"
+                          >
+                            {isRestartLoading ? (
+                              <Loader2 size={12} className="animate-spin text-purple-400" />
+                            ) : (
+                              <RotateCw size={12} />
+                            )}
+                          </button>
+                        )}
+
+                        {/* Stop Container Button (if Running) */}
+                        {isRunning && (
+                          <button
+                            onClick={() => handleControlSinglePod(pod, 'stop')}
+                            disabled={isStopLoading}
+                            className={`p-1.5 rounded-xl bg-slate-900 hover:bg-rose-500/20 text-slate-300 hover:text-rose-300 border border-slate-700 hover:border-rose-500/40 transition-all cursor-pointer disabled:opacity-50 active:scale-95 ${isStopLoading ? 'border-rose-500/60 bg-rose-500/10' : ''
+                              }`}
+                            title="Stop container mobile-synch pada POD ini"
+                          >
+                            {isStopLoading ? (
+                              <Loader2 size={12} className="animate-spin text-rose-400" />
+                            ) : (
+                              <Square size={10} className="fill-rose-400 text-rose-400" />
+                            )}
+                          </button>
+                        )}
+
+                        {/* Re-check Single POD Status & Files Button */}
+                        {pod.isOnline && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleInspectSinglePod(pod);
+                              handleCheckSinglePodFiles(pod);
+                            }}
+                            disabled={isInspectLoading || isCheckingThisPodFiles}
+                            className={`px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-cyan-500/20 text-slate-300 hover:text-cyan-300 border border-slate-700 hover:border-cyan-500/40 text-[10.5px] font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 active:scale-95 ${isInspectLoading || isCheckingThisPodFiles ? 'border-cyan-500/60 bg-cyan-500/10' : ''
+                              }`}
+                            title="Periksa ulang status container dan ketersediaan berkas fisik pada POD ini"
+                          >
+                            <RefreshCw
+                              size={11}
+                              className={isInspectLoading || isCheckingThisPodFiles ? 'animate-spin text-cyan-400' : 'text-slate-400'}
+                            />
+                            <span>{isInspectLoading || isCheckingThisPodFiles ? 'Memeriksa...' : 'Re-check'}</span>
+                          </button>
+                        )}
+
+                        {/* View Logs Button */}
+                        {pod.isOnline && (
+                          <button
+                            onClick={() => setLogModalPod(pod)}
+                            className="p-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-700 transition-all cursor-pointer active:scale-95"
+                            title="Buka Console Log Real-time mobile-synch"
+                          >
+                            <Terminal size={12} />
+                          </button>
+                        )}
                       </div>
                     </div>
 
-                    {/* Individual Action Controls per POD */}
-                    <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
-                      {/* Start Container Button (if Exited) */}
-                      {isExited && (
-                        <button
-                          onClick={() => handleControlSinglePod(pod, 'start')}
-                          disabled={isStartLoading}
-                          className={`px-2.5 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[10.5px] font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 active:scale-95 ${isStartLoading ? 'animate-pulse' : ''
-                            }`}
-                          title="Nyalakan container mobile-synch pada POD ini"
-                        >
-                          {isStartLoading ? (
-                            <Loader2 size={11} className="animate-spin text-emerald-300" />
-                          ) : (
-                            <Play size={10} className="fill-emerald-400 text-emerald-400" />
-                          )}
-                          <span>{isStartLoading ? 'Memulai...' : 'Start'}</span>
-                        </button>
-                      )}
+                    {/* Expandable Physical Files Checklist Sub-Panel */}
+                    {isExpanded && podCheck && (
+                      <div className="pt-2.5 border-t border-slate-800/80 bg-slate-950/40 rounded-xl p-2.5 space-y-2 animate-in fade-in duration-200">
+                        <div className="flex items-center justify-between text-[10.5px] font-mono text-slate-400">
+                          <span className="flex items-center gap-1.5 font-bold text-slate-300">
+                            <FolderOpen size={12} className="text-cyan-400 shrink-0" />
+                            <span>Direktori Media: <code className="text-cyan-300 font-semibold">/home/pod/sounds, /videos, /images</code></span>
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-white">{podCheck.foundCount}/{podCheck.totalExpected} Berkas</span>
+                            <button
+                              type="button"
+                              onClick={() => handleCheckSinglePodFiles(pod)}
+                              disabled={isCheckingThisPodFiles}
+                              className="p-1 rounded bg-slate-900 hover:bg-slate-800 text-cyan-400 border border-slate-700 hover:border-cyan-500/40 transition-colors cursor-pointer"
+                              title="Periksa ulang berkas pada POD ini"
+                            >
+                              <RefreshCw size={10} className={isCheckingThisPodFiles ? 'animate-spin' : ''} />
+                            </button>
+                          </div>
+                        </div>
 
-                      {/* Restart Container Button (if Online) */}
-                      {pod.isOnline && (
-                        <button
-                          onClick={() => handleControlSinglePod(pod, 'restart')}
-                          disabled={isRestartLoading}
-                          className={`p-1.5 rounded-xl bg-slate-900 hover:bg-purple-500/20 text-slate-300 hover:text-purple-300 border border-slate-700 hover:border-purple-500/40 transition-all cursor-pointer disabled:opacity-50 active:scale-95 ${isRestartLoading ? 'border-purple-500/60 bg-purple-500/10' : ''
-                            }`}
-                          title="Restart container mobile-synch pada POD ini"
-                        >
-                          {isRestartLoading ? (
-                            <Loader2 size={12} className="animate-spin text-purple-400" />
-                          ) : (
-                            <RotateCw size={12} />
-                          )}
-                        </button>
-                      )}
+                        {/* Grid of Files */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                          {/* Found Files on POD */}
+                          {podCheck.files?.map(f => {
+                            const folderType = f.folderType || (f.fullPath?.includes('/videos') ? 'videos' : f.fullPath?.includes('/images') ? 'images' : 'sounds');
+                            const integrityKey = `${podId}_${f.fullPath}`;
+                            const isIntegrityChecking = !!actionLoadingMap[`integrity_${podId}_${f.fullPath}`];
+                            const integrityData = integrityMap[integrityKey];
 
-                      {/* Stop Container Button (if Running) */}
-                      {isRunning && (
-                        <button
-                          onClick={() => handleControlSinglePod(pod, 'stop')}
-                          disabled={isStopLoading}
-                          className={`p-1.5 rounded-xl bg-slate-900 hover:bg-rose-500/20 text-slate-300 hover:text-rose-300 border border-slate-700 hover:border-rose-500/40 transition-all cursor-pointer disabled:opacity-50 active:scale-95 ${isStopLoading ? 'border-rose-500/60 bg-rose-500/10' : ''
-                            }`}
-                          title="Stop container mobile-synch pada POD ini"
-                        >
-                          {isStopLoading ? (
-                            <Loader2 size={12} className="animate-spin text-rose-400" />
-                          ) : (
-                            <Square size={10} className="fill-rose-400 text-rose-400" />
-                          )}
-                        </button>
-                      )}
+                            return (
+                              <div
+                                key={f.filename || f.fullPath}
+                                className={`p-2 rounded-xl border flex flex-col gap-1 text-[10.5px] transition-all ${integrityData?.isCorrupt
+                                  ? 'bg-rose-950/30 border-rose-500/50 shadow-sm'
+                                  : integrityData?.status === 'healthy'
+                                    ? 'bg-emerald-950/30 border-emerald-500/40 shadow-sm'
+                                    : 'bg-emerald-950/20 border-emerald-500/30'
+                                  }`}
+                              >
+                                <div className="flex items-center justify-between gap-1.5">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <CheckCircle2 size={12} className="text-emerald-400 shrink-0" />
+                                    <span className="font-bold text-white truncate font-mono text-[11px]" title={f.fullPath || f.filename}>
+                                      {f.filename}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <span className="text-[9.5px] font-mono text-emerald-300 font-semibold shrink-0">
+                                      {f.sizeFormatted || 'Ada'} &bull; /{folderType}
+                                    </span>
 
-                      {/* Re-check Single POD Status Button */}
-                      {pod.isOnline && (
-                        <button
-                          onClick={() => handleInspectSinglePod(pod)}
-                          disabled={isInspectLoading}
-                          className={`p-1.5 rounded-xl bg-slate-900 hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-300 border border-slate-700 hover:border-cyan-500/40 transition-all cursor-pointer disabled:opacity-50 active:scale-95 ${isInspectLoading ? 'border-cyan-500/60 bg-cyan-500/10' : ''
-                            }`}
-                          title="Periksa status container & file pada POD ini saja"
-                        >
-                          {isInspectLoading ? (
-                            <Loader2 size={12} className="animate-spin text-cyan-400" />
-                          ) : (
-                            <RefreshCw size={12} />
-                          )}
-                        </button>
-                      )}
+                                    {/* Tombol Cek Kesehatan / Integritas (ffprobe) */}
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCheckFileIntegrity(pod, f.fullPath, f.filename);
+                                      }}
+                                      disabled={isIntegrityChecking}
+                                      className={`p-1 rounded-lg border transition-all cursor-pointer ${integrityData?.isCorrupt
+                                        ? 'bg-rose-500/25 text-rose-300 border-rose-500/40 hover:bg-rose-500/35'
+                                        : integrityData?.status === 'healthy'
+                                          ? 'bg-emerald-500/25 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/35'
+                                          : 'bg-slate-900 hover:bg-slate-800 text-cyan-400 hover:text-white border-slate-700'
+                                        }`}
+                                      title="Cek Kesehatan & Validitas Berkas (ffprobe: durasi, bitrate, codec, korup/sehat)"
+                                    >
+                                      {isIntegrityChecking ? (
+                                        <Loader2 size={11} className="animate-spin text-cyan-400" />
+                                      ) : integrityData?.isCorrupt ? (
+                                        <ShieldAlert size={11} className="text-rose-400" />
+                                      ) : integrityData?.status === 'healthy' ? (
+                                        <ShieldCheck size={11} className="text-emerald-400" />
+                                      ) : (
+                                        <Stethoscope size={11} />
+                                      )}
+                                    </button>
+                                  </div>
+                                </div>
 
-                      {/* View Logs Button */}
-                      {pod.isOnline && (
-                        <button
-                          onClick={() => setLogModalPod(pod)}
-                          className="p-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-700 transition-all cursor-pointer active:scale-95"
-                          title="Buka Console Log Real-time mobile-synch"
-                        >
-                          <Terminal size={12} />
-                        </button>
-                      )}
-                    </div>
+                                {/* Badge Hasil Diagnosa Integritas ffprobe */}
+                                {integrityData && (
+                                  <div
+                                    onClick={() => setIntegrityModal({ isOpen: true, data: integrityData, isLoading: false, targetPod: pod, targetFilename: f.filename })}
+                                    className={`mt-0.5 px-2 py-1 rounded-lg text-[9.5px] font-mono flex items-center justify-between gap-1 border cursor-pointer transition-all ${integrityData.isCorrupt
+                                      ? 'bg-rose-950/60 text-rose-300 border-rose-500/40 hover:bg-rose-950/80'
+                                      : 'bg-emerald-950/50 text-emerald-300 border-emerald-500/40 hover:bg-emerald-950/70'
+                                      }`}
+                                    title="Klik untuk melihat laporan diagnostik ffprobe lengkap"
+                                  >
+                                    <span className="flex items-center gap-1.5 truncate">
+                                      {integrityData.isCorrupt ? (
+                                        <>
+                                          <AlertTriangle size={10} className="text-rose-400 shrink-0" />
+                                          <b className="text-rose-400">KORUP:</b> {integrityData.message}
+                                        </>
+                                      ) : (
+                                        <>
+                                          <CheckCircle2 size={10} className="text-emerald-400 shrink-0" />
+                                          <span>
+                                            <b>Sehat &amp; Utuh</b>
+                                            {integrityData.durationFormatted ? ` • ${integrityData.durationFormatted}` : ''}
+                                            {integrityData.bitrateFormatted ? ` • ${integrityData.bitrateFormatted}` : ''}
+                                            {integrityData.dimensions ? ` • ${integrityData.dimensions}` : ''}
+                                          </span>
+                                        </>
+                                      )}
+                                    </span>
+                                    <span className="text-[8.5px] text-cyan-300 underline shrink-0">Rincian</span>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+
+                          {/* Missing Files on POD */}
+                          {podCheck.missingFiles?.map(f => {
+                            const filename = typeof f === 'string' ? f : f.filename;
+                            const isDownloading = !!actionLoadingMap[`dl_${podId}_${filename}`];
+                            const folderGuess = filename.endsWith('.mp4') ? 'videos' : (filename.endsWith('.jpg') || filename.endsWith('.png') || filename.endsWith('.jpeg')) ? 'images' : 'sounds';
+                            return (
+                              <div
+                                key={filename}
+                                className="p-1.5 px-2.5 rounded-lg bg-rose-950/20 border border-rose-500/30 flex items-center justify-between gap-1.5 text-[10.5px]"
+                              >
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <AlertTriangle size={12} className="text-rose-400 shrink-0" />
+                                  <span className="font-semibold text-rose-300 truncate font-mono" title={filename}>
+                                    {filename}
+                                  </span>
+                                  <span className="text-[9px] font-mono text-rose-400/70 shrink-0">
+                                    (/{folderGuess})
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownloadSingleMissingFile(pod, filename)}
+                                  disabled={isDownloading}
+                                  className="px-2 py-0.5 rounded bg-rose-500/20 hover:bg-rose-500/40 border border-rose-500/40 text-[9.5px] font-bold text-rose-200 flex items-center gap-1 transition-all cursor-pointer disabled:opacity-50 shadow-sm shrink-0"
+                                  title={`Download ${filename} langsung ke /home/pod/${folderGuess} di ${pod.serverName}`}
+                                >
+                                  {isDownloading ? <Loader2 size={10} className="animate-spin" /> : <Download size={10} />}
+                                  <span>{isDownloading ? 'Unduh...' : 'Unduh'}</span>
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Download All Missing button if multiple missing */}
+                        {podCheck.missingFiles?.length > 1 && (
+                          <div className="pt-1 flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadAllMissingForPod(pod)}
+                              disabled={!!actionLoadingMap[`dl_all_${podId}`]}
+                              className="px-2.5 py-1 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 text-[10px] font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 active:scale-95 shadow-sm"
+                            >
+                              {actionLoadingMap[`dl_all_${podId}`] ? (
+                                <Loader2 size={11} className="animate-spin text-sky-400" />
+                              ) : (
+                                <CloudDownload size={11} />
+                              )}
+                              <span>Unduh Semua Berkas yang Kurang ({podCheck.missingFiles.length})</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })
@@ -1051,6 +1574,311 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
           </div>
         </div>
       )}
+
+      {/* Media File Integrity & ffprobe Diagnostic Modal */}
+      <FileIntegrityModal
+        isOpen={integrityModal.isOpen}
+        onClose={() => setIntegrityModal(prev => ({ ...prev, isOpen: false }))}
+        data={integrityModal.data}
+        isLoading={integrityModal.isLoading}
+        onRedownload={integrityModal.targetPod && integrityModal.targetFilename ? () => {
+          const { targetPod, targetFilename } = integrityModal;
+          setIntegrityModal(prev => ({ ...prev, isOpen: false }));
+          handleDownloadSingleMissingFile(targetPod, targetFilename);
+        } : null}
+        onOpenPreview={integrityModal.data?.status === 'healthy' && integrityModal.data?.filePath ? () => {
+          const { data, targetPod, targetFilename } = integrityModal;
+          const ext = (targetFilename || data.filePath || '').split('.').pop().toLowerCase();
+          const category = ['mp4', 'mkv', 'avi', 'mov'].includes(ext) ? 'video' : ['wav', 'mp3', 'aac', 'flac', 'ogg'].includes(ext) ? 'audio' : 'image';
+          const streamUrl = `/api/vps/content/pods/stream-media?serverId=${targetPod?.id}&filePath=${encodeURIComponent(data.filePath)}`;
+          setIntegrityModal(prev => ({ ...prev, isOpen: false }));
+          handleOpenMediaPreview({
+            filename: targetFilename || 'Media File',
+            category,
+            url: streamUrl,
+            sourceLabel: `POD ${targetPod?.name || targetPod?.host} • ${data.filePath}`
+          });
+        } : null}
+      />
+
+      {/* 4. Track Master Metadata Detail Modal */}
+      {trackInfoModalItem && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200"
+          onClick={() => setTrackInfoModalItem(null)}
+        >
+          <div
+            className="w-full max-w-lg rounded-3xl bg-slate-900 border border-purple-500/30 p-6 shadow-2xl shadow-purple-500/15 space-y-5 animate-in zoom-in-95 duration-200"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-3 rounded-2xl bg-purple-500/20 border border-purple-500/40 text-purple-300 shrink-0">
+                  <Layers size={22} />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-black text-purple-300">
+                      Folder #{trackInfoModalItem.sound_scape}
+                    </span>
+                    <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                      Master API Payload
+                    </span>
+                  </div>
+                  <h3 className="text-base font-black text-white truncate mt-0.5">
+                    {trackInfoModalItem.tittle || trackInfoModalItem.title || `Track #${trackInfoModalItem.sound_scape}`}
+                  </h3>
+                  <p className="text-xs text-slate-400 truncate">
+                    {trackInfoModalItem.artist || 'Regenesis'} • {trackInfoModalItem.album || 'Master Session'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setTrackInfoModalItem(null)}
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all cursor-pointer shrink-0"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Key-Value File Cards */}
+            <div className="space-y-2">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Daftar Berkas Terdaftar di Master API:
+              </div>
+
+              {/* Music Audio */}
+              <div className="p-2.5 rounded-2xl bg-slate-950/80 border border-cyan-500/25 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 shrink-0">
+                    <Music size={15} />
+                  </div>
+                  <div className="min-w-0 font-mono">
+                    <span className="text-[9.5px] text-slate-400 uppercase font-sans font-bold block">music</span>
+                    <span className="text-xs text-cyan-200 font-semibold truncate block" title={trackInfoModalItem.music}>
+                      {trackInfoModalItem.music || '<kosong / tidak ada>'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {trackInfoModalItem.music && (
+                    <>
+                      <span className="text-[10px] font-mono text-cyan-400/80 px-2 py-0.5 rounded bg-cyan-500/10">
+                        /sounds
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenMediaPreview({
+                          filename: trackInfoModalItem.music,
+                          category: 'audio',
+                          url: `https://developerfile-084897310273.s3.ap-southeast-1.amazonaws.com/media/${trackInfoModalItem.sound_scape}/${trackInfoModalItem.music}`,
+                          sourceLabel: `AWS S3 • media/${trackInfoModalItem.sound_scape}/`
+                        })}
+                        className="px-2.5 py-1 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-[10.5px] font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
+                        title="Putar / Preview Audio dari AWS S3"
+                      >
+                        <Play size={10} className="fill-cyan-400 text-cyan-400" />
+                        <span>Preview</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Video MP4 */}
+              <div className="p-2.5 rounded-2xl bg-slate-950/80 border border-rose-500/25 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="p-2 rounded-xl bg-rose-500/10 text-rose-400 shrink-0">
+                    <FileVideo size={15} />
+                  </div>
+                  <div className="min-w-0 font-mono">
+                    <span className="text-[9.5px] text-slate-400 uppercase font-sans font-bold block">video</span>
+                    <span className="text-xs text-rose-200 font-semibold truncate block" title={trackInfoModalItem.video}>
+                      {trackInfoModalItem.video || '<kosong / tidak ada>'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {trackInfoModalItem.video && (
+                    <>
+                      <span className="text-[10px] font-mono text-rose-400/80 px-2 py-0.5 rounded bg-rose-500/10">
+                        /videos
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenMediaPreview({
+                          filename: trackInfoModalItem.video,
+                          category: 'video',
+                          url: `https://developerfile-084897310273.s3.ap-southeast-1.amazonaws.com/media/${trackInfoModalItem.sound_scape}/${trackInfoModalItem.video}`,
+                          sourceLabel: `AWS S3 • media/${trackInfoModalItem.sound_scape}/`
+                        })}
+                        className="px-2.5 py-1 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-[10.5px] font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
+                        title="Putar / Preview Video dari AWS S3"
+                      >
+                        <Film size={10} className="text-rose-400" />
+                        <span>Preview</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Lamp Strobe WAV */}
+              <div className="p-2.5 rounded-2xl bg-slate-950/80 border border-amber-500/25 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 shrink-0">
+                    <Zap size={15} />
+                  </div>
+                  <div className="min-w-0 font-mono">
+                    <span className="text-[9.5px] text-slate-400 uppercase font-sans font-bold block">lamp</span>
+                    <span className="text-xs text-amber-200 font-semibold truncate block" title={trackInfoModalItem.lamp}>
+                      {trackInfoModalItem.lamp || '<kosong / tidak ada>'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {trackInfoModalItem.lamp && (
+                    <>
+                      <span className="text-[10px] font-mono text-amber-400/80 px-2 py-0.5 rounded bg-amber-500/10">
+                        /sounds
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenMediaPreview({
+                          filename: trackInfoModalItem.lamp,
+                          category: 'lamp',
+                          isStrobe: true,
+                          url: `https://developerfile-084897310273.s3.ap-southeast-1.amazonaws.com/media/${trackInfoModalItem.sound_scape}/${trackInfoModalItem.lamp}`,
+                          sourceLabel: `AWS S3 • media/${trackInfoModalItem.sound_scape}/`
+                        })}
+                        className="px-2.5 py-1 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[10.5px] font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
+                        title="Putar & Simulasi Lampu Strobe dari AWS S3"
+                      >
+                        <Zap size={10} className="fill-amber-400 text-amber-400" />
+                        <span>Simulasi Strobe</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Album String */}
+              <div className="p-2.5 rounded-2xl bg-slate-950/80 border border-purple-500/25 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 shrink-0">
+                    <Layers size={15} />
+                  </div>
+                  <div className="min-w-0 font-mono">
+                    <span className="text-[9.5px] text-slate-400 uppercase font-sans font-bold block">album</span>
+                    <span className="text-xs text-purple-200 font-semibold truncate block" title={trackInfoModalItem.album}>
+                      {trackInfoModalItem.album || '<kosong / tidak ada>'}
+                    </span>
+                  </div>
+                </div>
+                {trackInfoModalItem.album && (
+                  <span className="text-[10px] font-mono text-purple-400/80 px-2 py-0.5 rounded bg-purple-500/10 shrink-0">
+                    metadata
+                  </span>
+                )}
+              </div>
+
+              {/* Cover Album (if present) */}
+              {trackInfoModalItem.coverAlbumUrl && (
+                <div className="p-2.5 rounded-2xl bg-slate-950/80 border border-emerald-500/25 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 shrink-0">
+                      <Eye size={15} />
+                    </div>
+                    <div className="min-w-0 font-mono">
+                      <span className="text-[9.5px] text-slate-400 uppercase font-sans font-bold block">cover_album</span>
+                      <span className="text-xs text-emerald-200 font-semibold truncate block" title={trackInfoModalItem.coverAlbumUrl}>
+                        {trackInfoModalItem.cover_album || 'Cover Album Artwork'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-[10px] font-mono text-emerald-400/80 px-2 py-0.5 rounded bg-emerald-500/10">
+                      /images
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenMediaPreview({
+                        filename: trackInfoModalItem.cover_album || 'cover.jpg',
+                        category: 'image',
+                        url: trackInfoModalItem.coverAlbumUrl.startsWith('http')
+                          ? trackInfoModalItem.coverAlbumUrl
+                          : `https://developerfile-084897310273.s3.ap-southeast-1.amazonaws.com${trackInfoModalItem.coverAlbumUrl}`,
+                        sourceLabel: `AWS S3 • media/${trackInfoModalItem.sound_scape}/`
+                      })}
+                      className="px-2.5 py-1 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[10.5px] font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
+                      title="Lihat Preview Gambar Cover dari AWS S3"
+                    >
+                      <Eye size={10} className="text-emerald-400" />
+                      <span>Preview</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Raw JSON Code Block Preview */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-[11px] font-bold text-slate-400">
+                <span>Respon JSON:</span>
+                <button
+                  type="button"
+                  onClick={() => handleCopyTrackJson(trackInfoModalItem)}
+                  className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-purple-300 text-[10.5px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                >
+                  {copiedJson ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+                  <span>{copiedJson ? 'Tersalin!' : 'Salin JSON'}</span>
+                </button>
+              </div>
+              <pre className="p-3 rounded-2xl bg-slate-950 border border-slate-800 text-[11px] font-mono text-purple-300 overflow-x-auto custom-scrollbar">
+                {JSON.stringify({
+                  music: trackInfoModalItem.music || null,
+                  video: trackInfoModalItem.video || null,
+                  lamp: trackInfoModalItem.lamp || null,
+                  album: trackInfoModalItem.album || null
+                }, null, 2)}
+              </pre>
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="flex items-center justify-between gap-3 pt-1">
+              {onNavigateView && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const code = String(trackInfoModalItem.sound_scape);
+                    setTrackInfoModalItem(null);
+                    onNavigateView('storage-manager', { code, returnView: 'multimedia-sync' });
+                  }}
+                  className="px-4 py-2 rounded-xl bg-purple-600/30 hover:bg-purple-600/40 text-purple-200 border border-purple-500/40 text-xs font-bold flex items-center gap-2 transition-all cursor-pointer"
+                >
+                  <Layers size={13} />
+                  <span>Buka di Storage Manager</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setTrackInfoModalItem(null)}
+                className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-all cursor-pointer ml-auto"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. AWS S3 & POD Media Preview Modal (Audio, Video, Image Player) */}
+      <MediaPreviewModal
+        isOpen={previewModal.isOpen}
+        file={previewModal.file}
+        onClose={handleCloseMediaPreview}
+      />
 
     </div>
   );
