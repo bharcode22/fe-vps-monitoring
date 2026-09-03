@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Activity, Server, Radio, Cpu, Sliders } from 'lucide-react';
+import { ArrowLeft, Activity, Server, Radio, Cpu } from 'lucide-react';
 import io from 'socket.io-client';
 import { SOCKET_URL } from '../../config';
 import PodActivityTopicCards from './PodActivityTopicCards';
@@ -70,7 +70,7 @@ export default function PodActivityDetailPage({ pod, onBack }) {
         }
       }
 
-      // Format the packet to match what PodActivityTopicCards and PodHeartbeatDetailTab expect:
+      // Format the packet to match what PodActivityTopicCards expects:
       // { topic: string, payload: string, timestamp: number, serverId: number, serverName: string }
       setMqttActivityFeed((prev) => {
         const newLog = {
@@ -195,8 +195,8 @@ export default function PodActivityDetailPage({ pod, onBack }) {
                   <>
                     <span className="text-slate-600">•</span>
                     <span className={`inline-flex items-center gap-1.5 text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-md border ${occupancyState === 1
-                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                      : 'bg-slate-800/90 text-slate-300 border-slate-700'
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                        : 'bg-slate-800/90 text-slate-300 border-slate-700'
                       }`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${occupancyState === 1 ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
                       {occupancyState === 1 ? 'OCCUPIED (1)' : 'AVAILABLE (0)'}

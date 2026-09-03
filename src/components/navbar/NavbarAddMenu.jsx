@@ -1,6 +1,5 @@
 import React, { useRef, useEffect } from 'react';
 import { Plus, ChevronDown, Server, Database } from 'lucide-react';
-import { useLanguage } from '../../context/LanguageContext';
 
 export default function NavbarAddMenu({
   isOpen,
@@ -9,7 +8,6 @@ export default function NavbarAddMenu({
   onOpenAddServer,
   onOpenAddService
 }) {
-  const { t } = useLanguage();
   const addMenuRef = useRef(null);
 
   useEffect(() => {
@@ -29,10 +27,10 @@ export default function NavbarAddMenu({
       <button
         onClick={onToggle}
         className="bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 px-3 py-1.5 rounded-xl font-extrabold text-xs flex items-center gap-1.5 shadow-md shadow-cyan-500/20 transition-all duration-200 cursor-pointer"
-        title={t('navbar.addMenu.addVpsPod', null, 'Tambah VPS / Service Baru')}
+        title="Tambah VPS / Service Baru"
       >
         <Plus size={14} />
-        <span>{t('navbar.addMenu.add', null, '+ Tambah')}</span>
+        <span>Tambah</span>
         <ChevronDown
           size={12}
           className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
@@ -55,7 +53,7 @@ export default function NavbarAddMenu({
               <div className="text-xs font-bold text-white group-hover:text-cyan-400 transition-colors">
                 VPS / POD
               </div>
-              <div className="text-[10px] text-slate-400">{t('navbar.addMenu.addVpsPodDesc', null, 'Server Linux via SSH')}</div>
+              <div className="text-[10px] text-slate-400">Server Linux via SSH</div>
             </div>
           </button>
 
@@ -73,7 +71,7 @@ export default function NavbarAddMenu({
               <div className="text-xs font-bold text-white group-hover:text-sky-400 transition-colors">
                 DB &amp; Storage
               </div>
-              <div className="text-[10px] text-slate-400">{t('navbar.addMenu.addDbStorageDesc', null, 'PostgreSQL, MinIO, S3')}</div>
+              <div className="text-[10px] text-slate-400">PostgreSQL, MinIO, S3</div>
             </div>
           </button>
         </div>

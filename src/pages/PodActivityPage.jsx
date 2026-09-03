@@ -16,10 +16,9 @@ import PodActivityCardGrid from '../components/podActivity/PodActivityCardGrid';
 import PodActivityTableView from '../components/podActivity/PodActivityTableView';
 import PodActivityDetailPage from '../components/podActivity/PodActivityDetailPage';
 import PodFleetHeartbeatMatrix from '../components/podActivity/PodFleetHeartbeatMatrix';
-import { useLanguage } from '../context/LanguageContext';
 
 export default function PodActivityPage({ onBack }) {
-  const { t } = useLanguage();
+  const socketRef = useRef(null);
   const [data, setData] = useState({ summary: {}, pods: [], recentLogs: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -53,7 +52,6 @@ export default function PodActivityPage({ onBack }) {
 
   // Live raw MQTT log feed
   const [mqttActivityFeed, setMqttActivityFeed] = useState([]);
-  const socketRef = useRef(null);
 
   // Live timer tick for real-time elapsed seconds update
   const [nowTimestamp, setNowTimestamp] = useState(Date.now());

@@ -31,10 +31,8 @@ import LiveActivityTracer from '../components/rabbitmq/LiveActivityTracer';
 import QueuesMonitor from '../components/rabbitmq/QueuesMonitor';
 import ServerDetailModal from '../components/server/ServerDetailModal';
 import PodV3DockerMatrix from '../components/rabbitmq/PodV3DockerMatrix';
-import { useLanguage } from '../context/LanguageContext';
 
 export default function RabbitMqMonitorPage({ onBack }) {
-  const { t } = useLanguage();
   const [servers, setServers] = useState([]);
   const [vpsServers, setVpsServers] = useState([]);
   const [selectedServerId, setSelectedServerId] = useState(null);

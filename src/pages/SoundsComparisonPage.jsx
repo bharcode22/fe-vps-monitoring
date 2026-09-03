@@ -13,10 +13,8 @@ import {
 } from 'lucide-react';
 import { fetchCompareSoundsApi } from '../api/vpsApi';
 import SoundsSkeletonTable from '../components/common/SoundsSkeletonTable';
-import { useLanguage } from '../context/LanguageContext';
 
 export default function SoundsComparisonPage({ onBack }) {
-  const { t } = useLanguage();
   const [podVersion, setPodVersion] = useState('v3'); // Default to v3
   const [isLoading, setIsLoading] = useState(false);
   const [data, setData] = useState(null);

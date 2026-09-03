@@ -13,10 +13,8 @@ import {
 } from 'lucide-react';
 import { fetchCompareMetadataApi } from '../api/vpsApi';
 import MetadataSkeletonTable from '../components/common/MetadataSkeletonTable';
-import { useLanguage } from '../context/LanguageContext';
 
 export default function MetadataComparisonPage({ onBack }) {
-  const { t } = useLanguage();
   const [podVersion, setPodVersion] = useState('v3'); // Default to v3
   const [isLoading, setIsLoading] = useState(false);
   const [data, setData] = useState(null);

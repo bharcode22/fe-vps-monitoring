@@ -13,10 +13,8 @@ import {
   Filter
 } from 'lucide-react';
 import { compareEnvFilesApi } from '../../api/vpsApi';
-import { useLanguage } from '../../context/LanguageContext';
 
 export default function EnvComparator({ files = [] }) {
-  const { t } = useLanguage();
   const [sourceA, setSourceA] = useState('');
   const [sourceB, setSourceB] = useState('');
   const [diffResult, setDiffResult] = useState(null);
@@ -99,7 +97,7 @@ export default function EnvComparator({ files = [] }) {
           {/* Source File A */}
           <div className="flex-1 min-w-[200px]">
             <label className="block text-[10px] font-bold text-cyan-400 uppercase tracking-wider mb-1">
-              {t('envManager.comparator.sourceA', null, 'Source File A (Kiri)')}
+              Source File A (Kiri)
             </label>
             <select
               value={sourceA}
@@ -116,7 +114,7 @@ export default function EnvComparator({ files = [] }) {
           <button
             onClick={handleSwapSources}
             className="p-2.5 mt-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors cursor-pointer"
-            title={t('envManager.comparator.swapTooltip', null, 'Tukar Posisi File')}
+            title="Tukar Posisi File"
           >
             <ArrowRightLeft size={16} />
           </button>
@@ -124,7 +122,7 @@ export default function EnvComparator({ files = [] }) {
           {/* Source File B */}
           <div className="flex-1 min-w-[200px]">
             <label className="block text-[10px] font-bold text-purple-400 uppercase tracking-wider mb-1">
-              {t('envManager.comparator.sourceB', null, 'Source File B (Kanan)')}
+              Source File B (Kanan)
             </label>
             <select
               value={sourceB}
@@ -144,7 +142,7 @@ export default function EnvComparator({ files = [] }) {
           className="px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-400 hover:to-indigo-400 text-white rounded-xl text-xs font-extrabold flex items-center gap-2 shadow-md shadow-purple-500/20 cursor-pointer shrink-0"
         >
           <RotateCw size={14} className={isLoading ? 'animate-spin' : ''} />
-          <span>{isLoading ? t('envManager.comparator.comparing', null, 'Membandingkan...') : t('envManager.comparator.compareBtn', null, 'Bandingkan Ulang')}</span>
+          <span>Bandingkan Ulang</span>
         </button>
       </div>
 
@@ -160,7 +158,7 @@ export default function EnvComparator({ files = [] }) {
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           {/* Total Keys */}
           <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 text-center">
-            <div className="text-[10px] font-bold text-slate-400 uppercase">{t('envManager.comparator.stats.total', null, 'Total Variabel')}</div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase">Total Variabel</div>
             <div className="text-xl font-extrabold text-white mt-0.5">{diffResult.stats.totalKeys}</div>
           </div>
 
@@ -173,7 +171,7 @@ export default function EnvComparator({ files = [] }) {
           >
             <div className="text-[10px] font-bold text-emerald-400 uppercase flex items-center justify-center gap-1">
               <CheckCircle2 size={12} />
-              <span>{t('envManager.comparator.stats.identical', null, 'Nilai Sama')}</span>
+              <span>Nilai Sama</span>
             </div>
             <div className="text-xl font-extrabold text-emerald-300 mt-0.5">{diffResult.stats.identicalCount}</div>
           </div>
@@ -187,7 +185,7 @@ export default function EnvComparator({ files = [] }) {
           >
             <div className="text-[10px] font-bold text-amber-400 uppercase flex items-center justify-center gap-1">
               <AlertTriangle size={12} />
-              <span>{t('envManager.comparator.stats.diff', null, 'Nilai Berbeda')}</span>
+              <span>Nilai Berbeda</span>
             </div>
             <div className="text-xl font-extrabold text-amber-300 mt-0.5">{diffResult.stats.mismatchCount}</div>
           </div>
@@ -201,7 +199,7 @@ export default function EnvComparator({ files = [] }) {
           >
             <div className="text-[10px] font-bold text-cyan-400 uppercase flex items-center justify-center gap-1">
               <MinusCircle size={12} />
-              <span>{t('envManager.comparator.stats.onlyA', null, 'Hanya di File A')}</span>
+              <span>Hanya di File A</span>
             </div>
             <div className="text-xl font-extrabold text-cyan-300 mt-0.5">{diffResult.stats.onlyACount}</div>
           </div>
@@ -215,7 +213,7 @@ export default function EnvComparator({ files = [] }) {
           >
             <div className="text-[10px] font-bold text-purple-400 uppercase flex items-center justify-center gap-1">
               <PlusCircle size={12} />
-              <span>{t('envManager.comparator.stats.onlyB', null, 'Hanya di File B')}</span>
+              <span>Hanya di File B</span>
             </div>
             <div className="text-xl font-extrabold text-purple-300 mt-0.5">{diffResult.stats.onlyBCount}</div>
           </div>
@@ -233,7 +231,7 @@ export default function EnvComparator({ files = [] }) {
                 : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
             }`}
           >
-            {t('envManager.comparator.filters.all', { count: diffResult?.diffMatrix?.length || 0 }, `Semua (${diffResult?.diffMatrix?.length || 0})`)}
+            Semua ({diffResult?.diffMatrix?.length || 0})
           </button>
           <button
             onClick={() => setFilterMode('DIFF_ONLY')}
@@ -243,7 +241,7 @@ export default function EnvComparator({ files = [] }) {
                 : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
             }`}
           >
-            {t('envManager.comparator.filters.diffOnly', { count: (diffResult?.stats?.mismatchCount || 0) + (diffResult?.stats?.onlyACount || 0) + (diffResult?.stats?.onlyBCount || 0) }, `Hanya Perbedaan (${((diffResult?.stats?.mismatchCount || 0) + (diffResult?.stats?.onlyACount || 0) + (diffResult?.stats?.onlyBCount || 0))})`)}
+            Hanya Perbedaan ({((diffResult?.stats?.mismatchCount || 0) + (diffResult?.stats?.onlyACount || 0) + (diffResult?.stats?.onlyBCount || 0))})
           </button>
           <button
             onClick={() => setFilterMode('MISMATCH')}
@@ -253,7 +251,7 @@ export default function EnvComparator({ files = [] }) {
                 : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
             }`}
           >
-            {t('envManager.comparator.filters.mismatch', { count: diffResult?.stats?.mismatchCount || 0 }, `Nilai Mismatch (${diffResult?.stats?.mismatchCount || 0})`)}
+            Nilai Mismatch ({diffResult?.stats?.mismatchCount || 0})
           </button>
         </div>
 
@@ -263,7 +261,7 @@ export default function EnvComparator({ files = [] }) {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t('envManager.comparator.searchPlaceholder', null, 'Cari variabel / nilai...')}
+            placeholder="Cari variabel / nilai..."
             className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-8 pr-2.5 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/50"
           />
         </div>
@@ -274,21 +272,21 @@ export default function EnvComparator({ files = [] }) {
         <table className="w-full text-left text-xs font-mono">
           <thead className="bg-slate-950/80 sticky top-0 border-b border-slate-800 text-slate-400 text-[11px] uppercase tracking-wider">
             <tr>
-              <th className="py-3 px-3 w-1/4">{t('envManager.comparator.table.varName', null, 'Variable Name')}</th>
+              <th className="py-3 px-3 w-1/4">Variable Name</th>
               <th className="py-3 px-3 w-1/3 border-l border-slate-800">
-                <span className="text-cyan-400">{t('envManager.comparator.table.fileA', { name: sourceA }, `File A: ${sourceA}`)}</span>
+                <span className="text-cyan-400">File A: {sourceA}</span>
               </th>
               <th className="py-3 px-3 w-1/3 border-l border-slate-800">
-                <span className="text-purple-400">{t('envManager.comparator.table.fileB', { name: sourceB }, `File B: ${sourceB}`)}</span>
+                <span className="text-purple-400">File B: {sourceB}</span>
               </th>
-              <th className="py-3 px-3 w-28 text-center border-l border-slate-800">{t('envManager.comparator.table.status', null, 'Status')}</th>
+              <th className="py-3 px-3 w-28 text-center border-l border-slate-800">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/60">
             {filteredMatrix.length === 0 ? (
               <tr>
                 <td colSpan={4} className="py-12 text-center text-slate-500 italic">
-                  {isLoading ? t('common.loading', null, 'Memuat komparasi environment...') : t('common.noData', null, 'Tidak ada perbedaan yang ditemukan pada filter ini.')}
+                  {isLoading ? 'Memuat komparasi environment...' : 'Tidak ada perbedaan yang ditemukan pada filter ini.'}
                 </td>
               </tr>
             ) : (
@@ -366,22 +364,22 @@ export default function EnvComparator({ files = [] }) {
                     <td className="py-2.5 px-3 text-center border-l border-slate-800">
                       {isIdentical && (
                         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                          {t('envManager.comparator.statusBadges.identical', null, 'IDENTIK')}
+                          MATCH
                         </span>
                       )}
                       {isMismatch && (
                         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                          {t('envManager.comparator.statusBadges.mismatch', null, 'BEDA NILAI')}
+                          DIFF VALUE
                         </span>
                       )}
                       {isOnlyA && (
                         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                          {t('envManager.comparator.statusBadges.onlyA', null, 'HANYA DI A')}
+                          ONLY IN A
                         </span>
                       )}
                       {isOnlyB && (
                         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                          {t('envManager.comparator.statusBadges.onlyB', null, 'HANYA DI B')}
+                          ONLY IN B
                         </span>
                       )}
                     </td>

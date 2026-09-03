@@ -19,7 +19,6 @@ import PodHeartbeatTable from '../components/dashboard/PodHeartbeatTable';
 import ServerDetailModal from '../components/server/ServerDetailModal';
 import { syncHeartbeatApi } from '../api/vpsApi';
 import { useAuth } from '../context/AuthContext';
-import { useLanguage } from '../context/LanguageContext';
 
 export default function DashboardPage({
   servers = [],
@@ -28,7 +27,6 @@ export default function DashboardPage({
   onNavigateView = null
 }) {
   const { isAuthenticated } = useAuth();
-  const { t } = useLanguage();
   const [isSyncing, setIsSyncing] = useState(false);
   const [selectedPodId, setSelectedPodId] = useState(null);
   const [selectedDetailServer, setSelectedDetailServer] = useState(null);

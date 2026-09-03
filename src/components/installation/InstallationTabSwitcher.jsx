@@ -1,10 +1,7 @@
 import React from 'react';
 import { Cpu, Tv, HardDrive, History, Layers, Package } from 'lucide-react';
-import { useLanguage } from '../../context/LanguageContext';
 
 export default function InstallationTabSwitcher({ activeTab, setActiveTab }) {
-  const { t } = useLanguage();
-
   return (
     <div className="flex flex-wrap items-center bg-slate-950/90 p-1.5 rounded-2xl border border-cyan-500/20 shadow-lg gap-1.5">
       {/* 1. Backend Microservices */}
@@ -16,7 +13,7 @@ export default function InstallationTabSwitcher({ activeTab, setActiveTab }) {
           }`}
       >
         <Cpu size={14} className={activeTab === 'backend' ? 'text-cyan-400' : 'text-slate-500'} />
-        <span>{t('installation.tabs.backend', null, 'Backend')}</span>
+        <span>Backend</span>
         <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
           5 Apps
         </span>
@@ -31,7 +28,7 @@ export default function InstallationTabSwitcher({ activeTab, setActiveTab }) {
           }`}
       >
         <Tv size={14} className={activeTab === 'frontend' ? 'text-purple-400' : 'text-slate-500'} />
-        <span>{t('installation.tabs.frontend', null, 'Frontend Screens')}</span>
+        <span>Frontend Screens</span>
         <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
           2 Apps
         </span>
@@ -46,9 +43,9 @@ export default function InstallationTabSwitcher({ activeTab, setActiveTab }) {
           }`}
       >
         <Package size={14} className={activeTab === 'bundles' || activeTab === 'bundle_deploy' ? 'text-teal-400' : 'text-slate-500'} />
-        <span>{t('installation.tabs.bundles', null, 'Versi Bundle')}</span>
+        <span>Versi Bundle</span>
         <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30">
-          {activeTab === 'bundle_deploy' ? t('installation.tabs.deployCount', null, '7 Apps Deploy') : t('installation.tabs.bundleBadge', null, 'Bundle')}
+          {activeTab === 'bundle_deploy' ? '7 Apps Deploy' : 'Bundle'}
         </span>
       </button>
 
@@ -61,7 +58,7 @@ export default function InstallationTabSwitcher({ activeTab, setActiveTab }) {
           }`}
       >
         <Layers size={14} className={activeTab === 'matrix' ? 'text-amber-400' : 'text-slate-500'} />
-        <span>{t('installation.tabs.matrix', null, 'Matriks Versi')}</span>
+        <span>Matriks Versi</span>
       </button>
 
       {/* 5. Deployment History */}
@@ -73,7 +70,7 @@ export default function InstallationTabSwitcher({ activeTab, setActiveTab }) {
           }`}
       >
         <History size={14} className={activeTab === 'history' ? 'text-blue-400' : 'text-slate-500'} />
-        <span>{t('installation.tabs.history', null, 'Riwayat Rilis')}</span>
+        <span>Riwayat Rilis</span>
       </button>
 
       {/* 6. MinIO Artifact & Version Manager */}
@@ -85,7 +82,7 @@ export default function InstallationTabSwitcher({ activeTab, setActiveTab }) {
           }`}
       >
         <HardDrive size={14} className={activeTab === 'artifacts' ? 'text-rose-400' : 'text-slate-500'} />
-        <span>{t('installation.tabs.artifacts', null, 'MinIO Storage')}</span>
+        <span>MinIO Storage</span>
       </button>
     </div>
   );

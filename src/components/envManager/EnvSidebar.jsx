@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Search, FileCode, Copy, Trash2 } from 'lucide-react';
-import { useLanguage } from '../../context/LanguageContext';
 
 export default function EnvSidebar({
   files = [],
@@ -9,7 +8,6 @@ export default function EnvSidebar({
   onDuplicateFile,
   onDeleteFile
 }) {
-  const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredFiles = files.filter(f =>
@@ -26,14 +24,14 @@ export default function EnvSidebar({
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder={t('envManager.sidebar.searchPlaceholder', null, 'Cari file / nama variabel...')}
+          placeholder="Cari file / nama variabel..."
           className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/60 transition-colors"
         />
       </div>
 
       <div className="flex items-center justify-between px-1">
         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-          {t('envManager.sidebar.fileCount', { count: filteredFiles.length }, `File Environment (${filteredFiles.length})`)}
+          File Environment ({filteredFiles.length})
         </span>
       </div>
 
@@ -41,7 +39,7 @@ export default function EnvSidebar({
       <div className="flex flex-col gap-2 overflow-y-auto max-h-[620px] scrollbar-thin pr-1">
         {filteredFiles.length === 0 ? (
           <div className="text-center py-10 text-slate-500 text-xs italic">
-            {t('envManager.sidebar.noFiles', null, 'Tidak ada file .env ditemukan.')}
+            Tidak ada file .env ditemukan.
           </div>
         ) : (
           filteredFiles.map((file) => {
@@ -83,7 +81,7 @@ export default function EnvSidebar({
                         onDuplicateFile(file);
                       }}
                       className="p-1 hover:bg-slate-800 text-slate-400 hover:text-cyan-300 rounded transition-colors cursor-pointer"
-                      title={t('envManager.sidebar.cloneTooltip', null, 'Kloning file .env ini')}
+                      title="Kloning file .env ini"
                     >
                       <Copy size={12} />
                     </button>
@@ -95,7 +93,7 @@ export default function EnvSidebar({
                         onDeleteFile(file);
                       }}
                       className="p-1 hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 rounded transition-colors cursor-pointer"
-                      title={t('envManager.sidebar.deleteTooltip', null, 'Hapus file .env ini')}
+                      title="Hapus file .env ini"
                     >
                       <Trash2 size={12} />
                     </button>
@@ -104,7 +102,7 @@ export default function EnvSidebar({
 
                 <div className="flex items-center justify-between text-[10px] text-slate-400">
                   <span className="font-mono">
-                    {t('envManager.sidebar.varsAndLines', { vars: file.variableCount, lines: file.lineCount }, `${file.variableCount} Variabel • ${file.lineCount} Baris`)}
+                    {file.variableCount} Variabel • {file.lineCount} Baris
                   </span>
 
                   <span className={`px-1.5 py-0.5 rounded font-bold uppercase text-[9px] ${

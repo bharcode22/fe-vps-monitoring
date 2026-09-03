@@ -10,7 +10,6 @@ import {
   Play
 } from 'lucide-react';
 import { POD_APPS } from './constants';
-import { useLanguage } from '../../context/LanguageContext';
 
 export default function BackendInstallationTab({
   podV3Servers,
@@ -36,8 +35,6 @@ export default function BackendInstallationTab({
   onStartDeploy,
   totalBatchCombinations
 }) {
-  const { t } = useLanguage();
-
   return (
     <>
       {/* Step 1: Select Target POD v3 Servers */}
@@ -46,7 +43,7 @@ export default function BackendInstallationTab({
           <div className="flex items-center gap-2.5">
             <Server size={18} className="text-cyan-400" />
             <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">
-              {t('installation.step1.title', null, '1. PILIH SERVER POD TARGET (KHUSUS POD V3)')}
+              1. PILIH SERVER POD TARGET (KHUSUS POD V3)
             </h3>
           </div>
 
@@ -56,13 +53,13 @@ export default function BackendInstallationTab({
                 onClick={() => setSelectedServerIds(podV3Servers.map(s => String(s.id)))}
                 className="text-[11px] font-bold text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 px-2.5 py-1 rounded-lg border border-cyan-500/30 transition-colors cursor-pointer"
               >
-                {t('installation.step1.selectAll', { count: podV3Servers.length }, `Pilih Semua (${podV3Servers.length})`)}
+                Pilih Semua ({podV3Servers.length})
               </button>
               <button
                 onClick={() => setSelectedServerIds([])}
                 className="text-[11px] font-bold text-slate-400 hover:text-slate-200 bg-slate-800 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
               >
-                {t('installation.step1.clearAll', null, 'Hapus Semua')}
+                Hapus Semua
               </button>
             </div>
           )}
@@ -82,8 +79,8 @@ export default function BackendInstallationTab({
                   key={srv.id}
                   onClick={() => toggleServerSelect(srv.id)}
                   className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between ${isSelected
-                      ? 'bg-cyan-500/20 border-cyan-500/50 text-white shadow-lg shadow-cyan-500/10'
-                      : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 text-slate-400'
+                    ? 'bg-cyan-500/20 border-cyan-500/50 text-white shadow-lg shadow-cyan-500/10'
+                    : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 text-slate-400'
                     }`}
                 >
                   <div className="flex items-center gap-3">
@@ -111,7 +108,7 @@ export default function BackendInstallationTab({
           <div className="flex items-center gap-2.5">
             <Box size={18} className="text-cyan-400" />
             <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">
-              {t('installation.step2.title', null, '2. PILIH APLIKASI BACKEND POD & ENVIRONMENT')}
+              2. PILIH APLIKASI BACKEND POD & ENVIRONMENT
             </h3>
           </div>
 
@@ -120,8 +117,8 @@ export default function BackendInstallationTab({
             <button
               onClick={() => setEnv('dev')}
               className={`px-3 py-1 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${env === 'dev'
-                  ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-400 border border-cyan-500/40 shadow-sm'
-                  : 'text-slate-400 hover:text-white'
+                ? 'bg-gradient-to-r from-cyan-500/30 to-blue-500/30 text-cyan-400 border border-cyan-500/40 shadow-sm'
+                : 'text-slate-400 hover:text-white'
                 }`}
             >
               DEV
@@ -129,8 +126,8 @@ export default function BackendInstallationTab({
             <button
               onClick={() => setEnv('release')}
               className={`px-3 py-1 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${env === 'release'
-                  ? 'bg-gradient-to-r from-purple-500/30 to-pink-500/30 text-purple-400 border border-purple-500/40 shadow-sm'
-                  : 'text-slate-400 hover:text-white'
+                ? 'bg-gradient-to-r from-purple-500/30 to-pink-500/30 text-purple-400 border border-purple-500/40 shadow-sm'
+                : 'text-slate-400 hover:text-white'
                 }`}
             >
               RELEASE
@@ -145,13 +142,13 @@ export default function BackendInstallationTab({
               onClick={() => setSelectedAppIds(POD_APPS.map(a => a.id))}
               className="text-[11px] font-bold text-cyan-400 hover:text-cyan-300 bg-cyan-500/10 px-2.5 py-1 rounded-lg border border-cyan-500/30 transition-colors cursor-pointer"
             >
-              {t('installation.step2.selectAll', null, 'Pilih Semua Apps')}
+              Pilih Semua Apps
             </button>
             <button
               onClick={() => setSelectedAppIds([])}
               className="text-[11px] font-bold text-slate-400 hover:text-slate-200 bg-slate-800 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
             >
-              {t('installation.step2.clearAll', null, 'Hapus Semua')}
+              Hapus Semua
             </button>
           </div>
         </div>
@@ -164,8 +161,8 @@ export default function BackendInstallationTab({
                 key={app.id}
                 onClick={() => toggleAppSelect(app.id)}
                 className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2.5 ${isSelected
-                    ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border-cyan-500/50 text-white shadow-md'
-                    : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 text-slate-400'
+                  ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border-cyan-500/50 text-white shadow-md'
+                  : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 text-slate-400'
                   }`}
               >
                 <div className={`p-1 rounded-md ${isSelected ? 'text-cyan-400' : 'text-slate-600'}`}>
@@ -286,8 +283,8 @@ export default function BackendInstallationTab({
                       <button
                         onClick={() => setAppPrismaMapping({ ...appPrismaMapping, [appId]: !appPrismaMapping[appId] })}
                         className={`w-full py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-between ${appPrismaMapping[appId]
-                            ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
-                            : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-slate-200'
+                          ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+                          : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-slate-200'
                           }`}
                       >
                         <span>Prisma Migrate</span>
@@ -302,6 +299,29 @@ export default function BackendInstallationTab({
             })}
           </div>
         )}
+
+        <div className="mt-5">
+          <button
+            onClick={onStartDeploy}
+            disabled={isDeploying || selectedServerIds.length === 0 || selectedAppIds.length === 0}
+            className={`w-full py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer ${isDeploying || selectedServerIds.length === 0 || selectedAppIds.length === 0
+              ? 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-60'
+              : 'bg-gradient-to-r from-cyan-400 via-sky-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 shadow-cyan-500/25'
+              }`}
+          >
+            {isDeploying ? (
+              <>
+                <RefreshCw size={18} className="animate-spin" />
+                <span>Mengeksekusi Jenkins CI/CD Backend Pipeline Stream...</span>
+              </>
+            ) : (
+              <>
+                <Play size={18} className="fill-slate-950" />
+                <span>Jalankan Jenkins Pipeline Backend ({totalBatchCombinations} Target)</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </>
   );

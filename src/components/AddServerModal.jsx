@@ -400,7 +400,7 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
               className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-2 border border-slate-700 transition-colors cursor-pointer"
             >
               {testing ? <Loader2 className="animate-spin" size={16} /> : <Key size={16} />}
-              <span>{testing ? t('serverModal.testing', null, 'Menguji SSH...') : t('serverModal.testSsh', null, 'Uji Koneksi SSH')}</span>
+              <span>{testing ? 'Uji Koneksi...' : 'Uji Koneksi SSH'}</span>
             </button>
 
             <button
@@ -409,7 +409,7 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded, serverT
               className="px-5 py-2.5 bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 rounded-xl text-xs font-bold flex items-center gap-2 shadow-lg shadow-cyan-500/25 transition-all cursor-pointer"
             >
               {submitting ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle size={16} />}
-              <span>{submitting ? t('common.saving', null, 'Menyimpan...') : (isEditMode ? t('serverModal.saveChanges', null, 'Simpan Perubahan') : t('serverModal.save', null, 'Tambah Server'))}</span>
+              <span>{submitting ? 'Menyimpan...' : (isEditMode ? 'Simpan Perubahan' : 'Tambah Server')}</span>
             </button>
           </div>
 

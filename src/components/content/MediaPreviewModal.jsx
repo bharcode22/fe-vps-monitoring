@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { BACKEND_URL } from '../../config';
 import { getAuthHeaders } from '../../api/vpsApi';
-import { useLanguage } from '../../context/LanguageContext';
 import {
   X,
   Play,
@@ -154,7 +153,6 @@ export default function MediaPreviewModal({
   file,
   onClose
 }) {
-  const { t } = useLanguage();
   const mediaRef = useRef(null);
   const canvasHeroRef = useRef(null);
   const animationFrameRef = useRef(null);
@@ -597,7 +595,7 @@ export default function MediaPreviewModal({
                 {isStrobe && (
                   <span className="px-2 py-0.5 rounded-md bg-amber-500/25 text-amber-300 border border-amber-500/40 text-[9.5px] font-bold font-mono uppercase tracking-wider flex items-center gap-1">
                     <Sparkles size={10} />
-                    <span>{t('multimedia.mediaPreview.strobeSimTitle', null, 'Regenesis Strobe Simulator')}</span>
+                    <span>Regenesis Strobe Simulator</span>
                   </span>
                 )}
               </div>
@@ -620,8 +618,8 @@ export default function MediaPreviewModal({
                       <Loader2 size={10} className="animate-spin text-amber-400" />
                       <span>
                         {downloadStage === 'decoding'
-                          ? t('multimedia.mediaPreview.decodingSignal', null, 'Mendekode Sinyal (500Hz)...')
-                          : t('multimedia.mediaPreview.downloadingProgress', { pct: downloadProgress !== null ? `${downloadProgress}%` : '', mb: downloadMB ? `(${downloadMB})` : '' }, `Mengunduh ${downloadProgress !== null ? `${downloadProgress}%` : ''} ${downloadMB ? `(${downloadMB})` : ''}`)
+                          ? 'Mendekode Sinyal (500Hz)...'
+                          : `Mengunduh ${downloadProgress !== null ? `${downloadProgress}%` : ''} ${downloadMB ? `(${downloadMB})` : ''}`
                         }
                       </span>
                     </span>
@@ -638,10 +636,10 @@ export default function MediaPreviewModal({
                 type="button"
                 onClick={jumpToFirstPulse}
                 className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-lg shadow-amber-500/30 transition-all cursor-pointer active:scale-95 animate-pulse"
-                title={t('multimedia.mediaPreview.jumpTooltip', { time: formatDuration(firstPulseTime) }, `Lompat langsung ke detik ${formatDuration(firstPulseTime)} saat lampu strobe mulai berkedip aktif`)}
+                title={`Lompat langsung ke detik ${formatDuration(firstPulseTime)} saat lampu strobe mulai berkedip aktif`}
               >
                 <Zap size={14} className="fill-slate-950 text-slate-950" />
-                <span>{t('multimedia.mediaPreview.jumpToPulse', { time: formatDuration(firstPulseTime) }, `Lompat (${formatDuration(firstPulseTime)})`)}</span>
+                <span>Lompat({formatDuration(firstPulseTime)})</span>
               </button>
             )}
 
@@ -652,7 +650,7 @@ export default function MediaPreviewModal({
                 rel="noreferrer"
                 download={file.filename}
                 className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer border border-slate-700"
-                title={t('multimedia.mediaPreview.downloadOriginal', null, 'Buka / Download file asli')}
+                title="Buka / Download file asli"
               >
                 <Download size={15} />
               </a>
@@ -660,7 +658,7 @@ export default function MediaPreviewModal({
             <button
               onClick={onClose}
               className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer border border-slate-700"
-              title={t('multimedia.mediaPreview.close', null, 'Tutup preview')}
+              title="Tutup preview"
             >
               <X size={16} />
             </button>
@@ -690,7 +688,7 @@ export default function MediaPreviewModal({
               onWaiting={() => setIsBuffering(true)}
               onPlaying={() => setIsBuffering(false)}
               onCanPlay={() => setIsBuffering(false)}
-              onError={() => setErrorMsg(t('multimedia.mediaPreview.audioError', null, 'Gagal memutar audio dari S3.'))}
+              onError={() => setErrorMsg('Gagal memutar audio dari S3.')}
             />
           )}
 
@@ -712,14 +710,12 @@ export default function MediaPreviewModal({
 
                     <div className="space-y-1">
                       <h4 className="text-sm font-black text-white">
-                        {downloadStage === 'decoding'
-                          ? t('multimedia.mediaPreview.decodingOverlayTitle', null, 'Mendekode Sinyal 500Hz...')
-                          : t('multimedia.mediaPreview.downloadingOverlayTitle', null, 'Mengunduh Berkas Strobe dari S3...')}
+                        {downloadStage === 'decoding' ? 'Mendekode Sinyal 500Hz...' : 'Mengunduh Berkas Strobe dari S3...'}
                       </h4>
                       <p className="text-[11px] text-slate-400 font-mono">
                         {downloadStage === 'decoding'
-                          ? t('multimedia.mediaPreview.decodingOverlayDesc', null, 'Mengekstrak matriks logika kanal Kiri & Kanan')
-                          : t('multimedia.mediaPreview.downloadingOverlayDesc', null, 'Mengambil streaming file audio strobe langsung dari S3')}
+                          ? 'Mengekstrak matriks logika kanal Kiri & Kanan'
+                          : 'Mengambil streaming file audio strobe langsung dari S3'}
                       </p>
                     </div>
 
@@ -732,14 +728,14 @@ export default function MediaPreviewModal({
                         />
                       </div>
                       <div className="flex items-center justify-between text-[10.5px] font-mono text-slate-400">
-                        <span className="text-amber-300 font-bold">{downloadMB || t('multimedia.mediaPreview.connecting', null, 'Menghubungkan...')}</span>
+                        <span className="text-amber-300 font-bold">{downloadMB || 'Menghubungkan...'}</span>
                         <span className="font-black text-white">{downloadProgress !== null ? `${downloadProgress}%` : ''}</span>
                       </div>
                     </div>
 
                     <div className="text-[10px] text-slate-500 font-mono flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                      <span>{t('multimedia.mediaPreview.controlsLocked', null, 'Tombol kontrol terkunci selama proses download...')}</span>
+                      <span>Tombol kontrol terkunci selama proses download...</span>
                     </div>
                   </div>
                 </div>
@@ -962,7 +958,7 @@ export default function MediaPreviewModal({
                       {isDecodingStrobe ? (
                         <span className="px-2 py-1 rounded-lg text-[10px] font-mono font-bold flex items-center gap-1.5 border bg-amber-500/20 text-amber-300 border-amber-500/40">
                           <Loader2 size={11} className="animate-spin text-amber-400" />
-                          <span>{downloadStage === 'decoding' ? t('multimedia.mediaPreview.decodingBadge', null, 'MENDEKODE...') : `${downloadProgress || 0}%`}</span>
+                          <span>{downloadStage === 'decoding' ? 'MENDEKODE...' : `${downloadProgress || 0}%`}</span>
                         </span>
                       ) : (
                         <span className={`px-2 py-1 rounded-lg text-[10px] font-mono font-bold flex items-center gap-1.5 border transition-all ${isPlaying
@@ -970,7 +966,7 @@ export default function MediaPreviewModal({
                           : 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
                           }`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${isPlaying ? 'bg-emerald-400 animate-ping' : 'bg-cyan-400'}`} />
-                          <span>{isPlaying ? t('multimedia.mediaPreview.activePulse', null, 'PULSA AKTIF') : t('multimedia.mediaPreview.ready500Hz', null, 'SIAP (500Hz)')}</span>
+                          <span>{isPlaying ? 'PULSA AKTIF' : 'SIAP (500Hz)'}</span>
                         </span>
                       )}
                     </div>
@@ -981,9 +977,9 @@ export default function MediaPreviewModal({
                     <div className="flex items-center justify-between text-[10.5px] text-slate-400 font-mono px-1">
                       <span className="text-cyan-300 font-bold flex items-center gap-1">
                         <Zap size={11} className="text-amber-400" />
-                        <span>{t('multimedia.mediaPreview.logicOutputTrack', null, 'Logic Output Track (Top: L/Warm, Bottom: R/Cool)')}</span>
+                        <span>Logic Output Track (Top: L/Warm, Bottom: R/Cool)</span>
                       </span>
-                      <span className="text-amber-400 text-[10px] font-bold">{t('multimedia.mediaPreview.realtimeEnvelope', null, '500Hz Realtime Envelope')}</span>
+                      <span className="text-amber-400 text-[10px] font-bold">500Hz Realtime Envelope</span>
                     </div>
                     <div className="w-full h-32 sm:h-36 bg-black rounded-2xl border border-slate-800 p-1 relative shadow-inner overflow-hidden flex items-center justify-center">
                       <canvas
@@ -1025,7 +1021,7 @@ export default function MediaPreviewModal({
                 src={file.url}
                 alt={file.filename}
                 className="max-h-[56vh] max-w-full object-contain rounded-xl shadow-lg"
-                onError={() => setErrorMsg(t('multimedia.mediaPreview.imageError', null, 'Gagal memuat gambar dari URL S3.'))}
+                onError={() => setErrorMsg('Gagal memuat gambar dari URL S3.')}
               />
             </div>
           )}
@@ -1075,7 +1071,7 @@ export default function MediaPreviewModal({
                         onWaiting={() => setIsBuffering(true)}
                         onPlaying={() => setIsBuffering(false)}
                         onCanPlay={() => setIsBuffering(false)}
-                        onError={() => setErrorMsg(t('multimedia.mediaPreview.videoError', null, 'Gagal memutar video dari S3.'))}
+                        onError={() => setErrorMsg('Gagal memutar video dari S3.')}
                       />
 
                       {/* Center Play/Pause overlay indicator on hover or pause */}
@@ -1095,7 +1091,7 @@ export default function MediaPreviewModal({
                         <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center pointer-events-none">
                           <div className="p-3 bg-slate-900/90 rounded-2xl border border-slate-700 flex items-center gap-2 text-fuchsia-300 text-xs font-bold shadow-xl">
                             <Loader2 size={16} className="animate-spin text-fuchsia-400" />
-                            <span>{t('multimedia.mediaPreview.loadingStream', null, 'Memuat Stream...')}</span>
+                            <span>Memuat Stream...</span>
                           </div>
                         </div>
                       )}
@@ -1113,42 +1109,42 @@ export default function MediaPreviewModal({
                       <div className="flex items-center gap-2">
                         <Smartphone size={16} className="text-fuchsia-400" />
                         <span className="text-xs font-extrabold text-white">
-                          {isRotated90 ? t('multimedia.mediaPreview.portraitPillarTitle', null, 'Format Portrait Pillar Totem (3840 × 996 Rotated)') : t('multimedia.mediaPreview.portraitVerticalTitle', null, 'Format Video Vertikal (9:16 Portrait)')}
+                          {isRotated90 ? 'Format Portrait Pillar Totem (3840 × 996 Rotated)' : 'Format Video Vertikal (9:16 Portrait)'}
                         </span>
                       </div>
                       <p className="text-[11px] text-fuchsia-200/80 font-mono">
                         {isRotated90
-                          ? t('multimedia.mediaPreview.portraitPillarDesc', null, 'Disesuaikan untuk vertical pillar display & totem Regenesis Pod.')
-                          : t('multimedia.mediaPreview.portraitVerticalDesc', null, 'Dioptimalkan untuk layar vertical display & mobile POD.')}
+                          ? 'Disesuaikan untuk vertical pillar display & totem Regenesis Pod.'
+                          : 'Dioptimalkan untuk layar vertical display & mobile POD.'}
                       </p>
                     </div>
 
                     {/* Video Technical Details */}
                     <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2 text-xs font-mono">
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-400">{t('multimedia.mediaPreview.fileResolution', null, 'Resolusi File:')}</span>
+                        <span className="text-slate-400">Resolusi File:</span>
                         <span className="font-bold text-cyan-300">
-                          {videoMeta.width > 0 ? `${videoMeta.width} × ${videoMeta.height} px` : t('multimedia.mediaPreview.detecting', null, 'Mendeteksi...')}
+                          {videoMeta.width > 0 ? `${videoMeta.width} × ${videoMeta.height} px` : 'Mendeteksi...'}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-400">{t('multimedia.mediaPreview.activeOrientation', null, 'Orientasi Aktif:')}</span>
+                        <span className="text-slate-400">Orientasi Aktif:</span>
                         <span className="font-bold text-fuchsia-300">
-                          {isRotated90 ? `${videoMeta.height || 996} × ${videoMeta.width || 3840} px ${t('multimedia.mediaPreview.upright', { deg: videoRotation }, `(Tegak ${videoRotation}°)`)}` : `${videoMeta.width} × ${videoMeta.height} px`}
+                          {isRotated90 ? `${videoMeta.height || 996} × ${videoMeta.width || 3840} px (Tegak ${videoRotation}°)` : `${videoMeta.width} × ${videoMeta.height} px`}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-400">{t('multimedia.mediaPreview.displayRatio', null, 'Rasio Tampilan:')}</span>
+                        <span className="text-slate-400">Rasio Tampilan:</span>
                         <span className="font-bold text-purple-300">
-                          {isRotated90 ? t('multimedia.mediaPreview.verticalTotemPillar', null, '1 : 3.86 (Vertical Totem Pillar)') : videoMeta.ratioLabel}
+                          {isRotated90 ? '1 : 3.86 (Vertical Totem Pillar)' : videoMeta.ratioLabel}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-400">{t('multimedia.mediaPreview.duration', null, 'Durasi:')}</span>
+                        <span className="text-slate-400">Durasi:</span>
                         <span className="font-bold text-white">{formatDuration(duration)}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-400">{t('multimedia.mediaPreview.fileSize', null, 'Ukuran Berkas:')}</span>
+                        <span className="text-slate-400">Ukuran Berkas:</span>
                         <span className="font-bold text-slate-300">{file.sizeFormatted}</span>
                       </div>
                     </div>
@@ -1156,7 +1152,7 @@ export default function MediaPreviewModal({
                     {/* Orientation & Scale Controls */}
                     <div className="p-3 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-2.5">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-400 font-mono text-[11px]">{t('multimedia.mediaPreview.rotateOrientation', null, 'Orientasi Putar:')}</span>
+                        <span className="text-slate-400 font-mono text-[11px]">Orientasi Putar:</span>
                         <span className="text-fuchsia-300 font-bold font-mono text-[10.5px]">{videoRotation}°</span>
                       </div>
                       <div className="grid grid-cols-3 gap-1.5">
@@ -1169,7 +1165,7 @@ export default function MediaPreviewModal({
                             }`}
                         >
                           <Smartphone size={12} />
-                          <span>{t('multimedia.mediaPreview.portraitMode', null, 'Portrait (90°)')}</span>
+                          <span>Portrait (90°)</span>
                         </button>
                         <button
                           type="button"
@@ -1180,21 +1176,21 @@ export default function MediaPreviewModal({
                             }`}
                         >
                           <Monitor size={12} />
-                          <span>{t('multimedia.mediaPreview.landscapeMode', null, 'Landscape (0°)')}</span>
+                          <span>Landscape (0°)</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => setVideoRotation(prev => (prev + 90) % 360)}
                           className="py-1.5 px-2 rounded-xl text-[11px] font-bold font-mono flex items-center justify-center gap-1 bg-slate-950 text-cyan-300 border border-slate-800 hover:border-cyan-500/40 hover:text-white transition-all cursor-pointer"
-                          title={t('multimedia.mediaPreview.rotatePlus90Tooltip', null, 'Putar +90°')}
+                          title="Putar +90°"
                         >
                           <RotateCw size={12} />
-                          <span>{t('multimedia.mediaPreview.rotatePlus90', null, '+90°')}</span>
+                          <span>+90°</span>
                         </button>
                       </div>
 
                       <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-800">
-                        <span className="text-slate-400 font-mono text-[11px]">{t('multimedia.mediaPreview.scale', null, 'Skala:')}</span>
+                        <span className="text-slate-400 font-mono text-[11px]">Skala:</span>
                         <div className="flex items-center gap-1">
                           <button
                             type="button"
@@ -1204,7 +1200,7 @@ export default function MediaPreviewModal({
                               : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
                               }`}
                           >
-                            {t('multimedia.mediaPreview.fitContain', null, 'Fit Utuh')}
+                            Fit Utuh
                           </button>
                           <button
                             type="button"
@@ -1214,7 +1210,7 @@ export default function MediaPreviewModal({
                               : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
                               }`}
                           >
-                            {t('multimedia.mediaPreview.coverFull', null, 'Cover Penuh')}
+                            Cover Penuh
                           </button>
                         </div>
                       </div>
@@ -1247,7 +1243,7 @@ export default function MediaPreviewModal({
                         onWaiting={() => setIsBuffering(true)}
                         onPlaying={() => setIsBuffering(false)}
                         onCanPlay={() => setIsBuffering(false)}
-                        onError={() => setErrorMsg(t('multimedia.mediaPreview.videoError', null, 'Gagal memutar video dari S3.'))}
+                        onError={() => setErrorMsg('Gagal memutar video dari S3.')}
                       />
 
                       {/* Center Play/Pause overlay */}
@@ -1267,7 +1263,7 @@ export default function MediaPreviewModal({
                         <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center pointer-events-none">
                           <div className="p-3 bg-slate-900/90 rounded-2xl border border-slate-700 flex items-center gap-2 text-fuchsia-300 text-xs font-bold shadow-xl">
                             <Loader2 size={16} className="animate-spin text-fuchsia-400" />
-                            <span>{t('multimedia.mediaPreview.loadingStreamUltraWide', null, 'Memuat Stream Ultra-Wide...')}</span>
+                            <span>Memuat Stream Ultra-Wide...</span>
                           </div>
                         </div>
                       )}
@@ -1287,13 +1283,13 @@ export default function MediaPreviewModal({
                         <Monitor size={15} />
                       </div>
                       <div className="min-w-0 text-xs font-mono">
-                        <div className="text-slate-400 text-[10px]">{t('multimedia.mediaPreview.displayType', null, 'Tipe Tampilan Layar')}</div>
-                        <div className="font-bold text-white truncate">{t('multimedia.mediaPreview.ledWallImmersion', null, 'LED Wall / Immersion Ribbon')}</div>
+                        <div className="text-slate-400 text-[10px]">Tipe Tampilan Layar</div>
+                        <div className="font-bold text-white truncate">LED Wall / Immersion Ribbon</div>
                       </div>
                     </div>
 
                     <div className="p-2.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between px-3 text-xs font-mono">
-                      <span className="text-slate-400">{t('multimedia.mediaPreview.aspectRatio', null, 'Rasio Aspek:')}</span>
+                      <span className="text-slate-400">Rasio Aspek:</span>
                       <span className="font-bold text-cyan-300">{videoMeta.ratioLabel}</span>
                     </div>
 
@@ -1305,7 +1301,7 @@ export default function MediaPreviewModal({
                           className="py-1 px-2 rounded-lg text-[10.5px] font-bold font-mono bg-fuchsia-500/25 text-fuchsia-200 border border-fuchsia-500/50 hover:bg-fuchsia-500/40 transition-all flex items-center gap-1"
                         >
                           <Smartphone size={11} />
-                          <span>{t('multimedia.mediaPreview.portraitMode', null, 'Mode Portrait (90°)')}</span>
+                          <span>Mode Portrait (90°)</span>
                         </button>
                       </div>
                       <div className="flex items-center gap-1">
@@ -1317,7 +1313,7 @@ export default function MediaPreviewModal({
                             : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
                             }`}
                         >
-                          {t('multimedia.mediaPreview.fit', null, 'Fit')}
+                          Fit
                         </button>
                         <button
                           type="button"
@@ -1327,7 +1323,7 @@ export default function MediaPreviewModal({
                             : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
                             }`}
                         >
-                          {t('multimedia.mediaPreview.cover', null, 'Cover')}
+                          Cover
                         </button>
                       </div>
                     </div>
@@ -1356,7 +1352,7 @@ export default function MediaPreviewModal({
                       onWaiting={() => setIsBuffering(true)}
                       onPlaying={() => setIsBuffering(false)}
                       onCanPlay={() => setIsBuffering(false)}
-                      onError={() => setErrorMsg(t('multimedia.mediaPreview.videoError', null, 'Gagal memutar video dari S3.'))}
+                      onError={() => setErrorMsg('Gagal memutar video dari S3.')}
                     />
 
                     {/* Buffering */}
@@ -1364,7 +1360,7 @@ export default function MediaPreviewModal({
                       <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center pointer-events-none">
                         <div className="p-3 bg-slate-900/90 rounded-2xl border border-slate-700 flex items-center gap-2 text-cyan-300 text-xs font-bold shadow-xl">
                           <Loader2 size={16} className="animate-spin text-cyan-400" />
-                          <span>{t('multimedia.mediaPreview.loadingStream', null, 'Memuat Stream...')}</span>
+                          <span>Memuat Stream...</span>
                         </div>
                       </div>
                     )}
@@ -1378,7 +1374,7 @@ export default function MediaPreviewModal({
           {!isPlayable && !isImage && (
             <div className="p-8 text-center text-slate-400 text-xs">
               <FileCode size={40} className="mx-auto mb-2 text-slate-500" />
-              <p>{t('multimedia.mediaPreview.cannotPlayBrowser', null, 'File ini tidak dapat diputar langsung di browser.')}</p>
+              <p>File ini tidak dapat diputar langsung di browser.</p>
               {file.url && (
                 <a
                   href={file.url}
@@ -1387,7 +1383,7 @@ export default function MediaPreviewModal({
                   className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 text-cyan-300 hover:text-white font-bold text-xs border border-slate-700"
                 >
                   <Download size={13} />
-                  <span>{t('multimedia.mediaPreview.downloadOpenFile', null, 'Download / Buka File')}</span>
+                  <span>Download / Buka File</span>
                 </a>
               )}
             </div>
@@ -1421,7 +1417,7 @@ export default function MediaPreviewModal({
                   <div
                     className="absolute top-1/2 -translate-y-1/2 w-1.5 h-3.5 bg-amber-400 rounded-sm pointer-events-none shadow-[0_0_8px_#f59e0b] z-10 opacity-90 border border-amber-200"
                     style={{ left: `${Math.min(99, Math.max(1, (firstPulseTime / duration) * 100))}%` }}
-                    title={t('multimedia.mediaPreview.firstPulseAt', { time: formatDuration(firstPulseTime) }, `Pulsa pertama dimulai pada ${formatDuration(firstPulseTime)}`)}
+                    title={`Pulsa pertama dimulai pada ${formatDuration(firstPulseTime)}`}
                   />
                 )}
               </div>
@@ -1438,7 +1434,7 @@ export default function MediaPreviewModal({
                   disabled={isDecodingStrobe}
                   onClick={() => handleSkip(-10)}
                   className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer border border-slate-700 flex items-center gap-1 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-50"
-                  title={t('multimedia.mediaPreview.rewind10', null, 'Mundur 10 detik')}
+                  title="Mundur 10 detik"
                 >
                   <RotateCcw size={14} />
                   <span>-10s</span>
@@ -1451,7 +1447,7 @@ export default function MediaPreviewModal({
                     ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 shadow-amber-500/25'
                     : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 shadow-cyan-500/25'
                     } text-white shadow-lg transition-all cursor-pointer flex items-center justify-center shrink-0 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50`}
-                  title={isDecodingStrobe ? t('multimedia.mediaPreview.downloadingFile', null, 'Sedang mengunduh berkas...') : isBuffering ? t('multimedia.mediaPreview.loadingAudioStream', null, 'Memuat stream audio...') : isPlaying ? t('multimedia.mediaPreview.pause', null, 'Pause') : t('multimedia.mediaPreview.play', null, 'Play')}
+                  title={isDecodingStrobe ? 'Sedang mengunduh berkas...' : isBuffering ? 'Memuat stream audio...' : isPlaying ? 'Pause' : 'Play'}
                 >
                   {isDecodingStrobe ? (
                     <Loader2 size={18} className="animate-spin text-white" />
@@ -1468,7 +1464,7 @@ export default function MediaPreviewModal({
                   disabled={isDecodingStrobe}
                   onClick={() => handleSkip(10)}
                   className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer border border-slate-700 flex items-center gap-1 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-50"
-                  title={t('multimedia.mediaPreview.forward10', null, 'Maju 10 detik')}
+                  title="Maju 10 detik"
                 >
                   <RotateCw size={14} />
                   <span>+10s</span>
@@ -1480,10 +1476,10 @@ export default function MediaPreviewModal({
                     type="button"
                     onClick={jumpToFirstPulse}
                     className="px-3 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all cursor-pointer active:scale-95"
-                    title={t('multimedia.mediaPreview.jumpTooltip', { time: formatDuration(firstPulseTime) }, `Lompat langsung ke detik ${formatDuration(firstPulseTime)}`)}
+                    title={`Lompat langsung ke detik ${formatDuration(firstPulseTime)}`}
                   >
                     <Zap size={13} className="fill-slate-950 text-slate-950" />
-                    <span>{t('multimedia.mediaPreview.jumpToPulse', { time: formatDuration(firstPulseTime) }, `Lompat (${formatDuration(firstPulseTime)})`)}</span>
+                    <span>Lompat ({formatDuration(firstPulseTime)})</span>
                   </button>
                 )}
               </div>
@@ -1492,11 +1488,11 @@ export default function MediaPreviewModal({
               {isStrobe ? (
                 <div className="flex items-center gap-1.5 bg-slate-950/80 px-3 py-2 rounded-xl border border-slate-800 text-[10.5px] font-mono text-slate-400">
                   <VolumeX size={14} className="text-amber-400" />
-                  <span>{t('multimedia.mediaPreview.audioMutedStrobe', null, 'Audio Muted (Sinyal Lampu)')}</span>
+                  <span>Audio Muted (Sinyal Lampu)</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 bg-slate-950/80 px-3 py-2 rounded-xl border border-slate-800">
-                  <button onClick={toggleMute} disabled={isDecodingStrobe} className="text-slate-400 hover:text-white cursor-pointer disabled:cursor-not-allowed" title={isMuted ? t('multimedia.mediaPreview.unmute', null, 'Unmute') : t('multimedia.mediaPreview.mute', null, 'Mute')}>
+                  <button onClick={toggleMute} disabled={isDecodingStrobe} className="text-slate-400 hover:text-white cursor-pointer disabled:cursor-not-allowed" title={isMuted ? 'Unmute' : 'Mute'}>
                     {isMuted || volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
                   </button>
                   <input

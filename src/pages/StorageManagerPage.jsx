@@ -45,7 +45,6 @@ import FlowEditorStorageView from '../components/storage/FlowEditorStorageView';
 import MultimediaUploadModal from '../components/content/MultimediaUploadModal';
 import io from 'socket.io-client';
 import { SOCKET_URL } from '../config';
-import { useLanguage } from '../context/LanguageContext';
 
 export default function StorageManagerPage({
   onBack,
@@ -55,7 +54,6 @@ export default function StorageManagerPage({
   returnView = null,
   onClearReturnView = null
 }) {
-  const { t } = useLanguage();
   // Main Tab Navigation: 'docker_storage' | 'media_catalog' | 'rogue_scanner'
   const [activeTab, setActiveTab] = useState(() => {
     if (initialActiveCode || localStorage.getItem('storageManagerInitialCode')) {
@@ -783,11 +781,11 @@ export default function StorageManagerPage({
   const currentCatalogFolders = filteredFolders.slice((catalogPage - 1) * catalogPageSize, catalogPage * catalogPageSize);
 
   const tabs = [
-    { id: 'docker_storage', label: t('storage.tabs.docker', null, 'Sampah Docker & Disk 1 TB'), icon: Zap, color: 'cyan', badge: `${storageData?.pods?.length || 0} POD` },
-    { id: 'media_catalog', label: t('storage.tabs.mediaCatalog', null, 'Direktori Media & S3'), icon: Cloud, color: 'rose', badge: `${allFolders.length} Kode S3` },
-    { id: 'flow_pods', label: t('storage.tabs.flowPods', null, 'Unit POD Flow Editor'), icon: Server, color: 'indigo', badge: `${storageData?.pods?.length || 0} POD` },
-    { id: 'flow_catalog', label: t('storage.tabs.flowCatalog', null, 'Katalog File Flow Editor'), icon: LayoutGrid, color: 'purple', badge: '49 File' },
-    { id: 'rogue_scanner', label: t('storage.tabs.rogueScanner', null, 'Rogue Media Scanner'), icon: Search, color: 'emerald' }
+    { id: 'docker_storage', label: 'Sampah Docker & Disk 1 TB', icon: Zap, color: 'cyan', badge: `${storageData?.pods?.length || 0} POD` },
+    { id: 'media_catalog', label: 'Direktori Media & S3', icon: Cloud, color: 'rose', badge: `${allFolders.length} Kode S3` },
+    { id: 'flow_pods', label: 'Unit POD Flow Editor', icon: Server, color: 'indigo', badge: `${storageData?.pods?.length || 0} POD` },
+    { id: 'flow_catalog', label: 'Katalog File Flow Editor', icon: LayoutGrid, color: 'purple', badge: '49 File' },
+    { id: 'rogue_scanner', label: 'Rogue Media Scanner', icon: Search, color: 'emerald' }
   ];
 
   return (
@@ -805,7 +803,7 @@ export default function StorageManagerPage({
                 ? (returnView === 'multimedia-sync' || localStorage.getItem('storageManagerReturnView') === 'multimedia-sync'
                     ? 'Kembali ke Content Management'
                     : 'Kembali ke Katalog')
-                : t('common.back', null, 'Kembali')}
+                : 'Kembali'}
             </span>
           </button>
           <div>
@@ -815,7 +813,7 @@ export default function StorageManagerPage({
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                  <span>{t('storage.title', null, 'Storage Manager')}</span>
+                  <span>Storage Manager</span>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
                     POD v3 Volume Hub
                   </span>
@@ -823,7 +821,7 @@ export default function StorageManagerPage({
                 <p className="text-slate-400 text-xs mt-0.5">
                   {activeCodeDetail
                     ? `Workspace Pengelolaan Konten Kode #${activeCodeDetail.code}`
-                    : t('storage.subtitle', null, 'Manajemen Penyimpanan Disk 1TB, Pembersihan Docker Junk, dan Analisis Berkas Media')}
+                    : 'Kelola kapasitas disk 1 TB, bersihkan sampah build Docker, dan pantau direktori media POD v3.'}
                 </p>
               </div>
             </div>
@@ -834,10 +832,10 @@ export default function StorageManagerPage({
           <button
             onClick={() => { loadStorageAndDockerData(); loadS3Folders(); }}
             className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white rounded-xl border border-slate-800 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
-            title={t('common.refresh', null, 'Refresh Data')}
+            title="Refresh Seluruh Data Storage"
           >
             <RefreshCw size={14} className={isStorageLoading || isInspectingAll ? 'animate-spin text-cyan-400' : ''} />
-            <span className="hidden sm:inline">{t('common.refresh', null, 'Refresh Data')}</span>
+            <span className="hidden sm:inline">Refresh Data</span>
           </button>
 
           <span className="text-xs text-slate-400 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-800 flex items-center gap-2">

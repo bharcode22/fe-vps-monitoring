@@ -33,10 +33,8 @@ import MasterPodSkeleton from '../components/masterPodSync/MasterPodSkeleton';
 import DeleteRowConfirmationModal from '../components/masterPodSync/DeleteRowConfirmationModal';
 import SingleRowSyncModal from '../components/masterPodSync/SingleRowSyncModal';
 import SyncProgressReportModal from '../components/masterPodSync/SyncProgressReportModal';
-import { useLanguage } from '../context/LanguageContext';
 
 export default function MasterPodSyncMatrixPage({ onBack }) {
-  const { t } = useLanguage();
   // View mode: 'catalog' (Level 1: Tables Grid) | 'audit' (Level 1B: Fleet Audit) | 'detail' (Level 2: Detail Workspace)
   const [viewMode, setViewMode] = useState('catalog');
 
@@ -1155,14 +1153,14 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
               }
             }}
             className="p-2 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 transition-colors cursor-pointer"
-            title={t('common.back', null, 'Kembali')}
+            title="Kembali"
           >
             <ArrowLeft size={18} />
           </button>
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-extrabold text-white tracking-tight">
-                {t('masterSync.title', null, 'Master Multi-POD Sync Matrix')}
+                Master Multi-POD Sync Matrix
               </h1>
               <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30">
                 {viewMode === 'catalog'
@@ -1173,7 +1171,7 @@ export default function MasterPodSyncMatrixPage({ onBack }) {
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              {t('masterSync.subtitle', null, 'Audit Skema & Sinkronisasi Tabel PostgreSQL Master ke Seluruh Armada POD V3')}
+              Audit Keselarasan Skema Kolom &amp; Baris Data dari <strong className="text-cyan-300">Database Master</strong> ke seluruh armada <strong className="text-purple-300">POD V3</strong>
             </p>
           </div>
         </div>

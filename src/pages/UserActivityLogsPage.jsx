@@ -28,7 +28,6 @@ import {
 import io from 'socket.io-client';
 import { SOCKET_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
-import { useLanguage } from '../context/LanguageContext';
 import {
   fetchActiveUsersApi,
   fetchActivityLogsApi,
@@ -38,7 +37,6 @@ import {
 
 export default function UserActivityLogsPage({ onBack }) {
   const { user } = useAuth();
-  const { t } = useLanguage();
   const isSuperAdmin = user?.role === 'super_admin';
 
   // Real-time Active Users
@@ -258,14 +256,14 @@ export default function UserActivityLogsPage({ onBack }) {
   const formatRelativeTime = (timestamp) => {
     if (!timestamp) return '—';
     const diffSec = Math.max(0, Math.floor((nowTime - new Date(timestamp).getTime()) / 1000));
-    if (diffSec < 5) return t('common.justNow', null, 'Baru saja');
-    if (diffSec < 60) return t('common.secondsAgo', { count: diffSec }, `${diffSec} detik lalu`);
+    if (diffSec < 5) return 'Baru saja';
+    if (diffSec < 60) return `${diffSec} detik lalu`;
     const diffMin = Math.floor(diffSec / 60);
-    if (diffMin < 60) return t('common.minutesAgo', { count: diffMin }, `${diffMin} menit lalu`);
+    if (diffMin < 60) return `${diffMin} menit lalu`;
     const diffHour = Math.floor(diffMin / 60);
-    if (diffHour < 24) return t('common.hoursAgo', { count: diffHour }, `${diffHour} jam lalu`);
+    if (diffHour < 24) return `${diffHour} jam lalu`;
     const diffDays = Math.floor(diffHour / 24);
-    return t('common.daysAgo', { count: diffDays }, `${diffDays} hari lalu`);
+    return `${diffDays} hari lalu`;
   };
 
   const getCategoryColor = (cat) => {
@@ -298,15 +296,15 @@ export default function UserActivityLogsPage({ onBack }) {
         <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-3xl mb-4 shadow-xl">
           <ShieldAlert size={48} className="text-rose-400" />
         </div>
-        <h2 className="text-xl font-black text-white">{t('common.restrictedAccess', null, 'Akses Ditolak (Super Admin Only)')}</h2>
+        <h2 className="text-xl font-black text-white">Akses Ditolak (Super Admin Only)</h2>
         <p className="text-sm text-slate-400 max-w-md mt-2">
-          {t('common.restrictedDesc', null, 'Halaman Pemantauan Aktivitas Pengguna & Audit Logs hanya dapat diakses oleh akun Super Admin berwenang.')}
+          Halaman Pemantauan Aktivitas Pengguna & Audit Logs hanya dapat diakses oleh akun Super Admin berwenang.
         </p>
         <button
           onClick={onBack}
           className="mt-6 px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer border border-slate-700 shadow"
         >
-          {t('common.backToDashboard', null, 'Kembali ke Dashboard')}
+          Kembali ke Dashboard
         </button>
       </div>
     );
@@ -323,19 +321,19 @@ export default function UserActivityLogsPage({ onBack }) {
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
               <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                {t('userActivity.title', null, 'User Activity & Audit Logs')}
+                User Activity & Audit Logs
               </h1>
               <span className="text-xs font-mono px-2.5 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full font-bold inline-flex items-center gap-1.5 shadow-sm">
                 <Sparkles size={12} className="text-amber-400" />
-                {t('userActivity.exclusiveBadge', null, 'Super Admin Exclusive')}
+                Super Admin Exclusive
               </span>
               <span className="text-xs font-mono px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-md font-bold inline-flex items-center gap-1">
                 <Radio size={11} className={isSocketConnected ? 'animate-pulse text-emerald-400' : 'text-slate-400'} />
-                {isSocketConnected ? t('userActivity.liveSocketActive', null, 'Live Socket Active') : t('common.connecting', null, 'Connecting...')}
+                {isSocketConnected ? 'Live Socket Active' : 'Connecting...'}
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-1">
-              {t('userActivity.subtitle', null, 'Pantau siapa saja pengguna yang sedang online secara real-time dan rekam jejak audit interaksi sistem.')}
+              Pantau siapa saja pengguna yang sedang online secara real-time dan rekam jejak audit interaksi sistem.
             </p>
           </div>
         </div>
@@ -347,10 +345,10 @@ export default function UserActivityLogsPage({ onBack }) {
             onClick={loadAllData}
             disabled={isRefreshing}
             className="px-3.5 py-2 bg-slate-800/80 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700/60 transition flex items-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
-            title={t('common.refresh', null, 'Segarkan')}
+            title="Segarkan"
           >
             <RefreshCw size={14} className={isRefreshing ? 'animate-spin text-cyan-400' : ''} />
-            <span>{t('common.refresh', null, 'Segarkan')}</span>
+            <span>Segarkan</span>
           </button>
 
           {/* Export Dropdown / Buttons */}
@@ -386,26 +384,26 @@ export default function UserActivityLogsPage({ onBack }) {
               <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 shadow-[0_0_8px_rgba(52,211,153,1)]" />
             </div>
             <h2 className="text-base font-black text-white tracking-wide">
-              {t('userActivity.activeUsers.title', null, 'Pengguna Sedang Online Saat Ini')}
+              Pengguna Sedang Online Saat Ini
             </h2>
             <span className="px-2.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full font-mono text-xs font-bold">
-              {t('userActivity.activeUsers.badge', { count: totalActiveUsers }, `${totalActiveUsers} User Aktif`)}
+              {totalActiveUsers} User Aktif
             </span>
           </div>
 
           <span className="text-[11px] font-mono text-slate-400">
-            {t('userActivity.activeUsers.sub', null, 'Terhubung via WebSocket presence stream')}
+            Terhubung via WebSocket presence stream
           </span>
         </div>
 
         {isLoadingActiveUsers ? (
           <div className="py-8 text-center text-slate-400 text-xs font-medium flex items-center justify-center gap-2">
             <RefreshCw size={16} className="animate-spin text-cyan-400" />
-            <span>{t('common.loading', null, 'Memeriksa pengguna yang sedang online...')}</span>
+            <span>Memeriksa pengguna yang sedang online...</span>
           </div>
         ) : activeUsers.length === 0 ? (
           <div className="py-8 text-center text-slate-500 text-xs font-medium bg-slate-950/40 rounded-xl border border-slate-800/60">
-            {t('userActivity.activeUsers.noOtherUsers', null, 'Tidak ada pengguna lain yang sedang aktif selain sesi Anda.')}
+            Tidak ada pengguna lain yang sedang aktif selain sesi Anda.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
@@ -448,7 +446,7 @@ export default function UserActivityLogsPage({ onBack }) {
                         </span>
                         {isCurrentUser && (
                           <span className="text-[9px] font-mono px-1.5 py-0.2 bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded font-bold shrink-0">
-                            {t('userActivity.activeUsers.you', null, 'Anda')}
+                            Anda
                           </span>
                         )}
                       </div>
@@ -469,17 +467,17 @@ export default function UserActivityLogsPage({ onBack }) {
                     <div className="mt-2 flex items-center gap-1.5 text-[10.5px] bg-slate-900/90 px-2.5 py-1 rounded-lg border border-slate-800 text-cyan-300 font-medium truncate">
                       <Laptop size={11} className="text-cyan-400 shrink-0" />
                       <span className="truncate" title={u.currentViewLabel}>
-                        {u.currentView === 'dashboard' ? t('navbar.items.dashboard', null, 'Dashboard Monitoring') :
-                         u.currentView === 'server-list' ? t('navbar.items.serverList', null, 'Server List') :
-                         u.currentView === 'pod-activity' || u.currentView === 'pod-occupancy' ? t('navbar.items.podActivity', null, 'POD Activity Real-Time') :
-                         u.currentView === 'multimedia-sync' || u.currentView === 'content-manager' ? t('navbar.items.multimediaSync', null, 'Content Management') :
-                         u.currentView === 'storage-manager' || u.currentView === 'storage' ? t('navbar.items.storageManager', null, 'Storage Manager') :
-                         u.currentView === 'pod-logs-sync' || u.currentView === 'pod-logs' ? t('navbar.items.podLogsSync', null, 'POD Logs Sync') :
-                         u.currentView === 'master-pod-sync' || u.currentView === 'master-sync' ? t('navbar.items.masterPodSync', null, 'Master POD Sync Matrix') :
-                         u.currentView === 'tnc-sync-manager' ? t('navbar.items.tncSync', null, 'T&C Sync Manager') :
-                         u.currentView === 'sync' ? t('navbar.items.databaseSync', null, 'Database Sync') :
-                         u.currentView === 'user-activity' ? t('navbar.items.userActivity', null, 'User Activity & Audit Logs') :
-                         u.currentView === 'settings' ? t('navbar.items.settings', null, 'Settings & Preferences') :
+                        {u.currentView === 'dashboard' ? 'Dashboard Monitoring' :
+                         u.currentView === 'server-list' ? 'Server List' :
+                         u.currentView === 'pod-activity' || u.currentView === 'pod-occupancy' ? 'POD Activity Real-Time' :
+                         u.currentView === 'multimedia-sync' || u.currentView === 'content-manager' ? 'Content Management' :
+                         u.currentView === 'storage-manager' || u.currentView === 'storage' ? 'Storage Manager' :
+                         u.currentView === 'pod-logs-sync' || u.currentView === 'pod-logs' ? 'POD Logs Sync' :
+                         u.currentView === 'master-pod-sync' || u.currentView === 'master-sync' ? 'Master POD Sync Matrix' :
+                         u.currentView === 'tnc-sync-manager' ? 'T&C Sync Manager' :
+                         u.currentView === 'sync' ? 'Database Sync' :
+                         u.currentView === 'user-activity' ? 'User Activity & Audit Logs' :
+                         u.currentView === 'settings' ? 'Settings & Preferences' :
                          (u.currentViewLabel || 'Dashboard Monitoring')}
                       </span>
                     </div>
@@ -508,7 +506,7 @@ export default function UserActivityLogsPage({ onBack }) {
         {/* Card 1: Total Aksi Hari Ini */}
         <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800/90 backdrop-blur-md shadow-lg relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('userActivity.kpi.todayActions', null, 'Aksi Hari Ini')}</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Aksi Hari Ini</span>
             <div className="p-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl">
               <Activity size={18} />
             </div>
@@ -517,14 +515,14 @@ export default function UserActivityLogsPage({ onBack }) {
             {stats.todayActions.toLocaleString()}
           </div>
           <span className="text-[10px] font-mono text-emerald-400/90 mt-1 block">
-            ● {t('userActivity.kpi.todaySubtitle', null, 'Tercatat sejak 00:00 WIB')}
+            ● Tercatat sejak 00:00 WIB
           </span>
         </div>
 
         {/* Card 2: Total Keseluruhan Log */}
         <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800/90 backdrop-blur-md shadow-lg relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('userActivity.kpi.totalAudit', null, 'Total Audit Trail')}</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Audit Trail</span>
             <div className="p-2 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded-xl">
               <Layers size={18} />
             </div>
@@ -533,14 +531,14 @@ export default function UserActivityLogsPage({ onBack }) {
             {stats.totalActions.toLocaleString()}
           </div>
           <span className="text-[10px] font-mono text-slate-400 mt-1 block">
-            {t('userActivity.kpi.totalSubtitle', null, 'Tersimpan di PostgreSQL RDS')}
+            Tersimpan di PostgreSQL RDS
           </span>
         </div>
 
         {/* Card 3: Aksi Gagal / Ditolak */}
         <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800/90 backdrop-blur-md shadow-lg relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('userActivity.kpi.failedActions', null, 'Aksi Gagal / Ditolak')}</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Aksi Gagal / Ditolak</span>
             <div className="p-2 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-xl">
               <AlertTriangle size={18} />
             </div>
@@ -549,14 +547,14 @@ export default function UserActivityLogsPage({ onBack }) {
             {stats.failedActions.toLocaleString()}
           </div>
           <span className="text-[10px] font-mono text-slate-400 mt-1 block">
-            {stats.failedActions > 0 ? t('userActivity.kpi.failedAlert', null, 'Perlu peninjauan audit') : t('userActivity.kpi.failedNormal', null, 'Semua eksekusi normal')}
+            {stats.failedActions > 0 ? 'Perlu peninjauan audit' : 'Semua eksekusi normal'}
           </span>
         </div>
 
         {/* Card 4: Pengguna Teraktif (7 Hari) */}
         <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800/90 backdrop-blur-md shadow-lg relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('userActivity.kpi.topUser', null, 'Top User Teraktif')}</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Top User Teraktif</span>
             <div className="p-2 bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-xl">
               <Users size={18} />
             </div>
@@ -659,14 +657,14 @@ export default function UserActivityLogsPage({ onBack }) {
           <table className="w-full text-left border-collapse min-w-[920px]">
             <thead>
               <tr className="bg-slate-950/95 border-b border-slate-800 text-[10.5px] font-extrabold uppercase tracking-wider text-slate-400">
-                <th className="py-3 px-4">{t('userActivity.table.time', null, 'Waktu')}</th>
-                <th className="py-3 px-4">{t('userActivity.table.user', null, 'Pengguna')}</th>
-                <th className="py-3 px-3">{t('userActivity.table.category', null, 'Kategori')}</th>
-                <th className="py-3 px-4">{t('userActivity.table.actionTarget', null, 'Aksi & Target')}</th>
-                <th className="py-3 px-4">{t('userActivity.table.description', null, 'Deskripsi')}</th>
-                <th className="py-3 px-3">{t('userActivity.table.ipClient', null, 'IP & Klien')}</th>
-                <th className="py-3 px-3 text-center">{t('userActivity.table.status', null, 'Status')}</th>
-                <th className="py-3 px-3 text-center">{t('userActivity.table.detail', null, 'Detail')}</th>
+                <th className="py-3 px-4">Waktu</th>
+                <th className="py-3 px-4">Pengguna</th>
+                <th className="py-3 px-3">Kategori</th>
+                <th className="py-3 px-4">Aksi & Target</th>
+                <th className="py-3 px-4">Deskripsi</th>
+                <th className="py-3 px-3">IP & Klien</th>
+                <th className="py-3 px-3 text-center">Status</th>
+                <th className="py-3 px-3 text-center">Detail</th>
               </tr>
             </thead>
 
@@ -675,13 +673,13 @@ export default function UserActivityLogsPage({ onBack }) {
                 <tr>
                   <td colSpan={8} className="py-16 text-center text-slate-400">
                     <RefreshCw size={24} className="animate-spin mx-auto mb-2 text-cyan-400" />
-                    <span>{t('common.loading', null, 'Memuat catatan audit log...')}</span>
+                    <span>Memuat catatan audit log...</span>
                   </td>
                 </tr>
               ) : logs.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-16 text-center text-slate-500 font-medium">
-                    {t('userActivity.table.noLogs', null, 'Tidak ada catatan aktivitas yang cocok dengan filter ini.')}
+                    Tidak ada catatan aktivitas yang cocok dengan filter ini.
                   </td>
                 </tr>
               ) : (

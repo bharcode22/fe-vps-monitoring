@@ -1,5 +1,4 @@
 import React, { useRef } from 'react';
-import { useLanguage } from '../../context/LanguageContext';
 import {
   X,
   UploadCloud,
@@ -33,7 +32,6 @@ function formatBytes(bytes, decimals = 2) {
 }
 
 export default function DirectS3UploadModal({ onSuccess }) {
-  const { t } = useLanguage();
   const {
     isOpen,
     isMinimized,
@@ -75,11 +73,11 @@ export default function DirectS3UploadModal({ onSuccess }) {
                   Direct S3 #{metadata.sound_scape}
                 </h4>
                 <span className="px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[9px] font-mono font-bold">
-                  {t('multimedia.directS3Modal.bgBadge', null, 'Background')}
+                  Background
                 </span>
               </div>
               <p className="text-[10.5px] font-mono text-slate-300 truncate mt-0.5">
-                {metadata.title || t('multimedia.directS3Modal.uploadingDefault', null, 'Mengunggah Berkas...')}
+                {metadata.title || 'Mengunggah Berkas...'}
               </p>
             </div>
           </div>
@@ -89,7 +87,7 @@ export default function DirectS3UploadModal({ onSuccess }) {
               type="button"
               onClick={restoreDirectS3Modal}
               className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-white transition-all cursor-pointer border border-slate-700 shadow-sm"
-              title={t('multimedia.directS3Modal.maximizeTooltip', null, 'Buka / Maksimalkan Modal')}
+              title="Buka / Maksimalkan Modal"
             >
               <Maximize2 size={14} />
             </button>
@@ -97,7 +95,7 @@ export default function DirectS3UploadModal({ onSuccess }) {
               type="button"
               onClick={abortUpload}
               className="p-1.5 rounded-xl bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-all cursor-pointer border border-slate-700"
-              title={t('multimedia.directS3Modal.cancelTooltip', null, 'Batalkan Upload')}
+              title="Batalkan Upload"
             >
               <X size={14} />
             </button>
@@ -136,13 +134,13 @@ export default function DirectS3UploadModal({ onSuccess }) {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-black text-white">{t('multimedia.directS3Modal.title', null, 'Direct S3 Upload & Media Forensik')}</h3>
+                <h3 className="text-base sm:text-lg font-black text-white">Direct S3 Upload &amp; Media Forensik</h3>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-bold flex items-center gap-1">
-                  <ShieldCheck size={11} /> {t('multimedia.directS3Modal.engineBadge', null, 'SHA-256 Engine')}
+                  <ShieldCheck size={11} /> SHA-256 Engine
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                {t('multimedia.directS3Modal.desc', null, 'Upload berkecepatan tinggi langsung ke AWS S3 & pencatatan otomatis ke tabel multimedia + media_forensik')}
+                Upload berkecepatan tinggi langsung ke AWS S3 &amp; pencatatan otomatis ke tabel <code className="text-amber-300">multimedia</code> + <code className="text-cyan-300">media_forensik</code>
               </p>
             </div>
           </div>
@@ -152,7 +150,7 @@ export default function DirectS3UploadModal({ onSuccess }) {
                 type="button"
                 onClick={minimizeDirectS3Modal}
                 className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-amber-300 transition-colors cursor-pointer border border-slate-700"
-                title={t('multimedia.directS3Modal.minimizeTooltip', null, 'Minimize / Jalankan di Background')}
+                title="Minimize / Jalankan di Background"
               >
                 <Minus size={18} />
               </button>
@@ -161,7 +159,7 @@ export default function DirectS3UploadModal({ onSuccess }) {
               type="button"
               onClick={closeDirectS3Modal}
               className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer border border-slate-700"
-              title={t('multimedia.directS3Modal.closeTooltip', null, 'Tutup Modal')}
+              title="Tutup Modal"
             >
               <X size={18} />
             </button>
@@ -185,9 +183,9 @@ export default function DirectS3UploadModal({ onSuccess }) {
                 <CheckCircle2 size={32} />
               </div>
               <div className="space-y-1 max-w-md">
-                <h4 className="text-lg font-black text-white">{t('multimedia.directS3Modal.successTitle', null, 'Upload & Pencatatan Berhasil!')}</h4>
+                <h4 className="text-lg font-black text-white">Upload &amp; Pencatatan Berhasil!</h4>
                 <p className="text-xs text-slate-400">
-                  {t('multimedia.directS3Modal.successDesc', { sound_scape: metadata.sound_scape }, `Seluruh berkas kode #${metadata.sound_scape} telah diunggah ke AWS S3, metadata dicatat ke tabel multimedia, dan tanda tangan hash terdaftar di tabel media_forensik.`)}
+                  Seluruh berkas kode <span className="text-amber-300 font-bold font-mono">#{metadata.sound_scape}</span> telah diunggah ke AWS S3, metadata dicatat ke tabel <code className="text-amber-300">multimedia</code>, dan tanda tangan hash terdaftar di tabel <code className="text-cyan-300">media_forensik</code>.
                 </p>
               </div>
               <div className="pt-2 flex items-center gap-3">
@@ -200,7 +198,7 @@ export default function DirectS3UploadModal({ onSuccess }) {
                   }}
                   className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 hover:from-emerald-400 hover:to-teal-400 transition-all cursor-pointer"
                 >
-                  {t('multimedia.directS3Modal.finishCloseBtn', null, 'Selesai & Tutup')}
+                  Selesai &amp; Tutup
                 </button>
               </div>
             </div>
@@ -210,7 +208,7 @@ export default function DirectS3UploadModal({ onSuccess }) {
               <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-3">
                 <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
                   <Database size={14} className="text-amber-400" />
-                  <span>{t('multimedia.directS3Modal.sectionTitle', null, 'Informasi Metadata Master')}</span>
+                  <span>Informasi Metadata Master</span>
                 </div>
 
                 {/* Row 1: SoundScape Code & Track Title */}
@@ -218,17 +216,17 @@ export default function DirectS3UploadModal({ onSuccess }) {
                   <div>
                     <div className="h-5 flex items-center justify-between mb-1.5">
                       <label className="text-[11px] font-mono text-slate-400 font-semibold">
-                        {t('multimedia.directS3Modal.soundScapeLabel', null, 'SoundScape Code (#)')} <span className="text-rose-400">*</span>
+                        SoundScape Code (#) <span className="text-rose-400">*</span>
                       </label>
                       <button
                         type="button"
                         disabled={isUploading}
                         onClick={() => setMetadata(prev => ({ ...prev, sound_scape: generateRandomSoundScapeCode() }))}
                         className="text-[10px] font-mono text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                        title={t('multimedia.directS3Modal.randomTooltip', null, 'Acak / Generate kode baru otomatis')}
+                        title="Acak / Generate kode baru otomatis"
                       >
                         <RefreshCw size={10} />
-                        <span>{t('multimedia.directS3Modal.randomBtn', null, 'Acak')}</span>
+                        <span>Acak</span>
                       </button>
                     </div>
                     <div className="relative">
@@ -245,7 +243,7 @@ export default function DirectS3UploadModal({ onSuccess }) {
                         disabled={isUploading}
                         onClick={() => setMetadata(prev => ({ ...prev, sound_scape: generateRandomSoundScapeCode() }))}
                         className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-amber-400 transition-colors cursor-pointer"
-                        title={t('multimedia.directS3Modal.generate6DigitTooltip', null, 'Generate ulang 6-digit kode acak')}
+                        title="Generate ulang 6-digit kode acak"
                       >
                         <RefreshCw size={13} />
                       </button>
@@ -255,7 +253,7 @@ export default function DirectS3UploadModal({ onSuccess }) {
                   <div className="sm:col-span-2">
                     <div className="h-5 flex items-center mb-1.5">
                       <label className="text-[11px] font-mono text-slate-400 font-semibold">
-                        {t('multimedia.directS3Modal.trackTitleLabel', null, 'Judul Lagu / Track (Title)')}
+                        Judul Lagu / Track (Title)
                       </label>
                     </div>
                     <input
@@ -263,7 +261,7 @@ export default function DirectS3UploadModal({ onSuccess }) {
                       disabled={isUploading}
                       value={metadata.title}
                       onChange={(e) => setMetadata(prev => ({ ...prev, title: e.target.value }))}
-                      placeholder={t('multimedia.directS3Modal.trackTitlePlaceholder', null, 'contoh: Relax Max 21m Deep Healing')}
+                      placeholder="contoh: Relax Max 21m Deep Healing"
                       className="w-full h-10 px-3.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 disabled:opacity-50"
                     />
                   </div>
@@ -274,7 +272,7 @@ export default function DirectS3UploadModal({ onSuccess }) {
                   <div>
                     <div className="h-5 flex items-center mb-1.5">
                       <label className="text-[11px] font-mono text-slate-400 font-semibold">
-                        {t('multimedia.directS3Modal.artistLabel', null, 'Artis')}
+                        Artis
                       </label>
                     </div>
                     <input
@@ -282,7 +280,7 @@ export default function DirectS3UploadModal({ onSuccess }) {
                       disabled={isUploading}
                       value={metadata.artist}
                       onChange={(e) => setMetadata(prev => ({ ...prev, artist: e.target.value }))}
-                      placeholder={t('multimedia.directS3Modal.artistPlaceholder', null, 'contoh: Regenesis')}
+                      placeholder="contoh: Regenesis"
                       className="w-full h-10 px-3.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 disabled:opacity-50"
                     />
                   </div>
@@ -290,7 +288,7 @@ export default function DirectS3UploadModal({ onSuccess }) {
                   <div>
                     <div className="h-5 flex items-center mb-1.5">
                       <label className="text-[11px] font-mono text-slate-400 font-semibold">
-                        {t('multimedia.directS3Modal.albumLabel', null, 'Album')}
+                        Album
                       </label>
                     </div>
                     <input
@@ -298,7 +296,7 @@ export default function DirectS3UploadModal({ onSuccess }) {
                       disabled={isUploading}
                       value={metadata.album}
                       onChange={(e) => setMetadata(prev => ({ ...prev, album: e.target.value }))}
-                      placeholder={t('multimedia.directS3Modal.albumPlaceholder', null, 'contoh: SoundScape Therapy')}
+                      placeholder="contoh: SoundScape Therapy"
                       className="w-full h-10 px-3.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 disabled:opacity-50"
                     />
                   </div>
@@ -306,7 +304,7 @@ export default function DirectS3UploadModal({ onSuccess }) {
                   <div>
                     <div className="h-5 flex items-center mb-1.5">
                       <label className="text-[11px] font-mono text-slate-400 font-semibold">
-                        {t('multimedia.directS3Modal.durationLabel', null, 'Durasi (Opsional)')}
+                        Durasi (Opsional)
                       </label>
                     </div>
                     <input
@@ -314,7 +312,7 @@ export default function DirectS3UploadModal({ onSuccess }) {
                       disabled={isUploading}
                       value={metadata.duration}
                       onChange={(e) => setMetadata(prev => ({ ...prev, duration: e.target.value }))}
-                      placeholder={t('multimedia.directS3Modal.durationPlaceholder', null, 'contoh: 21m')}
+                      placeholder="contoh: 21m"
                       className="w-full h-10 px-3.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 disabled:opacity-50"
                     />
                   </div>
@@ -322,7 +320,7 @@ export default function DirectS3UploadModal({ onSuccess }) {
                   <div>
                     <div className="h-5 flex items-center justify-between mb-1.5">
                       <label className="text-[11px] font-mono text-slate-400 font-semibold">
-                        {t('multimedia.directS3Modal.customVisibilityLabel', null, 'Visibilitas Kustom')}
+                        Visibilitas Kustom
                       </label>
                     </div>
                     <div className="w-full h-10 grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-slate-950 border border-slate-700">
@@ -342,7 +340,7 @@ export default function DirectS3UploadModal({ onSuccess }) {
                           className="hidden"
                         />
                         <span className={`w-2 h-2 rounded-full transition-all ${metadata.isShowAtCustom === 'show' ? 'bg-amber-400 shadow-sm shadow-amber-400' : 'bg-slate-600'}`} />
-                        <span>{t('multimedia.directS3Modal.show', null, 'show')}</span>
+                        <span>show</span>
                       </label>
 
                       <label
@@ -361,7 +359,7 @@ export default function DirectS3UploadModal({ onSuccess }) {
                           className="hidden"
                         />
                         <span className={`w-2 h-2 rounded-full transition-all ${metadata.isShowAtCustom === 'hide' ? 'bg-purple-400 shadow-sm shadow-purple-400' : 'bg-slate-600'}`} />
-                        <span>{t('multimedia.directS3Modal.hide', null, 'hide')}</span>
+                        <span>hide</span>
                       </label>
                     </div>
                   </div>
@@ -375,9 +373,9 @@ export default function DirectS3UploadModal({ onSuccess }) {
                     <span className="font-bold text-amber-300 flex items-center gap-2">
                       <Loader2 size={14} className="animate-spin text-amber-400" />
                       <span>
-                        {uploadPhase === 'presigning' && t('multimedia.directS3Modal.presigning', null, 'Membuat Tiket Upload S3...')}
-                        {uploadPhase === 'uploading_s3' && t('multimedia.directS3Modal.uploadingS3', null, 'Mengunggah Berkas Langsung ke AWS S3...')}
-                        {uploadPhase === 'saving_db' && t('multimedia.directS3Modal.savingDb', null, 'Menyimpan Metadata & Forensik ke Database Master...')}
+                        {uploadPhase === 'presigning' && 'Membuat Tiket Upload S3...'}
+                        {uploadPhase === 'uploading_s3' && 'Mengunggah Berkas Langsung ke AWS S3...'}
+                        {uploadPhase === 'saving_db' && 'Menyimpan Metadata & Forensik ke Database Master...'}
                       </span>
                     </span>
                     <span className="text-white font-black text-sm">{grandProgress}%</span>
@@ -395,7 +393,7 @@ export default function DirectS3UploadModal({ onSuccess }) {
                     <div className="p-2 rounded-xl bg-slate-950/70 border border-slate-800/80 flex flex-col">
                       <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
                         <Zap size={11} className="text-amber-400" />
-                        <span>{t('multimedia.directS3Modal.clientBandwidth', null, 'Bandwidth Klien')}</span>
+                        <span>Bandwidth Klien</span>
                       </span>
                       <span className="text-xs font-mono font-black text-amber-300 truncate mt-0.5">
                         {uploadStats.bandwidthMbps || '0.0 Mbps'}
@@ -405,7 +403,7 @@ export default function DirectS3UploadModal({ onSuccess }) {
                     <div className="p-2 rounded-xl bg-slate-950/70 border border-slate-800/80 flex flex-col">
                       <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
                         <UploadCloud size={11} className="text-cyan-400" />
-                        <span>{t('multimedia.directS3Modal.uploadSpeed', null, 'Kecepatan Upload')}</span>
+                        <span>Kecepatan Upload</span>
                       </span>
                       <span className="text-xs font-mono font-bold text-cyan-300 truncate mt-0.5">
                         {uploadStats.speedMBs || '0 B/s'}
@@ -415,7 +413,7 @@ export default function DirectS3UploadModal({ onSuccess }) {
                     <div className="p-2 rounded-xl bg-slate-950/70 border border-slate-800/80 flex flex-col">
                       <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
                         <HardDrive size={11} className="text-purple-400" />
-                        <span>{t('multimedia.directS3Modal.sent', null, 'Terkirim')}</span>
+                        <span>Terkirim</span>
                       </span>
                       <span className="text-xs font-mono font-bold text-slate-200 truncate mt-0.5">
                         {formatBytes(uploadStats.loadedBytes)} / {formatBytes(uploadStats.totalBytes)}
@@ -425,10 +423,10 @@ export default function DirectS3UploadModal({ onSuccess }) {
                     <div className="p-2 rounded-xl bg-slate-950/70 border border-slate-800/80 flex flex-col">
                       <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
                         <Clock size={11} className="text-emerald-400" />
-                        <span>{t('multimedia.directS3Modal.eta', null, 'Estimasi Sisa (ETA)')}</span>
+                        <span>Estimasi Sisa (ETA)</span>
                       </span>
                       <span className="text-xs font-mono font-bold text-emerald-400 truncate mt-0.5">
-                        {uploadStats.eta || t('multimedia.directS3Modal.calculating', null, 'Menghitung...')}
+                        {uploadStats.eta || 'Menghitung...'}
                       </span>
                     </div>
                   </div>
@@ -440,7 +438,7 @@ export default function DirectS3UploadModal({ onSuccess }) {
                 <div className="flex items-center justify-between text-xs text-slate-300 font-bold">
                   <span className="flex items-center gap-1.5">
                     <HardDrive size={14} className="text-cyan-400" />
-                    <span>{t('multimedia.directS3Modal.filesSectionTitle', null, 'Pilih Berkas Media (Direct AWS S3)')}</span>
+                    <span>Pilih Berkas Media (Direct AWS S3)</span>
                   </span>
                 </div>
 
@@ -448,7 +446,7 @@ export default function DirectS3UploadModal({ onSuccess }) {
 
                   {/* 1. Audio File Slot */}
                   <SlotCard
-                    title={t('multimedia.directS3Modal.musicSlot', null, 'Audio Utama (Music)')}
+                    title="Audio Utama (Music)"
                     icon={<Music size={16} className="text-sky-400" />}
                     slotKey="music"
                     accept="audio/*,.wav,.mp3,.flac,.ogg,.m4a"
@@ -460,7 +458,7 @@ export default function DirectS3UploadModal({ onSuccess }) {
 
                   {/* 2. Video File Slot */}
                   <SlotCard
-                    title={t('multimedia.directS3Modal.videoSlot', null, 'Video Visual (Video)')}
+                    title="Video Visual (Video)"
                     icon={<FileVideo size={16} className="text-purple-400" />}
                     slotKey="video"
                     accept="video/*,.mp4,.webm,.mov"
@@ -472,7 +470,7 @@ export default function DirectS3UploadModal({ onSuccess }) {
 
                   {/* 3. Strobe Light File Slot */}
                   <SlotCard
-                    title={t('multimedia.directS3Modal.lampSlot', null, 'Sinyal Lampu Strobe (Lamp)')}
+                    title="Sinyal Lampu Strobe (Lamp)"
                     icon={<Zap size={16} className="text-amber-400" />}
                     slotKey="lamp"
                     accept="audio/*,.wav,.flac,.mp3"
@@ -484,7 +482,7 @@ export default function DirectS3UploadModal({ onSuccess }) {
 
                   {/* 4. Cover Album Slot */}
                   <SlotCard
-                    title={t('multimedia.directS3Modal.coverSlot', null, 'Sampul Album (Cover Album)')}
+                    title="Sampul Album (Cover Album)"
                     icon={<ImageIcon size={16} className="text-emerald-400" />}
                     slotKey="coverAlbum"
                     accept="image/*,.jpg,.jpeg,.png,.webp"
@@ -509,7 +507,7 @@ export default function DirectS3UploadModal({ onSuccess }) {
                 className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
               >
                 {isUploading && <Minus size={13} />}
-                <span>{isUploading ? t('multimedia.directS3Modal.minimize', null, 'Minimize ke Background') : t('multimedia.directS3Modal.close', null, 'Tutup')}</span>
+                <span>{isUploading ? 'Minimize ke Background' : 'Tutup'}</span>
               </button>
 
               {isUploading && (
@@ -517,9 +515,9 @@ export default function DirectS3UploadModal({ onSuccess }) {
                   type="button"
                   onClick={abortUpload}
                   className="px-3 py-2 rounded-xl hover:bg-rose-500/20 text-rose-400 text-xs font-bold transition-all cursor-pointer border border-rose-500/30"
-                  title={t('multimedia.directS3Modal.abortTooltip', null, 'Batalkan proses upload langsung ke S3')}
+                  title="Batalkan proses upload langsung ke S3"
                 >
-                  {t('multimedia.directS3Modal.abortBtn', null, 'Batalkan Upload')}
+                  Batalkan Upload
                 </button>
               )}
             </div>
@@ -533,12 +531,12 @@ export default function DirectS3UploadModal({ onSuccess }) {
               {isUploading ? (
                 <>
                   <Loader2 size={14} className="animate-spin text-slate-950" />
-                  <span>{t('multimedia.directS3Modal.uploadingBtn', null, 'Mengunggah ke S3...')}</span>
+                  <span>Mengunggah ke S3...</span>
                 </>
               ) : (
                 <>
                   <UploadCloud size={15} />
-                  <span>{t('multimedia.directS3Modal.startBtn', null, 'Mulai Upload Direct ke S3')}</span>
+                  <span>Mulai Upload Direct ke S3</span>
                   <ArrowRight size={14} />
                 </>
               )}
@@ -552,7 +550,6 @@ export default function DirectS3UploadModal({ onSuccess }) {
 
 // Sub-Component: File Slot Dropzone Card with SHA-256 Badge & Individual Progress
 function SlotCard({ title, icon, slotKey, accept, slotState, disabled, onFileSelect, onRemove }) {
-  const { t } = useLanguage();
   const inputRef = useRef(null);
   const file = slotState?.file;
   const sha256 = slotState?.sha256;
@@ -576,7 +573,7 @@ function SlotCard({ title, icon, slotKey, accept, slotState, disabled, onFileSel
             disabled={disabled}
             onClick={onRemove}
             className="p-1 rounded-lg hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer disabled:opacity-50"
-            title={t('multimedia.directS3Modal.removeFileTooltip', null, 'Hapus berkas')}
+            title="Hapus berkas"
           >
             <Trash2 size={13} />
           </button>
@@ -604,7 +601,7 @@ function SlotCard({ title, icon, slotKey, accept, slotState, disabled, onFileSel
           className="w-full py-4 px-3 rounded-xl border border-dashed border-slate-700 hover:border-amber-500/60 bg-slate-900/30 hover:bg-slate-900/60 text-slate-400 hover:text-slate-200 flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer text-xs"
         >
           <UploadCloud size={20} className="text-slate-500" />
-          <span className="font-semibold text-[11px]">{t('multimedia.directS3Modal.selectFilePrompt', { type: title.split(' ')[0] }, `Pilih berkas ${title.split(' ')[0]}`)}</span>
+          <span className="font-semibold text-[11px]">Pilih berkas {title.split(' ')[0]}</span>
           <span className="text-[9.5px] text-slate-500 font-mono">{accept.replace(/\*/g, '')}</span>
         </button>
       ) : (
@@ -626,14 +623,14 @@ function SlotCard({ title, icon, slotKey, accept, slotState, disabled, onFileSel
             </span>
             {isHashing ? (
               <span className="text-amber-400 flex items-center gap-1 animate-pulse">
-                <RefreshCw size={10} className="animate-spin" /> {t('multimedia.directS3Modal.calculatingHash', null, 'Menghitung hash...')}
+                <RefreshCw size={10} className="animate-spin" /> Menghitung hash...
               </span>
             ) : sha256 ? (
               <span className="text-emerald-400 font-semibold truncate" title={sha256}>
                 {sha256.substring(0, 10)}...{sha256.substring(sha256.length - 8)}
               </span>
             ) : (
-              <span className="text-rose-400">{t('multimedia.directS3Modal.hashFailed', null, 'Gagal hash')}</span>
+              <span className="text-rose-400">Gagal hash</span>
             )}
           </div>
 
@@ -647,7 +644,7 @@ function SlotCard({ title, icon, slotKey, accept, slotState, disabled, onFileSel
                 />
               </div>
               <div className="flex justify-between text-[9px] font-mono text-slate-400">
-                <span>{t('multimedia.directS3Modal.uploading', null, 'Mengunggah...')}</span>
+                <span>Mengunggah...</span>
                 <span>{progress}%</span>
               </div>
             </div>
@@ -656,7 +653,7 @@ function SlotCard({ title, icon, slotKey, accept, slotState, disabled, onFileSel
           {status === 'completed' && (
             <div className="flex items-center gap-1 text-[10px] text-emerald-400 font-mono">
               <CheckCircle2 size={11} />
-              <span>{t('multimedia.directS3Modal.uploadedToS3', null, 'Selesai diunggah ke S3')}</span>
+              <span>Selesai diunggah ke S3</span>
             </div>
           )}
         </div>

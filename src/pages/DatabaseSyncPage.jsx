@@ -11,10 +11,8 @@ import DbSyncConnectionCard from '../components/databaseSync/DbSyncConnectionCar
 import DbSyncSummaryCards from '../components/databaseSync/DbSyncSummaryCards';
 import DbSyncCompareTab from '../components/databaseSync/DbSyncCompareTab';
 import DbSyncExecuteTab from '../components/databaseSync/DbSyncExecuteTab';
-import { useLanguage } from '../context/LanguageContext';
 
 export default function DatabaseSyncPage({ servers = [], onBack }) {
-  const { t } = useLanguage();
   // Filter registered PostgreSQL database servers from monitoring list
   const pgServers = servers.filter(s => s.type === 'postgresql');
 

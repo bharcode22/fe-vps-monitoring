@@ -33,6 +33,7 @@ import { fetchSettingsApi, saveSettingApi } from './api/vpsApi';
 import { useAuth } from './context/AuthContext';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import DirectS3UploadModal from './components/content/DirectS3UploadModal';
+import ActiveUsersModal from './components/common/ActiveUsersModal';
 import { Server, Database, HardDrive, Cpu, ShieldCheck } from 'lucide-react';
 
 export default function App() {
@@ -62,6 +63,7 @@ export default function App() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAddServiceModalOpen, setIsAddServiceModalOpen] = useState(false);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [isActiveUsersModalOpen, setIsActiveUsersModalOpen] = useState(false);
   const [editingServer, setEditingServer] = useState(null);
   const [editingService, setEditingService] = useState(null);
   const [selectedDetailServerId, setSelectedDetailServerId] = useState(null);
@@ -148,7 +150,12 @@ export default function App() {
     handleReorder
   } = useServers();
 
-  const { isConnected } = useSocket(handleMetricsUpdate, fetchServers, currentView);
+  const {
+    isConnected,
+    activeUsers,
+    totalActiveUsers,
+    requestPresenceSnapshot
+  } = useSocket(handleMetricsUpdate, fetchServers, currentView);
 
   // Drag & Drop gesture handlers
   const handleDragStart = (e, idx) => {
@@ -158,17 +165,18 @@ export default function App() {
     }
   };
 
-  const handleDragOver = (e, idx) => {
+  const handleDragOver = (e) => {
     e.preventDefault();
     if (e.dataTransfer) {
       e.dataTransfer.dropEffect = 'move';
     }
   };
 
-  const handleDrop = (e, targetIndex) => {
+  const handleDrop = (e, dropIdx) => {
     e.preventDefault();
-    if (draggedIndex === null || draggedIndex === targetIndex) return;
-    handleReorder(draggedIndex, targetIndex);
+    if (draggedIndex !== null && draggedIndex !== dropIdx) {
+      handleReorder(draggedIndex, dropIdx, displayedServers);
+    }
     setDraggedIndex(null);
   };
 
@@ -176,6 +184,7 @@ export default function App() {
     setDraggedIndex(null);
   };
 
+  // Keep detail modal server object updated with latest live metrics
   const activeDetailServer = selectedDetailServerId
     ? ((allServers && allServers.length > 0 ? allServers : servers).find(s => s.id === selectedDetailServerId) || servers.find(s => s.id === selectedDetailServerId))
     : null;
@@ -187,18 +196,18 @@ export default function App() {
   const s3Group = displayedServers.filter(s => s.type === 's3');
 
   const gridClassName = `grid gap-5 transition-all duration-300 ${isTvMode
-    ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4'
-    : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3'
+    ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6'
+    : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4'
     }`;
 
   const isMultimediaSyncView = ['multimedia-sync', 'rabbitmq-pod-sync', 're-save-sync'].includes(currentView);
 
   const isFullWidthView = isTvMode || isMultimediaSyncView || [
-    'user-activity',
-    'audit-logs',
-    'activity-logs',
     'pod-activity',
     'pod-occupancy',
+    'pod-heartbeat',
+    'heartbeat-monitoring',
+    'fleet-heartbeat',
     'pod-topic-debugger',
     'pod-topics',
     'master-pod-sync',
@@ -216,11 +225,13 @@ export default function App() {
 
   return (
     <div className={`mx-auto transition-all duration-300 ${
-      isMultimediaSyncView
-        ? 'w-full max-w-[98%] 2xl:max-w-[1920px] px-2 sm:px-4 lg:px-6 pb-2'
-        : isFullWidthView
-          ? 'w-full max-w-[98%] 2xl:max-w-[1920px] px-2 sm:px-4 lg:px-6 pb-10'
-          : 'max-w-7xl px-4 sm:px-6 pb-10'
+      isTvMode
+        ? 'w-full max-w-none px-2 sm:px-4 lg:px-6 xl:px-8 pb-4'
+        : isMultimediaSyncView
+          ? 'w-full max-w-none px-2 sm:px-4 lg:px-6 pb-2'
+          : isFullWidthView
+            ? 'w-full max-w-[1920px] px-2 sm:px-5 lg:px-8 pb-10'
+            : 'max-w-7xl px-4 sm:px-6 pb-10'
       }`}>
 
       {/* Header Top Navbar */}
@@ -235,6 +246,8 @@ export default function App() {
         onToggleTvMode={handleToggleTvMode}
         currentView={currentView}
         onNavigateView={handleNavigateView}
+        totalActiveUsers={totalActiveUsers}
+        onOpenActiveUsersModal={() => setIsActiveUsersModalOpen(true)}
       />
 
       {/* Render View: Dashboard, Server List, Installation, or Tools */}
@@ -246,11 +259,11 @@ export default function App() {
           isTvMode={isTvMode}
           onToggleTvMode={handleToggleTvMode}
         />
-      ) : currentView === 'user-activity' || currentView === 'audit-logs' || currentView === 'activity-logs' ? (
+      ) : currentView === 'user-activity' || currentView === 'audit-logs' || currentView === 'activity-logs' || currentView === 'user-logs' ? (
         <UserActivityLogsPage onBack={() => handleNavigateView('dashboard')} />
       ) : currentView === 'database-users' || currentView === 'db-users' || currentView === 'user-manager' ? (
         <UserManagerPage onBack={() => handleNavigateView('dashboard')} />
-      ) : currentView === 'pod-activity' || currentView === 'pod-occupancy' ? (
+      ) : currentView === 'pod-activity' || currentView === 'pod-occupancy' || currentView === 'pod-heartbeat' || currentView === 'heartbeat-monitoring' || currentView === 'fleet-heartbeat' ? (
         <PodActivityPage onBack={() => handleNavigateView('dashboard')} />
       ) : currentView === 'pod-logs-sync' || currentView === 'pod-logs' ? (
         <PodLogsSyncPage onBack={() => handleNavigateView('dashboard')} />
@@ -519,7 +532,7 @@ export default function App() {
       </ErrorBoundary>
 
       {/* Global Footer displayed on all pages except full-screen single-screen tools */}
-      {!isMultimediaSyncView && <Footer />}
+      {!isMultimediaSyncView && <Footer isTvMode={isTvMode} />}
 
       {/* Add / Edit VPS / POD SSH Modal */}
       <AddServerModal
@@ -560,6 +573,16 @@ export default function App() {
 
       {/* Global Direct S3 Upload Modal & Background Floating Widget */}
       <DirectS3UploadModal />
+
+      {/* Active Online Users Modal */}
+      <ActiveUsersModal
+        isOpen={isActiveUsersModalOpen}
+        onClose={() => setIsActiveUsersModalOpen(false)}
+        activeUsers={activeUsers}
+        totalActiveUsers={totalActiveUsers}
+        onNavigateView={handleNavigateView}
+        onRefreshSnapshot={requestPresenceSnapshot}
+      />
 
     </div>
   );

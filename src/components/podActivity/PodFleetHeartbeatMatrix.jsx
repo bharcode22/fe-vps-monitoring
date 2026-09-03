@@ -22,8 +22,8 @@ import {
   HelpCircle
 } from 'lucide-react';
 import { fetchHeartbeatModulesApi } from '../../api/podActivityApi';
-import { useLanguage } from '../../context/LanguageContext';
 import PodHeartbeatLegendModal, { InlineStatusLegendStrip } from './PodHeartbeatLegendModal';
+import PodHeartbeatModuleConfigModal from './PodHeartbeatModuleConfigModal';
 
 // Default fallback modules if config not yet loaded
 const DEFAULT_SERVER_MODULES = [
@@ -102,7 +102,6 @@ export default function PodFleetHeartbeatMatrix({
   onSelectPod,
   onPublish
 }) {
-  const { t } = useLanguage();
   // Configured server modules
   const [serverModules, setServerModules] = useState(DEFAULT_SERVER_MODULES);
   const [isLoadingModules, setIsLoadingModules] = useState(false);
@@ -113,6 +112,9 @@ export default function PodFleetHeartbeatMatrix({
 
   // Legend / Guide Modal State
   const [isLegendModalOpen, setIsLegendModalOpen] = useState(false);
+
+  // Manage Modules Config Modal State
+  const [isManageModalOpen, setIsManageModalOpen] = useState(false);
 
   // Audio Alarm state
   const [soundAlarmEnabled, setSoundAlarmEnabled] = useState(() => {
@@ -194,15 +196,16 @@ export default function PodFleetHeartbeatMatrix({
     }
 
     if (matchedModuleId && (parsedJson?.hb !== undefined || topicStr.includes('mod_server'))) {
-      const hbVal = parsedJson?.hb !== undefined
+      const rawHb = parsedJson?.hb !== undefined
         ? parsedJson.hb
         : !isNaN(Number(payloadStr))
           ? Number(payloadStr)
           : null;
+      const hbVal = (rawHb !== null && rawHb !== undefined && !isNaN(Number(rawHb))) ? Number(rawHb) : null;
       const portVal = parsedJson?.port || null;
       const timestamp = latest.timestamp ? new Date(latest.timestamp).getTime() : Date.now();
-
       const cellKey = `${serverId}_${matchedModuleId}`;
+      let didIncrement = false;
 
       setFleetModuleMap((prev) => {
         const podData = prev[serverId] || {};
@@ -215,9 +218,13 @@ export default function PodFleetHeartbeatMatrix({
           totalPackets: 0
         };
 
-        const hasHbChanged = modData.hb !== hbVal;
+        const currentHbNum = (modData.hb !== null && modData.hb !== undefined && !isNaN(Number(modData.hb))) ? Number(modData.hb) : null;
+        const hasHbChanged = currentHbNum !== null && hbVal !== null && currentHbNum !== hbVal;
+        if (hasHbChanged) {
+          didIncrement = true;
+        }
         const lastHbChangeAt = hasHbChanged ? timestamp : (modData.lastHbChangeAt || timestamp);
-        const isFrozen = !hasHbChanged && (timestamp - lastHbChangeAt > 15000);
+        const isFrozen = !hasHbChanged && (timestamp - lastHbChangeAt > 3000);
 
         return {
           ...prev,
@@ -235,11 +242,13 @@ export default function PodFleetHeartbeatMatrix({
         };
       });
 
-      // Trigger cell flash
-      setFlashingCells((prev) => ({ ...prev, [cellKey]: true }));
-      setTimeout(() => {
-        setFlashingCells((prev) => ({ ...prev, [cellKey]: false }));
-      }, 700);
+      // Trigger cell flash ONLY if the HB counter actually incremented / changed
+      if (didIncrement) {
+        setFlashingCells((prev) => ({ ...prev, [cellKey]: true }));
+        setTimeout(() => {
+          setFlashingCells((prev) => ({ ...prev, [cellKey]: false }));
+        }, 600);
+      }
     }
   }, [mqttFeed]);
 
@@ -269,39 +278,49 @@ export default function PodFleetHeartbeatMatrix({
         const modData = podModulesData[mod.id];
         totalPacketsCount += (modData?.totalPackets || 0);
 
-        const elapsedSec = modData?.lastSeenAt
+        const packetElapsedSec = modData?.lastSeenAt
           ? Math.floor((nowTimestamp - modData.lastSeenAt) / 1000)
           : null;
+        const hbElapsedSec = modData?.lastHbChangeAt
+          ? Math.floor((nowTimestamp - modData.lastHbChangeAt) / 1000)
+          : null;
 
-        let status = 'DEAD'; // 'LIVE' | 'DELAY' | 'DEAD' | 'FROZEN'
-        let reason = !modData?.lastSeenAt ? 'No Data' : `Mati ${elapsedSec}s lalu`;
+        let status = 'DEAD';
+        let reason = !modData?.lastSeenAt ? 'Belum ada data' : `Mati ${packetElapsedSec}s lalu`;
 
-        if (!modData?.lastSeenAt || elapsedSec > 12) {
+        // ULTRA-STRICT HEALTH THRESHOLDS (NO GREEN IF HB IS NOT ACTIVELY RUNNING):
+        // 1. DEAD: No data at all OR packet timeout > 8s
+        if (!modData?.lastSeenAt || packetElapsedSec > 8) {
           status = 'DEAD';
+          reason = !modData?.lastSeenAt ? 'Belum ada data' : `Mati ${packetElapsedSec}s lalu`;
           podDeadCount++;
           totalDeadModules++;
           deadModulesGlobalList.push({
             pod,
             mod,
-            elapsedSec,
+            elapsedSec: packetElapsedSec,
             reason
           });
-        } else if (modData?.isFrozen) {
+        // 2. FROZEN: HB counter has not incremented for > 3s (Immediate freeze detection)
+        } else if (modData?.hb !== null && hbElapsedSec !== null && hbElapsedSec > 3) {
           status = 'FROZEN';
+          reason = `Macet di #${modData.hb} (${hbElapsedSec}s)`;
           podFrozenCount++;
           totalFrozenModules++;
-          reason = 'Counter Macet';
           deadModulesGlobalList.push({
             pod,
             mod,
-            elapsedSec,
+            elapsedSec: hbElapsedSec,
             reason
           });
-        } else if (elapsedSec > 4) {
+        // 3. DELAY: Slight lag (> 2s for packet or HB)
+        } else if ((packetElapsedSec !== null && packetElapsedSec > 2) || (hbElapsedSec !== null && hbElapsedSec > 2)) {
           status = 'DELAY';
           podDelayCount++;
           totalDelayedModules++;
-          reason = `Delay ${elapsedSec}s`;
+          const delaySec = Math.max(packetElapsedSec || 0, hbElapsedSec || 0);
+          reason = `Delay ${delaySec}s`;
+        // 4. LIVE: MUST be actively beating & incrementing <= 2s
         } else {
           status = 'LIVE';
           podHealthyCount++;
@@ -312,7 +331,8 @@ export default function PodFleetHeartbeatMatrix({
         moduleStatusMap[mod.id] = {
           data: modData,
           status,
-          elapsedSec,
+          elapsedSec: packetElapsedSec,
+          hbElapsedSec,
           reason
         };
       });
@@ -348,14 +368,14 @@ export default function PodFleetHeartbeatMatrix({
     };
   }, [pods, serverModules, fleetModuleMap, nowTimestamp]);
 
-  // Trigger sound alarm if new dead modules are detected anywhere across the fleet
+  // Trigger sound alarm ONLY if new DEAD modules are detected anywhere across the fleet (Hanya status DEAD)
   useEffect(() => {
-    const currentDeadCount = fleetAnalysis.deadModulesGlobalList.length;
+    const currentDeadCount = fleetAnalysis.totalDeadModules;
     if (currentDeadCount > prevDeadCountRef.current && soundAlarmEnabled) {
       playFleetAlertChime();
     }
     prevDeadCountRef.current = currentDeadCount;
-  }, [fleetAnalysis.deadModulesGlobalList.length, soundAlarmEnabled]);
+  }, [fleetAnalysis.totalDeadModules, soundAlarmEnabled]);
 
   // Ping all dead modules across the entire fleet
   const handlePingAllDeadModules = () => {
@@ -407,11 +427,11 @@ export default function PodFleetHeartbeatMatrix({
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-black text-rose-300 uppercase tracking-wider flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-rose-400 animate-ping" />
-                  {t('podActivity.earlyWarning.title', { count: fleetAnalysis.deadModulesGlobalList.length }, `PERINGATAN DINI: ${fleetAnalysis.deadModulesGlobalList.length} MODUL MATI PADA FLEET POD!`)}
+                  PERINGATAN DINI: {fleetAnalysis.deadModulesGlobalList.length} MODUL MATI PADA FLEET POD!
                 </h3>
               </div>
               <p className="text-xs text-rose-200/90 mt-1 font-medium">
-                {t('podActivity.earlyWarning.desc', null, 'Ditemukan modul yang kehilangan detak heartbeat (>12s). Segera periksa koneksi kabel USB & daya hardware pada unit berikut:')}
+                Ditemukan modul yang kehilangan detak heartbeat (&gt;12s). Segera periksa koneksi kabel USB & daya hardware pada unit berikut:
               </p>
               {/* Badges of Dead Modules with Pod Names */}
               <div className="flex flex-wrap gap-2 mt-3 max-h-32 overflow-y-auto pr-1">
@@ -429,7 +449,7 @@ export default function PodFleetHeartbeatMatrix({
                 ))}
                 {fleetAnalysis.deadModulesGlobalList.length > 12 && (
                   <span className="text-xs font-bold text-rose-300 self-center">
-                    {t('podActivity.earlyWarning.moreModules', { count: fleetAnalysis.deadModulesGlobalList.length - 12 }, `+${fleetAnalysis.deadModulesGlobalList.length - 12} modul lainnya...`)}
+                    +{fleetAnalysis.deadModulesGlobalList.length - 12} modul lainnya...
                   </span>
                 )}
               </div>
@@ -443,7 +463,7 @@ export default function PodFleetHeartbeatMatrix({
               className="px-5 py-2.5 bg-rose-600 hover:bg-rose-500 active:scale-95 text-white font-black text-xs rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <RefreshCw size={14} className={pingLoading ? 'animate-spin' : ''} />
-              <span>{t('podActivity.earlyWarning.pingAll', null, 'Ping Semua Modul Mati')}</span>
+              <span>Ping Semua Modul Mati</span>
             </button>
           </div>
         </div>
@@ -454,9 +474,9 @@ export default function PodFleetHeartbeatMatrix({
         {/* Total Pod Units */}
         <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 p-5 rounded-2xl shadow-xl flex items-center justify-between">
           <div>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('podActivity.matrixKpi.totalPods', null, 'Total Pod Unit')}</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Pod Unit</span>
             <div className="text-2xl font-black text-white mt-1 font-mono">{pods.length} Unit</div>
-            <span className="text-[11px] text-slate-500 font-medium">{t('podActivity.matrixKpi.totalPodsDesc', null, 'Terdaftar dalam jaringan')}</span>
+            <span className="text-[11px] text-slate-500 font-medium">Terdaftar dalam jaringan</span>
           </div>
           <div className="p-3 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 text-cyan-400 rounded-2xl border border-cyan-500/30 shadow-lg shadow-cyan-500/10">
             <Server size={24} />
@@ -466,7 +486,7 @@ export default function PodFleetHeartbeatMatrix({
         {/* Total Active Modules */}
         <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 p-5 rounded-2xl shadow-xl flex items-center justify-between">
           <div>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('podActivity.matrixKpi.healthyModules', null, 'Modul Berdetak Sehat')}</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Modul Berdetak Sehat</span>
             <div className="text-2xl font-black text-emerald-400 mt-1 font-mono">
               {fleetAnalysis.totalHealthyModules} / {fleetAnalysis.totalMonitoredModules}
             </div>
@@ -484,12 +504,12 @@ export default function PodFleetHeartbeatMatrix({
         {/* Problematic Pods Count */}
         <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 p-5 rounded-2xl shadow-xl flex items-center justify-between">
           <div>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('podActivity.matrixKpi.deadModules', null, 'Modul Mati / Timeout')}</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Modul Mati / Timeout</span>
             <div className={`text-2xl font-black mt-1 font-mono ${fleetAnalysis.totalDeadModules > 0 ? 'text-rose-400 animate-pulse' : 'text-slate-300'}`}>
               {fleetAnalysis.totalDeadModules} Modul
             </div>
             <span className={`text-[11px] font-medium ${fleetAnalysis.totalDeadModules > 0 ? 'text-rose-400 font-bold' : 'text-slate-500'}`}>
-              {fleetAnalysis.totalDeadModules > 0 ? t('podActivity.matrixKpi.needFix', null, '⚠️ Butuh perbaikan') : t('podActivity.matrixKpi.allActive', null, 'Semua hardware aktif')}
+              {fleetAnalysis.totalDeadModules > 0 ? '⚠️ Butuh perbaikan' : 'Semua hardware aktif'}
             </span>
           </div>
           <div className={`p-3 rounded-2xl border shadow-lg ${fleetAnalysis.totalDeadModules > 0
@@ -503,11 +523,11 @@ export default function PodFleetHeartbeatMatrix({
         {/* Total Ingested MQTT Packets */}
         <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 p-5 rounded-2xl shadow-xl flex items-center justify-between">
           <div>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('podActivity.matrixKpi.totalPackets', null, 'Total Paket Diterima')}</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Paket Diterima</span>
             <div className="text-2xl font-black text-cyan-300 mt-1 font-mono">
               {mqttFeed.length} Paket
             </div>
-            <span className="text-[11px] text-cyan-400/80 font-medium">{t('podActivity.matrixKpi.throughput', null, 'Real-time throughput feed')}</span>
+            <span className="text-[11px] text-cyan-400/80 font-medium">Real-time throughput feed</span>
           </div>
           <div className="p-3 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 text-indigo-400 rounded-2xl border border-indigo-500/30 shadow-lg shadow-indigo-500/10">
             <Radio size={24} className="animate-pulse" />
@@ -524,7 +544,7 @@ export default function PodFleetHeartbeatMatrix({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t('podActivity.matrixToolbar.searchPlaceholder', null, 'Cari nama Pod, IP LAN, kode...')}
+            placeholder="Cari nama Pod, IP LAN, kode..."
             className="w-full pl-9 pr-4 py-2 bg-slate-950/90 border border-slate-800 focus:border-cyan-400 rounded-xl text-white text-xs outline-none transition-all placeholder:text-slate-500 shadow-inner"
           />
         </div>
@@ -539,7 +559,7 @@ export default function PodFleetHeartbeatMatrix({
                 : 'text-slate-400 hover:text-slate-200'
                 }`}
             >
-              {t('podActivity.matrixToolbar.allPods', { count: pods.length }, `Semua Pod (${pods.length})`)}
+              Semua Pod ({pods.length})
             </button>
             <button
               onClick={() => setFleetFilter('ISSUES_ONLY')}
@@ -549,7 +569,7 @@ export default function PodFleetHeartbeatMatrix({
                 }`}
             >
               <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
-              <span>{t('podActivity.matrixToolbar.issuesOnly', { count: fleetAnalysis.podsHealthList.filter((p) => p.hasCriticalIssue).length }, `Ada Modul Mati (${fleetAnalysis.podsHealthList.filter((p) => p.hasCriticalIssue).length})`)}</span>
+              <span>Ada Modul Mati ({fleetAnalysis.podsHealthList.filter((p) => p.hasCriticalIssue).length})</span>
             </button>
             <button
               onClick={() => setFleetFilter('HEALTHY_ONLY')}
@@ -559,9 +579,19 @@ export default function PodFleetHeartbeatMatrix({
                 }`}
             >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              <span>{t('podActivity.matrixToolbar.healthyOnly', { count: fleetAnalysis.podsHealthList.filter((p) => p.is100PercentHealthy).length }, `100% Sehat (${fleetAnalysis.podsHealthList.filter((p) => p.is100PercentHealthy).length})`)}</span>
+              <span>100% Sehat ({fleetAnalysis.podsHealthList.filter((p) => p.is100PercentHealthy).length})</span>
             </button>
           </div>
+
+          {/* Manage Modules Button */}
+          <button
+            onClick={() => setIsManageModalOpen(true)}
+            className="p-2.5 bg-slate-800/80 hover:bg-slate-700 text-cyan-300 hover:text-white rounded-xl border border-slate-700/60 transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer shadow"
+            title="Kelola Daftar Modul (Edit / Tambah / Hapus file JSON)"
+          >
+            <Sliders size={14} className="text-cyan-400" />
+            <span>Kelola Modul (JSON)</span>
+          </button>
 
           {/* Legend / Guide Button */}
           <button
@@ -570,7 +600,7 @@ export default function PodFleetHeartbeatMatrix({
             title="Buka Panduan Arti Warna & Keterangan Status Modul"
           >
             <HelpCircle size={14} className="text-cyan-400" />
-            <span>{t('podActivity.matrixToolbar.statusGuide', null, 'Panduan Status')}</span>
+            <span>Panduan Status</span>
           </button>
 
           {/* Sound Alarm Toggle */}
@@ -583,7 +613,7 @@ export default function PodFleetHeartbeatMatrix({
             title={soundAlarmEnabled ? 'Alarm Suara Aktif (Klik untuk Mute)' : 'Alarm Suara Mati (Klik untuk Aktifkan)'}
           >
             {soundAlarmEnabled ? <Volume2 size={14} className="text-emerald-400 animate-pulse" /> : <VolumeX size={14} />}
-            <span className="hidden sm:inline">{soundAlarmEnabled ? t('podActivity.matrixToolbar.alarmOn', null, 'Alarm ON') : t('podActivity.matrixToolbar.alarmOff', null, 'Alarm OFF')}</span>
+            <span className="hidden sm:inline">{soundAlarmEnabled ? 'Alarm ON' : 'Alarm OFF'}</span>
           </button>
         </div>
       </div>
@@ -612,7 +642,7 @@ export default function PodFleetHeartbeatMatrix({
                 <th className="py-3.5 px-3.5 sticky left-0 z-20 bg-slate-950/95 border-r border-slate-800/90 min-w-[145px] max-w-[165px] shadow-md">
                   <div className="flex items-center gap-1.5">
                     <Server size={13} className="text-cyan-400" />
-                    <span className="tracking-wide">{t('podActivity.matrixTable.unitPod', null, 'Unit Pod')}</span>
+                    <span className="tracking-wide">Unit Pod</span>
                   </div>
                 </th>
 
@@ -632,7 +662,7 @@ export default function PodFleetHeartbeatMatrix({
 
                 {/* Overall Health Column */}
                 <th className="py-3.5 px-2 text-center min-w-[88px] max-w-[105px]">
-                  <span className="tracking-wide">{t('podActivity.matrixTable.statusHealth', null, 'Status Health')}</span>
+                  <span className="tracking-wide">Status Health</span>
                 </th>
               </tr>
             </thead>
@@ -642,12 +672,12 @@ export default function PodFleetHeartbeatMatrix({
               {filteredPodsHealthList.length === 0 ? (
                 <tr>
                   <td colSpan={serverModules.length + 2} className="py-12 text-center text-slate-500 font-medium text-xs">
-                    {t('podActivity.matrixTable.noMatch', null, 'Tidak ada unit Pod yang cocok dengan pencarian atau filter ini.')}
+                    Tidak ada unit Pod yang cocok dengan pencarian atau filter ini.
                   </td>
                 </tr>
               ) : (
-                filteredPodsHealthList.map(({ pod, moduleStatusMap, podHealthyCount, hasCriticalIssue, hasWarningIssue, is100PercentHealthy, totalModules }) => {
-                  const isEntirePodOffline = !pod.brokerConnected || podHealthyCount === 0;
+                filteredPodsHealthList.map(({ pod, moduleStatusMap, podHealthyCount, podDeadCount, podDelayCount, podFrozenCount, hasCriticalIssue, hasWarningIssue, is100PercentHealthy, totalModules }) => {
+                  const isEntirePodOffline = !pod.brokerConnected;
 
                   return (
                     <tr
@@ -669,13 +699,20 @@ export default function PodFleetHeartbeatMatrix({
                         <div className="flex items-center justify-between gap-2">
                           <div className="min-w-0 flex-1 flex items-center gap-2 truncate">
                             <span className="relative flex h-2 w-2 shrink-0">
-                              {pod.brokerConnected && (
+                              {is100PercentHealthy && (
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
                               )}
+                              {hasCriticalIssue && (
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                              )}
                               <span
-                                className={`relative inline-flex rounded-full h-2 w-2 ${pod.brokerConnected
+                                className={`relative inline-flex rounded-full h-2 w-2 ${is100PercentHealthy
                                   ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,1)]'
-                                  : 'bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,1)]'
+                                  : isEntirePodOffline
+                                    ? 'bg-slate-600'
+                                    : hasCriticalIssue
+                                      ? 'bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,1)]'
+                                      : 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)]'
                                   }`}
                               />
                             </span>
@@ -683,7 +720,9 @@ export default function PodFleetHeartbeatMatrix({
                             <span
                               className={`font-black text-xs transition-colors truncate ${isEntirePodOffline
                                 ? 'text-slate-400'
-                                : 'text-cyan-400 hover:text-cyan-300'
+                                : is100PercentHealthy
+                                  ? 'text-cyan-400 hover:text-cyan-300'
+                                  : 'text-slate-200 hover:text-white'
                                 }`}
                               title={pod.name}
                             >
@@ -822,11 +861,11 @@ export default function PodFleetHeartbeatMatrix({
                                   }`}
                               >
                                 {isLive
-                                  ? (modStatus.elapsedSec < 3 ? '● live' : `${modStatus.elapsedSec}s ago`)
+                                  ? (modStatus.elapsedSec < 3 ? '● live' : `${modStatus.elapsedSec}s lalu`)
                                   : isDelay
-                                    ? `DELAY (${modStatus.elapsedSec}s)`
+                                    ? `DELAY (${Math.max(modStatus.elapsedSec || 0, modStatus.hbElapsedSec || 0)}s)`
                                     : isFrozen
-                                      ? 'FROZEN'
+                                      ? `FROZEN (${modStatus.hbElapsedSec}s)`
                                       : isEntirePodOffline
                                         ? 'offline'
                                         : (modStatus.elapsedSec ? `DEAD (${modStatus.elapsedSec}s)` : 'DEAD')}
@@ -852,13 +891,18 @@ export default function PodFleetHeartbeatMatrix({
                               <span className="w-1.5 h-1.5 rounded-full bg-slate-600" />
                               <span>OFFLINE</span>
                             </span>
-                          ) : (
+                          ) : hasCriticalIssue ? (
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9.5px] font-black uppercase bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-[0_0_10px_rgba(244,63,94,0.2)] animate-pulse">
                               <span className="relative flex h-1.5 w-1.5">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
                                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500" />
                               </span>
-                              <span>{totalModules - podHealthyCount} DEAD</span>
+                              <span>{podDeadCount + podFrozenCount} MASALAH</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9.5px] font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                              <span>{podDelayCount} DELAY</span>
                             </span>
                           )}
 
@@ -866,8 +910,8 @@ export default function PodFleetHeartbeatMatrix({
                             {is100PercentHealthy
                               ? 'Normal'
                               : isEntirePodOffline
-                                ? t('podActivity.matrixTable.podDead', null, 'Pod Mati')
-                                : t('podActivity.matrixTable.activeCount', { active: podHealthyCount, total: totalModules }, `${podHealthyCount}/${totalModules} Aktif`)}
+                                ? 'Pod Mati'
+                                : `${podHealthyCount}/${totalModules} Aktif`}
                           </span>
                         </div>
                       </td>
@@ -884,6 +928,18 @@ export default function PodFleetHeartbeatMatrix({
       <PodHeartbeatLegendModal
         isOpen={isLegendModalOpen}
         onClose={() => setIsLegendModalOpen(false)}
+      />
+
+      {/* 6. MANAGE HEARTBEAT MODULES CONFIG MODAL (JSON EDITOR) */}
+      <PodHeartbeatModuleConfigModal
+        isOpen={isManageModalOpen}
+        onClose={() => setIsManageModalOpen(false)}
+        currentModules={serverModules}
+        onSaveSuccess={(updated) => {
+          setServerModules(updated);
+          setFeedbackToast('Konfigurasi modul berhasil diperbarui dari JSON backend!');
+          setTimeout(() => setFeedbackToast(null), 3500);
+        }}
       />
     </div>
   );

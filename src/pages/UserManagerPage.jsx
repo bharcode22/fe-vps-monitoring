@@ -6,10 +6,8 @@ import UserManagerHeader from '../components/userManager/UserManagerHeader';
 import TableDetailWorkspaceView from '../components/masterPodSync/TableDetailWorkspaceView';
 import MasterPodSyncModals from '../components/masterPodSync/MasterPodSyncModals';
 import UserManagerSkeleton from '../components/userManager/UserManagerSkeleton';
-import { useLanguage } from '../context/LanguageContext';
 
 export default function UserManagerPage({ onBack }) {
-  const { t } = useLanguage();
   const tableName = 'user';
 
   // 1. Master Databases state

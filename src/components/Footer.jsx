@@ -1,12 +1,14 @@
 import React from 'react';
 import { Server, Activity, ShieldCheck, Cpu } from 'lucide-react';
 
-export default function Footer() {
+export default function Footer({ isTvMode }) {
   const currentYear = new Date().getFullYear();
 
   return (
     <footer className="w-full mt-12 border-t border-slate-800/80 bg-slate-950/60 backdrop-blur-md py-6 px-4 md:px-8">
-      <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+      <div className={`mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400 ${
+        isTvMode ? 'w-full max-w-none px-2' : 'max-w-7xl'
+      }`}>
 
         {/* Left Side: Brand & Status Indicator */}
         <div className="flex items-center gap-3">

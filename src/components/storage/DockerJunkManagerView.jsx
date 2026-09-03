@@ -18,7 +18,6 @@ import {
   Sparkles,
   Info
 } from 'lucide-react';
-import { useLanguage } from '../../context/LanguageContext';
 
 export default function DockerJunkManagerView({
   pods = [],
@@ -31,7 +30,6 @@ export default function DockerJunkManagerView({
   onOpenCleanupModal,
   onGoToMediaStorage
 }) {
-  const { t } = useLanguage();
   const [filterTab, setFilterTab] = useState('all'); // 'all' | 'has_junk' | 'critical' | 'offline'
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -45,6 +43,10 @@ export default function DockerJunkManagerView({
             <div className="space-y-2">
               <div className="h-5 w-72 bg-slate-800 rounded-xl"></div>
               <div className="h-3 w-96 bg-slate-800/60 rounded-lg"></div>
+            </div>
+            <div className="flex gap-2.5">
+              <div className="h-9 w-48 bg-slate-800 rounded-xl"></div>
+              <div className="h-9 w-52 bg-slate-800 rounded-xl"></div>
             </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -125,12 +127,14 @@ export default function DockerJunkManagerView({
     );
   }
 
+
   // Calculate fleet-wide aggregated metrics
   const totalPods = pods.length;
   const onlinePods = pods.filter(p => p.status === 'online').length;
   const offlinePods = pods.filter(p => p.status === 'offline').length;
 
   let totalDiskUsedBytes = 0;
+  let totalBuildCacheBytes = 0;
   let totalDanglingImagesCount = 0;
   let totalLogsBytes = 0;
 
@@ -181,10 +185,10 @@ export default function DockerJunkManagerView({
           <div>
             <h3 className="text-base font-black text-white flex items-center gap-2">
               <HardDrive size={18} className="text-cyan-400" />
-              <span>{t('storage.dockerJunk.bannerTitle', null, 'Pusat Pengelola Storage & Sampah Build Docker (POD v3)')}</span>
+              <span>Pusat Pengelola Storage &amp; Sampah Build Docker (POD v3)</span>
             </h3>
             <p className="text-xs text-slate-400 mt-1">
-              {t('storage.dockerJunk.bannerDesc', null, 'Pantau kapasitas volume disk 1 TB dan bersihkan sisa build Docker (*BuildKit cache, dangling images, container logs*) secara aman.')}
+              Pantau kapasitas volume disk 1 TB dan bersihkan sisa build Docker (*BuildKit cache, dangling images, container logs*) secara aman.
             </p>
           </div>
 
@@ -196,7 +200,7 @@ export default function DockerJunkManagerView({
               title="Scan rincian sampah Docker di seluruh 31 POD via SSH"
             >
               <RefreshCw size={13} className={isInspectingAll ? 'animate-spin text-cyan-400' : ''} />
-              <span>{isInspectingAll ? t('storage.dockerJunk.scanningAll', null, 'Sedang Memindai Seluruh POD...') : t('storage.dockerJunk.scanAll', null, 'Scan Sampah Docker Seluruh POD')}</span>
+              <span>{isInspectingAll ? 'Sedang Memindai Seluruh POD...' : 'Scan Sampah Docker Seluruh POD'}</span>
             </button>
 
             <button
@@ -205,7 +209,7 @@ export default function DockerJunkManagerView({
               title="Bersihkan sampah build Docker di seluruh server POD"
             >
               <Trash2 size={13} />
-              <span>{t('storage.dockerJunk.cleanAll', null, 'Bersihkan Sampah Seluruh POD v3')}</span>
+              <span>Bersihkan Sampah Seluruh POD v3</span>
             </button>
           </div>
         </div>
@@ -213,7 +217,7 @@ export default function DockerJunkManagerView({
         {/* Aggregate Metrics Bar */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 flex flex-col justify-between">
-            <span className="text-[11px] text-slate-400 font-semibold">{t('storage.dockerJunk.totalServers', null, 'Total Unit Server:')}</span>
+            <span className="text-[11px] text-slate-400 font-semibold">Total Unit Server:</span>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-base font-mono font-black text-white">{totalPods} POD</span>
               <span className="text-[10px] text-emerald-400 font-mono">({onlinePods} Online)</span>
@@ -221,21 +225,21 @@ export default function DockerJunkManagerView({
           </div>
 
           <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 flex flex-col justify-between">
-            <span className="text-[11px] text-slate-400 font-semibold">{t('storage.dockerJunk.totalDiskUsed', null, 'Total Disk Terpakai:')}</span>
+            <span className="text-[11px] text-slate-400 font-semibold">Total Disk Terpakai:</span>
             <span className="text-base font-mono font-black text-cyan-300 mt-1">
               {totalDiskUsedGB} GB
             </span>
           </div>
 
           <div className="p-3 rounded-2xl bg-purple-950/30 border border-purple-500/30 flex flex-col justify-between">
-            <span className="text-[11px] text-purple-300 font-semibold">{t('storage.dockerJunk.danglingImages', null, 'Dangling Images:')}</span>
+            <span className="text-[11px] text-purple-300 font-semibold">Dangling Images:</span>
             <span className="text-base font-mono font-black text-purple-200 mt-1">
               {totalDanglingImagesCount} Image
             </span>
           </div>
 
           <div className="p-3 rounded-2xl bg-emerald-950/30 border border-emerald-500/30 flex flex-col justify-between">
-            <span className="text-[11px] text-emerald-300 font-semibold">{t('storage.dockerJunk.logsCollected', null, 'Log Docker Terkumpul:')}</span>
+            <span className="text-[11px] text-emerald-300 font-semibold">Log Docker Terkumpul:</span>
             <span className="text-base font-mono font-black text-emerald-300 mt-1">
               {totalLogsGB} GB
             </span>
@@ -247,10 +251,10 @@ export default function DockerJunkManagerView({
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-950/80 p-3.5 rounded-2xl border border-slate-800">
         <div className="flex items-center gap-1.5 flex-wrap">
           {[
-            { id: 'all', label: t('storage.dockerJunk.allPods', null, 'Semua POD'), count: totalPods },
-            { id: 'has_junk', label: t('storage.dockerJunk.hasJunk', null, 'Ada Sampah Build'), count: null },
-            { id: 'critical', label: t('storage.dockerJunk.criticalDisk', null, 'Disk Kritis (≥80%)'), count: null },
-            { id: 'offline', label: t('storage.dockerJunk.offline', null, 'Offline'), count: offlinePods }
+            { id: 'all', label: 'Semua POD', count: totalPods },
+            { id: 'has_junk', label: 'Ada Sampah Build', count: null },
+            { id: 'critical', label: 'Disk Kritis (≥80%)', count: null },
+            { id: 'offline', label: 'Offline', count: offlinePods }
           ].map(tab => (
             <button
               key={tab.id}
@@ -273,7 +277,7 @@ export default function DockerJunkManagerView({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t('storage.dockerJunk.searchPlaceholder', null, 'Cari nama POD...')}
+            placeholder="Cari nama POD..."
             className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
           />
         </div>
@@ -294,6 +298,7 @@ export default function DockerJunkManagerView({
 
           const docker = inspection?.docker || {};
           const buildCacheSize = docker.buildCache?.size || '0 B';
+          const buildCacheReclaimable = docker.buildCache?.reclaimable || '0 B';
           const danglingCount = docker.danglingImagesCount || 0;
           const imagesReclaimable = docker.images?.reclaimable || '0 B';
           const logsFormatted = docker.logsFormatted || '0 B';
@@ -335,11 +340,11 @@ export default function DockerJunkManagerView({
                         ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                         : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
                       }`}>
-                      {t('storage.dockerJunk.usedPercent', { percent }, `${percent}% Terpakai`)}
+                      {percent}% Terpakai
                     </span>
                   ) : (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 shrink-0">
-                      {t('storage.dockerJunk.offline', null, 'Offline')}
+                      Offline
                     </span>
                   )}
                 </div>
@@ -348,7 +353,7 @@ export default function DockerJunkManagerView({
                 {isOnline ? (
                   <div className="mb-4">
                     <div className="flex items-center justify-between text-xs mb-1.5">
-                      <span className="text-slate-400 font-semibold">{t('storage.dockerJunk.diskVolume', null, 'Volume Disk (Limit 1.0 TB):')}</span>
+                      <span className="text-slate-400 font-semibold">Volume Disk (Limit 1.0 TB):</span>
                       <span className="font-mono font-bold text-white">
                         {diskInfo.usedFormatted} / {diskInfo.totalFormatted || '1.0 TB'}
                       </span>
@@ -365,14 +370,14 @@ export default function DockerJunkManagerView({
                       />
                     </div>
                     <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono mt-1">
-                      <span>{t('storage.dockerJunk.freeSpace', null, 'Sisa Kosong:')} <strong className="text-emerald-400 font-bold">{diskInfo.freeFormatted}</strong></span>
-                      <span>{t('storage.dockerJunk.rootSystem', null, 'Sistem Root /')}</span>
+                      <span>Sisa Kosong: <strong className="text-emerald-400 font-bold">{diskInfo.freeFormatted}</strong></span>
+                      <span>Sistem Root /</span>
                     </div>
                   </div>
                 ) : (
                   <div className="p-3 rounded-2xl bg-slate-950/70 border border-slate-800/80 text-xs text-slate-400 mb-4 flex items-center gap-2">
                     <Info size={14} className="text-slate-500 shrink-0" />
-                    <span className="text-[11px]">{t('storage.dockerJunk.notConnected', null, 'Server tidak terhubung via SSH.')}</span>
+                    <span className="text-[11px]">Server tidak terhubung via SSH.</span>
                   </div>
                 )}
 
@@ -382,7 +387,7 @@ export default function DockerJunkManagerView({
                     <div className="flex items-center justify-between text-[11px] font-bold text-slate-300 mb-1">
                       <span className="flex items-center gap-1.5">
                         <Film size={13} className="text-purple-400" />
-                        <span>{t('storage.dockerJunk.mediaDir', null, 'Direktori Media (/home/pod):')}</span>
+                        <span>Direktori Media (/home/pod):</span>
                       </span>
                       <span className="font-mono text-white text-[10.5px]">
                         Total: {inspection?.totalMediaFormatted || pod.totalMediaFormatted || '0 B'}
@@ -438,11 +443,11 @@ export default function DockerJunkManagerView({
                     <div className="flex items-center justify-between text-[11px] font-bold text-slate-300">
                       <span className="flex items-center gap-1.5">
                         <Zap size={13} className="text-cyan-400" />
-                        <span>{t('storage.dockerJunk.dockerJunkTitle', null, 'Sampah Build Docker:')}</span>
+                        <span>Sampah Build Docker:</span>
                       </span>
                       {isInspectingThis ? (
                         <span className="text-[10px] text-cyan-300 flex items-center gap-1">
-                          <RefreshCw size={10} className="animate-spin" /> {t('common.loading', null, 'Memindai...')}
+                          <RefreshCw size={10} className="animate-spin" /> Memindai...
                         </span>
                       ) : inspection ? (
                         <span className="text-[10px] text-slate-500 font-mono">docker system df</span>
@@ -451,7 +456,7 @@ export default function DockerJunkManagerView({
                           onClick={() => onInspectSingle(podId)}
                           className="text-[10px] text-cyan-400 hover:text-cyan-300 font-bold cursor-pointer"
                         >
-                          {t('storage.dockerJunk.checkNow', null, 'Cek Sekarang')}
+                          Cek Sekarang
                         </button>
                       )}
                     </div>
@@ -493,7 +498,7 @@ export default function DockerJunkManagerView({
                           <Server size={11} className="text-emerald-400" /> Containers:
                         </span>
                         <span className="font-mono font-bold text-slate-200 mt-1">
-                          {docker.containers?.active || 0} / {docker.containers?.total || 0}
+                          {docker.containers?.active || 0} Aktif / {docker.containers?.total || 0}
                         </span>
                       </div>
                     </div>
@@ -511,7 +516,7 @@ export default function DockerJunkManagerView({
                     title="Scan ulang status Docker di POD ini"
                   >
                     <RefreshCw size={11} className={inspectingSinglePodId === podId ? 'animate-spin text-cyan-400' : ''} />
-                    <span>{t('storage.dockerJunk.rescan', null, 'Scan Ulang')}</span>
+                    <span>Scan Ulang</span>
                   </button>
 
                   <button
@@ -520,7 +525,7 @@ export default function DockerJunkManagerView({
                     title="Buka Direktori & Katalog Media S3"
                   >
                     <Film size={11} />
-                    <span>{t('storage.dockerJunk.mediaS3', null, 'Media S3')}</span>
+                    <span>Media S3</span>
                   </button>
                 </div>
 
@@ -531,7 +536,7 @@ export default function DockerJunkManagerView({
                     title="Pilih dan bersihkan sampah Docker di POD ini"
                   >
                     <Trash2 size={11} />
-                    <span>{t('storage.dockerJunk.cleanJunk', null, 'Bersihkan Sampah')}</span>
+                    <span>Bersihkan Sampah</span>
                   </button>
                 )}
               </div>

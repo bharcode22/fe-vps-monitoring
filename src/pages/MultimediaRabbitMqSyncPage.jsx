@@ -55,12 +55,10 @@ import {
 import DockerLogModal from '../components/server/DockerLogModal';
 import MultimediaUploadModal from '../components/content/MultimediaUploadModal';
 import { useDirectS3Upload } from '../context/DirectS3UploadContext';
-import { useLanguage } from '../context/LanguageContext';
 import FileIntegrityModal from '../components/content/FileIntegrityModal';
 import MediaPreviewModal from '../components/content/MediaPreviewModal';
 
 export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
-  const { t } = useLanguage();
   // 1. Master Multimedia State
   const [multimediaItems, setMultimediaItems] = useState([]);
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10, totalPages: 1 });
@@ -568,7 +566,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
             className="p-2 bg-slate-900 hover:bg-slate-800 text-purple-400 rounded-xl border border-purple-500/30 transition-all cursor-pointer shadow-lg shadow-purple-500/5 flex items-center gap-1.5 text-xs font-bold shrink-0"
           >
             <ArrowLeft size={15} />
-            <span>{t('common.back', null, 'Kembali')}</span>
+            <span>Kembali</span>
           </button>
           <div>
             <div className="flex items-center gap-2.5">
@@ -577,13 +575,13 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
               </div>
               <div>
                 <h1 className="text-lg font-black text-white tracking-tight flex items-center gap-2">
-                  {t('multimedia.title', null, 'Content Management')}
+                  Content Management
                   <span className="px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 uppercase">
                     Master API ➔ RabbitMQ ➔ POD V3
                   </span>
                 </h1>
                 <p className="text-[11px] text-slate-400 mt-0.5">
-                  {t('multimedia.subtitle', null, 'Konsolidasi Konten Master API & Sinkronisasi RabbitMQ ke Armada POD')}
+                  Pilih konten multimedia di panel kiri, pantau container <code className="text-purple-300 font-mono">mobile-synch</code> di panel kanan, lalu kirim trigger sinkronisasi.
                 </p>
               </div>
             </div>
@@ -598,7 +596,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
             title="Upload Berkecepatan Tinggi Langsung ke AWS S3 + Auto SHA-256 Forensik & Simpan ke Master DB"
           >
             <Zap size={14} className="fill-slate-950 text-slate-950" />
-            <span>{t('multimedia.directS3', null, 'Direct S3 Upload (Forensik)')}</span>
+            <span>Direct S3 Upload (Forensik)</span>
           </button>
 
           <button
@@ -607,7 +605,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
             title="Unggah Konten Multimedia Master (Cara Reguler)"
           >
             <UploadCloud size={14} />
-            <span>{t('multimedia.regularUpload', null, 'Upload Reguler')}</span>
+            <span>Upload Reguler</span>
           </button>
         </div>
       </div>
@@ -628,10 +626,10 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                   <Layers size={15} />
                 </div>
                 <h2 className="text-xs sm:text-sm font-black text-white truncate">
-                  {t('multimedia.fileAtCloud', null, 'File at Cloud')}
+                  File at Cloud
                 </h2>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0">
-                  {t('multimedia.tracksCount', { total: pagination.total }, `${pagination.total} Track`)}
+                  {pagination.total} Track
                 </span>
               </div>
             </div>
@@ -643,14 +641,14 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder={t('multimedia.searchPlaceholder', null, 'Cari judul, artis, folder #sound_scape...')}
+                placeholder="Cari judul, artis, folder #sound_scape..."
                 className="w-full pl-8 pr-16 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 font-medium"
               />
               <button
                 type="submit"
                 className="absolute right-1 top-1 px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-bold cursor-pointer transition-all"
               >
-                {t('multimedia.searchBtn', null, 'Cari')}
+                Cari
               </button>
             </form>
           </div>
@@ -669,7 +667,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
               </div>
             ) : multimediaItems.length === 0 ? (
               <div className="p-10 rounded-2xl bg-slate-950/60 border border-slate-800 text-center text-slate-500 text-xs">
-                {t('multimedia.noData', null, 'Tidak ada data multimedia yang ditemukan.')}
+                Tidak ada data multimedia yang ditemukan.
               </div>
             ) : (
               multimediaItems.map(item => {
@@ -714,7 +712,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                             {isSelected && (
                               <span className="px-1.5 py-0.2 rounded text-[8.5px] font-bold bg-purple-500 text-slate-950 flex items-center gap-0.5">
                                 <Check size={9} />
-                                {t('multimedia.selected', null, 'TERPILIH')}
+                                TERPILIH
                               </span>
                             )}
                           </div>
@@ -740,7 +738,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                           title="Lihat Struktur Data Berkas Master API (music, video, lamp, album)"
                         >
                           <Info size={12} className="text-purple-400" />
-                          <span>{t('multimedia.detail', null, 'Detail')}</span>
+                          <span>Detail</span>
                         </button>
 
                         {/* Delete from Master API Button */}
@@ -754,7 +752,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                           title={`Hapus #${item.sound_scape} dari Master API`}
                         >
                           <Trash2 size={12} className="text-rose-400" />
-                          <span>{t('multimedia.delete', null, 'Hapus')}</span>
+                          <span>Hapus</span>
                         </button>
                       </div>
                     </div>
@@ -801,15 +799,13 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
           {/* Catalog Pagination Footer */}
           {pagination.totalPages > 1 && (
             <div className="shrink-0 p-2.5 border-t border-purple-500/20 bg-slate-950/40 flex items-center justify-between text-xs text-slate-400 mt-auto">
-              <span className="text-[10.5px]">
-                {t('multimedia.pagination.page', { page: pagination.page, totalPages: pagination.totalPages }, `Halaman ${pagination.page} / ${pagination.totalPages}`)}
-              </span>
+              <span className="text-[10.5px]">Halaman {pagination.page} / {pagination.totalPages}</span>
               <div className="flex items-center gap-1.5">
                 <button
                   onClick={() => handlePageChange(pagination.page - 1)}
                   disabled={pagination.page <= 1 || isLoadingMaster}
                   className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-white disabled:opacity-30 cursor-pointer"
-                  title={t('multimedia.pagination.prev', null, 'Halaman Sebelumnya')}
+                  title="Halaman Sebelumnya"
                 >
                   <ChevronLeft size={13} />
                 </button>
@@ -817,7 +813,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                   onClick={() => handlePageChange(pagination.page + 1)}
                   disabled={pagination.page >= pagination.totalPages || isLoadingMaster}
                   className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-white disabled:opacity-30 cursor-pointer"
-                  title={t('multimedia.pagination.next', null, 'Halaman Selanjutnya')}
+                  title="Halaman Selanjutnya"
                 >
                   <ChevronRight size={13} />
                 </button>
@@ -855,11 +851,11 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                       Folder #{selectedItem?.sound_scape || '---'}
                     </span>
                     <span className="px-1.5 py-0.5 rounded text-[8.5px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                      {t('multimedia.matrix.syncTarget', null, 'TARGET SINKRONISASI')}
+                      TARGET SINKRONISASI
                     </span>
                   </div>
                   <h3 className="text-xs sm:text-sm font-bold text-white truncate mt-0.5">
-                    {selectedItem?.tittle || selectedItem?.title || t('multimedia.matrix.selectPrompt', null, 'Pilih track di panel kiri')}
+                    {selectedItem?.tittle || selectedItem?.title || 'Pilih track di panel kiri'}
                   </h3>
                   <p className="text-[10px] text-slate-400 truncate">
                     {selectedItem?.artist || 'Regenesis'} • {selectedItem?.album || 'Master Session'}
@@ -884,7 +880,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                     ) : (
                       <HardDrive size={13} className="text-purple-400 shrink-0 group-hover:scale-110 transition-transform" />
                     )}
-                    <span>{isCheckingAllFiles ? t('multimedia.matrix.scanningPodFiles', null, 'Memindai Berkas POD...') : t('multimedia.matrix.checkAllPodFiles', null, 'Cek Berkas Semua POD')}</span>
+                    <span>{isCheckingAllFiles ? 'Memindai Berkas POD...' : 'Cek Berkas Semua POD'}</span>
                   </button>
                 )}
 
@@ -895,7 +891,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                   title="Periksa status container mobile-synch di seluruh unit POD V3"
                 >
                   <RefreshCw size={13} className={isLoadingFleet ? 'animate-spin text-cyan-400' : ''} />
-                  <span>{t('multimedia.matrix.checkMatrixStatus', null, 'Cek Status Matriks POD')}</span>
+                  <span>Cek Status Matriks POD</span>
                 </button>
               </div>
 
@@ -906,17 +902,17 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
           <div className="shrink-0 px-3.5 py-2 bg-slate-950/40 border-b border-slate-800/80 flex items-center justify-between text-xs text-slate-400 flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <Server size={13} className="text-cyan-400" />
-              <span className="font-bold text-white text-xs">{t('multimedia.matrix.title', null, 'Matriks Unit POD V3')}</span>
-              <span className="font-mono text-[10.5px]">{t('multimedia.matrix.serverUnits', { count: fleetPods.length }, `(${fleetPods.length} Server)`)}</span>
+              <span className="font-bold text-white text-xs">Matriks Unit POD V3</span>
+              <span className="font-mono text-[10.5px]">({fleetPods.length} Server)</span>
             </div>
 
             <div className="flex items-center gap-2">
               <span className="px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-[10px] font-mono">
-                <span className="text-emerald-400 font-bold">{runningContainersCount}</span>/{onlinePodsCount} {t('multimedia.matrix.ready', null, 'Ready')}
+                <span className="text-emerald-400 font-bold">{runningContainersCount}</span>/{onlinePodsCount} Ready
               </span>
               {exitedContainersCount > 0 && (
                 <span className="px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-[10px] font-mono text-amber-300 font-bold">
-                  {exitedContainersCount} {t('multimedia.matrix.exited', null, 'Exited')}
+                  {exitedContainersCount} Exited
                 </span>
               )}
             </div>
@@ -935,11 +931,11 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
             {isLoadingFleet ? (
               <div className="py-20 flex flex-col items-center justify-center text-slate-500 gap-2.5">
                 <Loader2 size={22} className="animate-spin text-cyan-400" />
-                <span className="text-xs">{t('multimedia.matrix.checkingContainer', null, 'Memeriksa status container mobile-synch & disk di seluruh POD V3...')}</span>
+                <span className="text-xs">Memeriksa status container mobile-synch & disk di seluruh POD V3...</span>
               </div>
             ) : fleetPods.length === 0 ? (
               <div className="p-10 rounded-2xl bg-slate-950/60 border border-slate-800 text-center text-slate-500 text-xs">
-                {t('multimedia.matrix.noPods', null, 'Tidak ada server POD V3 yang terdaftar.')}
+                Tidak ada server POD V3 yang terdaftar.
               </div>
             ) : (
               fleetPods.map(pod => {
@@ -1003,7 +999,8 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                                   ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                                   : 'bg-rose-500/20 text-rose-300 border-rose-500/40'
                               }`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${isRunning ? 'bg-emerald-400 animate-pulse' : isExited ? 'bg-amber-400' : 'bg-rose-400'}`} />
+                              <span className={`w-1.5 h-1.5 rounded-full ${isRunning ? 'bg-emerald-400 animate-pulse' : isExited ? 'bg-amber-400' : 'bg-rose-400'
+                                }`} />
                               <span>{pod.containerStatus || pod.containerState}</span>
                             </span>
 
@@ -1013,7 +1010,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                                 {isCheckingThisPodFiles ? (
                                   <span className="px-2 py-0.5 rounded-md text-[9.5px] font-mono font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 flex items-center gap-1 shadow-sm">
                                     <Loader2 size={10} className="animate-spin text-cyan-400" />
-                                    <span>{t('multimedia.matrix.checkingFiles', null, 'Memeriksa Berkas...')}</span>
+                                    <span>Memeriksa Berkas...</span>
                                   </span>
                                 ) : podCheck && (
                                   <button
@@ -1030,10 +1027,10 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                                     <HardDrive size={10} />
                                     <span>
                                       {podCheck.fileStatus === 'all'
-                                        ? t('multimedia.matrix.complete', { found: podCheck.foundCount, expected: podCheck.totalExpected, size: podCheck.totalFormatted }, `Lengkap (${podCheck.foundCount}/${podCheck.totalExpected} Berkas • ${podCheck.totalFormatted})`)
+                                        ? `Lengkap (${podCheck.foundCount}/${podCheck.totalExpected} Berkas • ${podCheck.totalFormatted})`
                                         : podCheck.foundCount > 0
-                                          ? t('multimedia.matrix.partial', { found: podCheck.foundCount, expected: podCheck.totalExpected }, `Sebagian (${podCheck.foundCount}/${podCheck.totalExpected} Berkas)`)
-                                          : t('multimedia.matrix.empty', { expected: podCheck.totalExpected || 0 }, `Kosong (0/${podCheck.totalExpected || 0})`)}
+                                          ? `Sebagian (${podCheck.foundCount}/${podCheck.totalExpected} Berkas)`
+                                          : `Kosong (0/${podCheck.totalExpected || 0})`}
                                     </span>
                                     {isExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
                                   </button>
@@ -1060,7 +1057,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                             ) : (
                               <Play size={10} className="fill-emerald-400 text-emerald-400" />
                             )}
-                            <span>{isStartLoading ? t('multimedia.matrix.starting', null, 'Memulai...') : t('multimedia.matrix.start', null, 'Start')}</span>
+                            <span>{isStartLoading ? 'Memulai...' : 'Start'}</span>
                           </button>
                         )}
 
@@ -1074,7 +1071,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                             title="Restart container mobile-synch pada POD ini"
                           >
                             <RotateCw size={11} className={isRestartLoading ? 'animate-spin text-purple-400' : 'text-purple-400'} />
-                            <span>{isRestartLoading ? t('multimedia.matrix.restarting', null, 'Restarting...') : t('multimedia.matrix.restart', null, 'Restart')}</span>
+                            <span>{isRestartLoading ? 'Restarting...' : 'Restart'}</span>
                           </button>
                         )}
 
@@ -1092,7 +1089,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                             ) : (
                               <Square size={9} className="fill-rose-400 text-rose-400" />
                             )}
-                            <span>{isStopLoading ? t('multimedia.matrix.stopping', null, 'Menghentikan...') : t('multimedia.matrix.stop', null, 'Stop')}</span>
+                            <span>{isStopLoading ? 'Menghentikan...' : 'Stop'}</span>
                           </button>
                         )}
 
@@ -1112,7 +1109,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                               size={11}
                               className={isInspectLoading || isCheckingThisPodFiles ? 'animate-spin text-cyan-400' : 'text-slate-400'}
                             />
-                            <span>{isInspectLoading || isCheckingThisPodFiles ? t('multimedia.matrix.checkingFiles', null, 'Memeriksa...') : t('multimedia.matrix.checkFilesBtn', null, 'Cek Berkas')}</span>
+                            <span>{isInspectLoading || isCheckingThisPodFiles ? 'Memeriksa...' : 'Cek Berkas'}</span>
                           </button>
                         )}
 
@@ -1125,7 +1122,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                             title="Buka Console Log Real-time mobile-synch"
                           >
                             <Terminal size={11} className="text-slate-400" />
-                            <span>{t('multimedia.matrix.logs', null, 'Logs')}</span>
+                            <span>Logs</span>
                           </button>
                         )}
                       </div>
@@ -1137,7 +1134,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                         <div className="flex items-center justify-between text-[10.5px] font-mono text-slate-400">
                           <span className="flex items-center gap-1.5 font-bold text-slate-300">
                             <FolderOpen size={12} className="text-cyan-400 shrink-0" />
-                            <span>{t('multimedia.matrix.mediaFilesLabel', null, 'Berkas Media POD:')}</span>
+                            <span>Berkas Media POD:</span>
                           </span>
                           <span className="font-bold text-white">{podCheck.foundCount}/{podCheck.totalExpected} Berkas</span>
                         </div>
@@ -1219,20 +1216,20 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                                         {integrityData.isCorrupt ? (
                                           <>
                                             <AlertTriangle size={10} className="text-rose-400 shrink-0" />
-                                            <b className="text-rose-400">{t('multimedia.matrix.corrupt', null, 'KORUP:')}</b> {integrityData.message}
+                                            <b className="text-rose-400">KORUP:</b> {integrityData.message}
                                           </>
                                         ) : (
                                           <>
                                             <CheckCircle2 size={10} className="text-emerald-400 shrink-0" />
                                             <span>
-                                              <b>{t('multimedia.matrix.healthy', null, 'Sehat & Utuh')}</b>
+                                              <b>Sehat &amp; Utuh</b>
                                               {integrityData.durationFormatted ? ` • ${integrityData.durationFormatted}` : ''}
                                               {integrityData.bitrateFormatted ? ` • ${integrityData.bitrateFormatted}` : ''}
                                             </span>
                                           </>
                                         )}
                                       </span>
-                                      <span className="text-[8.5px] text-cyan-300 underline shrink-0 font-sans font-bold">{t('multimedia.matrix.detailsLink', null, 'Rincian ›')}</span>
+                                      <span className="text-[8.5px] text-cyan-300 underline shrink-0 font-sans font-bold">Rincian &rsaquo;</span>
                                     </div>
 
                                     {/* Action Buttons inside Corrupt File Box */}
@@ -1248,7 +1245,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                                           className="flex items-center gap-1 px-2 py-0.5 bg-rose-500/20 hover:bg-rose-500/40 border border-rose-500/40 rounded text-[9px] text-rose-200 font-bold transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                         >
                                           {isFileDownloading ? <RefreshCw size={10} className="animate-spin" /> : <Download size={10} />}
-                                          <span>{isFileDownloading ? t('multimedia.matrix.downloading', null, 'Mendownload...') : t('multimedia.matrix.redownload', null, 'Download Ulang')}</span>
+                                          <span>{isFileDownloading ? 'Mendownload...' : 'Download Ulang'}</span>
                                         </button>
                                         <button
                                           type="button"
@@ -1260,7 +1257,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                                           className="flex items-center gap-1 px-2 py-0.5 bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 rounded text-[9px] text-rose-400 font-bold transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                         >
                                           <Trash2 size={10} />
-                                          <span>{t('multimedia.delete', null, 'Hapus')}</span>
+                                          <span>Hapus</span>
                                         </button>
                                       </div>
                                     )}
@@ -1285,7 +1282,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                                       </>
                                     ) : (
                                       <div className="flex items-center gap-1.5 text-[10px] text-sky-400 font-mono animate-pulse">
-                                        <RefreshCw size={10} className="animate-spin" /> {t('common.loading', null, 'Menyiapkan download...')}
+                                        <RefreshCw size={10} className="animate-spin" /> Menyiapkan download...
                                       </div>
                                     )}
                                   </div>
@@ -1320,7 +1317,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                                     title={`Download ${filename} langsung ke POD ${pod.serverName}`}
                                   >
                                     {isDownloading ? <Loader2 size={10} className="animate-spin" /> : <Download size={10} />}
-                                    <span>{isDownloading ? t('multimedia.matrix.downloading', null, 'Mendownload...') : t('multimedia.matrix.download', null, 'Unduh')}</span>
+                                    <span>{isDownloading ? 'Mendownload...' : 'Unduh'}</span>
                                   </button>
                                 </div>
 
@@ -1342,7 +1339,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                                       </>
                                     ) : (
                                       <div className="flex items-center gap-1.5 text-[10px] text-sky-400 font-mono animate-pulse">
-                                        <RefreshCw size={10} className="animate-spin" /> {t('common.loading', null, 'Menyiapkan download...')}
+                                        <RefreshCw size={10} className="animate-spin" /> Menyiapkan download...
                                       </div>
                                     )}
                                   </div>
@@ -1366,7 +1363,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                               ) : (
                                 <CloudDownload size={11} />
                               )}
-                              <span>{t('multimedia.matrix.downloadMissingAll', { count: podCheck.missingFiles.length }, `Unduh Semua Berkas yang Kurang (${podCheck.missingFiles.length})`)}</span>
+                              <span>Unduh Semua Berkas yang Kurang ({podCheck.missingFiles.length})</span>
                             </button>
                           </div>
                         )}
@@ -1381,7 +1378,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                             title="Periksa ulang berkas fisik di POD ini"
                           >
                             <RefreshCw size={12} className={actionLoadingMap[`files_${podId}`] ? 'animate-spin text-cyan-400' : 'text-slate-400'} />
-                            <span>{t('multimedia.matrix.recheck', null, 'Periksa Ulang')}</span>
+                            <span>Periksa Ulang</span>
                           </button>
 
                           <button
@@ -1392,7 +1389,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                             title={`Hapus semua berkas kode #${selectedItem?.sound_scape} di ${pod.serverName}`}
                           >
                             {actionLoadingMap[`del_pod_${podId}`] ? <Loader2 size={12} className="animate-spin text-rose-400" /> : <Trash2 size={12} className="text-rose-400" />}
-                            <span>{t('multimedia.matrix.deleteOnThisPod', null, 'Hapus di POD Ini')}</span>
+                            <span>Hapus di POD Ini</span>
                           </button>
                         </div>
                       </div>
@@ -1427,10 +1424,10 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                   </span>
                 </div>
                 <div className="text-[10.5px] text-slate-400 flex items-center gap-2 mt-0.5">
-                  <span>{t('multimedia.triggerBar.podsReady', { running: runningContainersCount, online: onlinePodsCount }, `${runningContainersCount}/${onlinePodsCount} POD Siap`)}</span>
+                  <span>{runningContainersCount}/{onlinePodsCount} POD Siap</span>
                   {exitedContainersCount > 0 && (
                     <span className="text-amber-400 font-bold">
-                      {t('multimedia.triggerBar.deadContainers', { count: exitedContainersCount }, `(${exitedContainersCount} container mati)`)}
+                      ({exitedContainersCount} container mati)
                     </span>
                   )}
                 </div>
@@ -1445,7 +1442,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                 className="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-500 via-indigo-500 to-cyan-500 hover:from-purple-400 hover:to-cyan-400 text-slate-950 font-black text-xs transition-all cursor-pointer flex items-center gap-2 shadow-xl shadow-purple-500/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
               >
                 <Shuffle size={14} />
-                <span>{t('multimedia.triggerBar.triggerBtn', null, 'Trigger Sinkronisasi RabbitMQ')}</span>
+                <span>Trigger Sinkronisasi RabbitMQ</span>
               </button>
             </div>
 
@@ -1471,10 +1468,10 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                 </div>
                 <div>
                   <h3 className="text-base font-black text-white">
-                    {t('multimedia.confirmModal.title', null, 'Konfirmasi Sinkronisasi RabbitMQ')}
+                    Konfirmasi Sinkronisasi RabbitMQ
                   </h3>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    {t('multimedia.confirmModal.subtitle', null, 'Trigger unduhan multimedia ke seluruh armada unit POD V3')}
+                    Trigger unduhan multimedia ke seluruh armada unit POD V3
                   </p>
                 </div>
               </div>
@@ -1507,7 +1504,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                     #{selectedItem.sound_scape}
                   </span>
                   <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                    {t('multimedia.confirmModal.targetBadge', null, 'Target Sinkronisasi')}
+                    Target Sinkronisasi
                   </span>
                 </div>
                 <h4 className="text-sm font-bold text-white truncate mt-0.5">
@@ -1522,11 +1519,11 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
             {/* Fleet Status Summary Cards */}
             <div className="grid grid-cols-2 gap-2.5 text-xs">
               <div className="p-3 rounded-2xl bg-slate-950/60 border border-slate-800 flex items-center justify-between">
-                <span className="text-slate-400">{t('multimedia.confirmModal.onlinePods', null, 'Total POD Online:')}</span>
+                <span className="text-slate-400">Total POD Online:</span>
                 <span className="font-bold text-white font-mono">{onlinePodsCount} / {fleetPods.length} Unit</span>
               </div>
               <div className="p-3 rounded-2xl bg-slate-950/60 border border-slate-800 flex items-center justify-between">
-                <span className="text-slate-400">{t('multimedia.confirmModal.activeContainers', null, 'Container Aktif:')}</span>
+                <span className="text-slate-400">Container Aktif:</span>
                 <span className="font-bold text-emerald-400 font-mono">{runningContainersCount} Ready</span>
               </div>
             </div>
@@ -1537,10 +1534,10 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                 <AlertTriangle size={18} className="text-amber-400 shrink-0 mt-0.5" />
                 <div className="text-xs text-amber-200">
                   <p className="font-bold text-amber-300 mb-0.5">
-                    {t('multimedia.confirmModal.warningTitle', { count: exitedContainersCount }, `Perhatian: ${exitedContainersCount} POD memiliki container mobile-synch mati (Exited)`)}
+                    Perhatian: {exitedContainersCount} POD memiliki container mobile-synch mati (Exited)
                   </p>
                   <p className="text-[11px] text-amber-300/80 leading-relaxed">
-                    {t('multimedia.confirmModal.warningDesc', null, 'POD dengan container mati tidak akan menerima event unduhan RabbitMQ. Anda dapat menyalakan container terlebih dahulu pada tabel matriks atau tetap melanjutkan pengiriman ke unit yang aktif.')}
+                    POD dengan container mati tidak akan menerima event unduhan RabbitMQ. Anda dapat menyalakan container terlebih dahulu pada tabel matriks atau tetap melanjutkan pengiriman ke unit yang aktif.
                   </p>
                 </div>
               </div>
@@ -1548,7 +1545,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
 
             {/* Description Text */}
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              {t('multimedia.confirmModal.desc', { code: selectedItem.sound_scape }, `Sistem akan mengirim perintah re-save/${selectedItem.sound_scape} ke Master API, memicu antrean pesan RabbitMQ ke seluruh unit POD yang aktif untuk mengunduh berkas multimedia.`)}
+              Sistem akan mengirim perintah <code className="text-purple-300 font-mono font-bold">re-save/{selectedItem.sound_scape}</code> ke Master API, memicu antrean pesan RabbitMQ ke seluruh unit POD yang aktif untuk mengunduh berkas multimedia.
             </p>
 
             {/* Action Buttons */}
@@ -1559,7 +1556,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                 disabled={isTriggeringResave}
                 className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
               >
-                {t('multimedia.confirmModal.cancel', null, 'Batal')}
+                Batal
               </button>
               <button
                 type="button"
@@ -1570,12 +1567,12 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                 {isTriggeringResave ? (
                   <>
                     <Loader2 size={15} className="animate-spin text-slate-950" />
-                    <span>{t('multimedia.confirmModal.sending', null, 'Mengirim Trigger...')}</span>
+                    <span>Mengirim Trigger...</span>
                   </>
                 ) : (
                   <>
                     <Shuffle size={15} />
-                    <span>{t('multimedia.confirmModal.confirmBtn', null, 'Ya, Kirim Trigger RabbitMQ')}</span>
+                    <span>Ya, Kirim Trigger RabbitMQ</span>
                   </>
                 )}
               </button>
@@ -1623,10 +1620,10 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                 </div>
                 <div>
                   <h3 className="text-base font-black text-white">
-                    {t('multimedia.deleteModal.title', null, 'Hapus Konten Multimedia')}
+                    Hapus Konten Multimedia
                   </h3>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    {t('multimedia.deleteModal.subtitle', null, 'Hapus data katalog dari Master API')}
+                    Hapus data katalog dari Master API
                   </p>
                 </div>
               </div>
@@ -1675,7 +1672,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
             <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-start gap-2.5 text-xs text-rose-200">
               <AlertTriangle size={16} className="text-rose-400 shrink-0 mt-0.5" />
               <div className="leading-relaxed">
-                {t('multimedia.deleteModal.warningNotice', { code: deleteTargetItem.sound_scape }, `Tindakan ini akan memanggil endpoint DELETE /admin-api/multimedia/delete/${deleteTargetItem.sound_scape}. Data yang telah dihapus dari Master API tidak dapat dipulihkan.`)}
+                Tindakan ini akan memanggil endpoint <code className="text-rose-300 font-mono font-bold">DELETE /admin-api/multimedia/delete/{deleteTargetItem.sound_scape}</code>. Data yang telah dihapus dari Master API tidak dapat dipulihkan.
               </div>
             </div>
 
@@ -1687,7 +1684,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                 disabled={isDeletingItem}
                 className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
               >
-                {t('multimedia.deleteModal.cancel', null, 'Batal')}
+                Batal
               </button>
               <button
                 type="button"
@@ -1698,12 +1695,12 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                 {isDeletingItem ? (
                   <>
                     <Loader2 size={14} className="animate-spin text-white" />
-                    <span>{t('multimedia.deleteModal.deleting', null, 'Menghapus...')}</span>
+                    <span>Menghapus...</span>
                   </>
                 ) : (
                   <>
                     <Trash2 size={14} />
-                    <span>{t('multimedia.deleteModal.confirmBtn', null, 'Ya, Hapus Multimedia')}</span>
+                    <span>Ya, Hapus Multimedia</span>
                   </>
                 )}
               </button>
@@ -1782,7 +1779,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
             {/* Key-Value File Cards */}
             <div className="space-y-2">
               <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                {t('multimedia.detailModal.cloudFilesTitle', null, 'Daftar Berkas Di Cloud:')}
+                Daftar Berkas Di Cloud:
               </div>
 
               {/* Music Audio */}
@@ -1812,7 +1809,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                       title="Putar / Preview Audio dari AWS S3"
                     >
                       <Play size={10} className="fill-cyan-400 text-cyan-400" />
-                      <span>{t('multimedia.detailModal.preview', null, 'Preview')}</span>
+                      <span>Preview</span>
                     </button>
                   )}
                 </div>
@@ -1845,7 +1842,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                       title="Putar / Preview Video dari AWS S3"
                     >
                       <Film size={10} className="text-rose-400" />
-                      <span>{t('multimedia.detailModal.preview', null, 'Preview')}</span>
+                      <span>Preview</span>
                     </button>
                   )}
                 </div>
@@ -1879,7 +1876,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                       title="Putar & Simulasi Lampu Strobe dari AWS S3"
                     >
                       <Zap size={10} className="fill-amber-400 text-amber-400" />
-                      <span>{t('multimedia.detailModal.preview', null, 'Preview')}</span>
+                      <span>Preview</span>
                     </button>
                   )}
                 </div>
@@ -1929,12 +1926,35 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                       title="Lihat Preview Gambar Cover dari AWS S3"
                     >
                       <Eye size={10} className="text-emerald-400" />
-                      <span>{t('multimedia.detailModal.preview', null, 'Preview')}</span>
+                      <span>Preview</span>
                     </button>
                   </div>
                 </div>
               )}
             </div>
+
+            {/* Raw JSON Code Block Preview */}
+            {/* <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-[11px] font-bold text-slate-400">
+                <span>Respon JSON:</span>
+                <button
+                  type="button"
+                  onClick={() => handleCopyTrackJson(trackInfoModalItem)}
+                  className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-purple-300 text-[10.5px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                >
+                  {copiedJson ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+                  <span>{copiedJson ? 'Tersalin!' : 'Salin JSON'}</span>
+                </button>
+              </div>
+              <pre className="p-3 rounded-2xl bg-slate-950 border border-slate-800 text-[11px] font-mono text-purple-300 overflow-x-auto custom-scrollbar">
+                {JSON.stringify({
+                  music: trackInfoModalItem.music || null,
+                  video: trackInfoModalItem.video || null,
+                  lamp: trackInfoModalItem.lamp || null,
+                  album: trackInfoModalItem.album || null
+                }, null, 2)}
+              </pre>
+            </div> */}
 
             {/* Modal Footer Actions */}
             <div className="flex items-center justify-between gap-3 pt-1">
@@ -1949,7 +1969,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                   className="px-4 py-2 rounded-xl bg-purple-600/30 hover:bg-purple-600/40 text-purple-200 border border-purple-500/40 text-xs font-bold flex items-center gap-2 transition-all cursor-pointer"
                 >
                   <Layers size={13} />
-                  <span>{t('multimedia.detailModal.openStorageManager', null, 'Buka di Storage Manager')}</span>
+                  <span>Buka di Storage Manager</span>
                 </button>
               )}
               <button
@@ -1957,7 +1977,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
                 onClick={() => setTrackInfoModalItem(null)}
                 className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-all cursor-pointer ml-auto"
               >
-                {t('multimedia.detailModal.close', null, 'Tutup')}
+                Tutup
               </button>
             </div>
           </div>

@@ -409,12 +409,9 @@ export default function CreateBundleModal({
                           className="px-2 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-[11px] text-cyan-300 font-mono focus:outline-none focus:border-cyan-500/50 cursor-pointer max-w-[170px]"
                         >
                           <option value="">(Gunakan Server .env)</option>
-                          {envFiles.map((f, idx) => {
-                            const fname = typeof f === 'string' ? f : (f.name || f.filename || `env-${idx}`);
-                            return (
-                              <option key={fname} value={fname}>{fname}</option>
-                            );
-                          })}
+                          {envFiles.map(f => (
+                            <option key={f} value={f}>{f}</option>
+                          ))}
                         </select>
                       </div>
 

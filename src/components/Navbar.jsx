@@ -20,7 +20,9 @@ export default function Navbar({
   onToggleTvMode,
   onOpenUserModal,
   currentView = 'dashboard',
-  onNavigateView
+  onNavigateView,
+  totalActiveUsers = 0,
+  onOpenActiveUsersModal
 }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
@@ -73,8 +75,6 @@ export default function Navbar({
                 currentView === item.id ||
                 (item.aliases && item.aliases.includes(currentView));
 
-              const itemLabel = item.labelKey ? t(item.labelKey, null, item.label) : item.label;
-
               return (
                 <button
                   key={item.id}
@@ -88,7 +88,7 @@ export default function Navbar({
                     size={14}
                     className={isActive ? 'text-cyan-400' : 'text-slate-500'}
                   />
-                  <span>{itemLabel}</span>
+                  <span>{item.label}</span>
                 </button>
               );
             })}
@@ -124,7 +124,7 @@ export default function Navbar({
             />
           )}
 
-          {/* Utilities: TV Mode, Refresh & Language Switcher */}
+          {/* Utilities: TV Mode & Refresh */}
           <NavbarUtilities
             isTvMode={isTvMode}
             onToggleTvMode={onToggleTvMode}
@@ -138,9 +138,10 @@ export default function Navbar({
             onToggle={handleToggleUserMenu}
             onClose={() => setIsUserMenuOpen(false)}
             onOpenUserModal={onOpenUserModal}
-            onOpenSettings={(view) => onNavigateView && onNavigateView(view || 'settings')}
-            onNavigateView={onNavigateView}
+            onOpenSettings={() => onNavigateView && onNavigateView('settings')}
             onNavigateHome={() => onNavigateView && onNavigateView('dashboard')}
+            totalActiveUsers={totalActiveUsers}
+            onOpenActiveUsersModal={onOpenActiveUsersModal}
           />
         </div>
 
@@ -181,6 +182,8 @@ export default function Navbar({
         onOpenUserModal={onOpenUserModal}
         isTvMode={isTvMode}
         onToggleTvMode={onToggleTvMode}
+        totalActiveUsers={totalActiveUsers}
+        onOpenActiveUsersModal={onOpenActiveUsersModal}
       />
     </header>
   );

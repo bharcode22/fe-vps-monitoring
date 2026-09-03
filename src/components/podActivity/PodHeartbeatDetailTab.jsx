@@ -27,6 +27,7 @@ import {
   resetHeartbeatModulesApi
 } from '../../api/podActivityApi';
 import PodHeartbeatLegendModal, { InlineStatusLegendStrip } from './PodHeartbeatLegendModal';
+import PodHeartbeatModuleConfigModal from './PodHeartbeatModuleConfigModal';
 
 // Default 9 modules template
 const DEFAULT_SERVER_MODULES = [
@@ -337,15 +338,18 @@ export default function PodHeartbeatDetailTab({
     }
 
     if (matchedModuleId && (parsedJson?.hb !== undefined || topicStr.includes('mod_server'))) {
-      const hbVal = parsedJson?.hb !== undefined
+      const rawHb = parsedJson?.hb !== undefined
         ? parsedJson.hb
         : !isNaN(Number(payloadStr))
           ? Number(payloadStr)
           : null;
+      const hbVal = (rawHb !== null && rawHb !== undefined && !isNaN(Number(rawHb))) ? Number(rawHb) : null;
       const verVal = parsedJson?.version || parsedJson?.ver || null;
       const portVal = parsedJson?.port || null;
       const timestamp = latestFeed.timestamp ? new Date(latestFeed.timestamp) : new Date();
       const nowTime = timestamp.getTime();
+
+      let didIncrement = false;
 
       setModuleDataMap((prev) => {
         const currentMod = prev[matchedModuleId] || {
@@ -360,9 +364,13 @@ export default function PodHeartbeatDetailTab({
           isFrozen: false
         };
 
-        const hasHbChanged = currentMod.hb !== hbVal;
+        const currentHbNum = (currentMod.hb !== null && currentMod.hb !== undefined && !isNaN(Number(currentMod.hb))) ? Number(currentMod.hb) : null;
+        const hasHbChanged = currentHbNum !== null && hbVal !== null && currentHbNum !== hbVal;
+        if (hasHbChanged) {
+          didIncrement = true;
+        }
         const lastHbChangeAt = hasHbChanged ? nowTime : (currentMod.lastHbChangeAt || nowTime);
-        const isFrozen = !hasHbChanged && (nowTime - lastHbChangeAt > 15000);
+        const isFrozen = !hasHbChanged && (nowTime - lastHbChangeAt > 3000);
 
         const newHistory = hbVal !== null
           ? [Number(hbVal), ...(currentMod.history || []).slice(0, 7)]
@@ -388,11 +396,13 @@ export default function PodHeartbeatDetailTab({
         };
       });
 
-      // Trigger flash animation
-      setFlashingCards((prev) => ({ ...prev, [matchedModuleId]: true }));
-      setTimeout(() => {
-        setFlashingCards((prev) => ({ ...prev, [matchedModuleId]: false }));
-      }, 700);
+      // Trigger flash animation ONLY when the HB counter actually changed/incremented
+      if (didIncrement) {
+        setFlashingCards((prev) => ({ ...prev, [matchedModuleId]: true }));
+        setTimeout(() => {
+          setFlashingCards((prev) => ({ ...prev, [matchedModuleId]: false }));
+        }, 600);
+      }
     }
   }, [feed]);
 
@@ -492,16 +502,47 @@ export default function PodHeartbeatDetailTab({
 
     serverModules.forEach((mod) => {
       const data = moduleDataMap[mod.id];
-      const elapsedSec = data?.lastSeenAt ? Math.floor((nowTimestamp - data.lastSeenAt) / 1000) : null;
+      const packetElapsedSec = data?.lastSeenAt ? Math.floor((nowTimestamp - data.lastSeenAt) / 1000) : null;
+      const hbElapsedSec = data?.lastHbChangeAt ? Math.floor((nowTimestamp - data.lastHbChangeAt) / 1000) : null;
 
-      if (!data?.lastSeenAt || elapsedSec > 12) {
-        deadList.push({ mod, data, elapsedSec, reason: !data?.lastSeenAt ? 'Belum pernah berdetak' : `Mati ${elapsedSec}s lalu` });
-      } else if (data?.isFrozen) {
-        frozenList.push({ mod, data, elapsedSec, reason: 'Nilai HB macet (Frozen)' });
-      } else if (elapsedSec > 4) {
-        warningList.push({ mod, data, elapsedSec, reason: `Delay ${elapsedSec}s` });
+      // ULTRA-STRICT HEALTH THRESHOLDS (NO GREEN IF HB IS NOT ACTIVELY RUNNING):
+      // 1. DEAD: No data at all OR packet timeout > 8s
+      const isDead = !data?.lastSeenAt || packetElapsedSec > 8;
+      // 2. FROZEN: HB counter has not incremented for > 3s (Immediate freeze detection)
+      const isFrozen = !isDead && data?.hb !== null && hbElapsedSec !== null && hbElapsedSec > 3;
+      // 3. DELAY: Slight lag (> 2s for packet or HB)
+      const isDelay = !isDead && !isFrozen && ((packetElapsedSec !== null && packetElapsedSec > 2) || (hbElapsedSec !== null && hbElapsedSec > 2));
+      // 4. HEALTHY / LIVE: MUST be beating & incrementing actively <= 2s
+      const isHealthy = !isDead && !isFrozen && !isDelay && packetElapsedSec !== null && packetElapsedSec <= 2 && hbElapsedSec !== null && hbElapsedSec <= 2;
+
+      if (isDead) {
+        deadList.push({
+          mod,
+          data,
+          elapsedSec: packetElapsedSec,
+          reason: !data?.lastSeenAt ? 'Belum ada data' : `Mati ${packetElapsedSec}s lalu`
+        });
+      } else if (isFrozen) {
+        frozenList.push({
+          mod,
+          data,
+          elapsedSec: hbElapsedSec,
+          reason: `HB macet di #${data.hb} (${hbElapsedSec}s)`
+        });
+      } else if (isDelay) {
+        const delaySec = Math.max(packetElapsedSec || 0, hbElapsedSec || 0);
+        warningList.push({
+          mod,
+          data,
+          elapsedSec: delaySec,
+          reason: `Delay ${delaySec}s`
+        });
       } else {
-        healthyList.push({ mod, data, elapsedSec });
+        healthyList.push({
+          mod,
+          data,
+          elapsedSec: packetElapsedSec
+        });
       }
     });
 
@@ -515,14 +556,14 @@ export default function PodHeartbeatDetailTab({
     };
   }, [serverModules, moduleDataMap, nowTimestamp]);
 
-  // Trigger sound alarm if newly dead modules are detected
+  // Trigger sound alarm ONLY if newly DEAD modules are detected (Hanya status DEAD)
   useEffect(() => {
-    const currentDeadCount = modulesHealthAnalysis.deadList.length + modulesHealthAnalysis.frozenList.length;
+    const currentDeadCount = modulesHealthAnalysis.deadList.length;
     if (currentDeadCount > previousDeadCountRef.current && soundAlertEnabled) {
       playAlertChime();
     }
     previousDeadCountRef.current = currentDeadCount;
-  }, [modulesHealthAnalysis.deadList.length, modulesHealthAnalysis.frozenList.length, soundAlertEnabled]);
+  }, [modulesHealthAnalysis.deadList.length, soundAlertEnabled]);
 
   // Total Heartbeat packets count across all modules
   const totalReceivedPackets = useMemo(() => {
@@ -533,12 +574,15 @@ export default function PodHeartbeatDetailTab({
   const filteredModules = useMemo(() => {
     return serverModules.filter((m) => {
       const data = moduleDataMap[m.id];
-      const elapsedSec = data?.lastSeenAt ? Math.floor((nowTimestamp - data.lastSeenAt) / 1000) : null;
-      const isDead = !data?.lastSeenAt || elapsedSec > 12 || data?.isFrozen;
-      const isWarning = elapsedSec !== null && elapsedSec > 4 && elapsedSec <= 12;
-      const isHealthy = elapsedSec !== null && elapsedSec <= 4 && !data?.isFrozen;
+      const packetElapsedSec = data?.lastSeenAt ? Math.floor((nowTimestamp - data.lastSeenAt) / 1000) : null;
+      const hbElapsedSec = data?.lastHbChangeAt ? Math.floor((nowTimestamp - data.lastHbChangeAt) / 1000) : null;
 
-      if (healthFilter === 'CRITICAL' && !isDead) return false;
+      const isDead = !data?.lastSeenAt || packetElapsedSec > 8;
+      const isFrozen = !isDead && data?.hb !== null && hbElapsedSec !== null && hbElapsedSec > 3;
+      const isWarning = !isDead && !isFrozen && ((packetElapsedSec !== null && packetElapsedSec > 2) || (hbElapsedSec !== null && hbElapsedSec > 2));
+      const isHealthy = !isDead && !isFrozen && !isWarning && packetElapsedSec !== null && packetElapsedSec <= 2 && hbElapsedSec !== null && hbElapsedSec <= 2;
+
+      if (healthFilter === 'CRITICAL' && !(isDead || isFrozen)) return false;
       if (healthFilter === 'WARNING' && !isWarning) return false;
       if (healthFilter === 'HEALTHY' && !isHealthy) return false;
 
@@ -598,84 +642,81 @@ export default function PodHeartbeatDetailTab({
                 });
               }}
               className="px-4 py-2 bg-rose-600 hover:bg-rose-500 active:scale-95 text-white font-extrabold text-xs rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer"
-              title="Kirim request status serentak ke modul yang bermasalah"
+              title="Kirim status check ke seluruh modul bermasalah"
             >
-              <RefreshCw size={13} />
-              <span>Ping Modul Bermasalah</span>
+              <RefreshCw size={14} />
+              <span>Ping Semua Modul Bermasalah</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* 2. TOP STATS BAR & QUICK FLEET CONTROLS */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-900/80 p-5 rounded-2xl border border-slate-800 backdrop-blur-md shadow-xl">
-        {/* Left: Icon, Title, & Realtime Health Badges */}
-        <div className="flex items-center gap-4">
-          <div className={`p-3 rounded-2xl border shadow-lg transition-all ${modulesHealthAnalysis.hasCriticalIssue
-            ? 'bg-rose-500/20 text-rose-400 border-rose-500/40 shadow-rose-500/20 animate-pulse'
-            : 'bg-gradient-to-br from-indigo-500/20 to-purple-500/20 text-indigo-400 border-indigo-500/30 shadow-indigo-500/10'
-            }`}>
-            <Cpu size={24} className="animate-pulse" />
+      {/* 2. TOOLBAR & STATS BAR */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/80 p-4 rounded-2xl border border-slate-800 shadow-xl backdrop-blur-md">
+        {/* Left: Summary Metrics */}
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Total Received Packets */}
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-950/80 rounded-xl border border-slate-800">
+            <Radio size={14} className="text-cyan-400 animate-pulse" />
+            <span className="text-xs text-slate-400">Total Paket:</span>
+            <span className="text-xs font-bold text-white font-mono">{totalReceivedPackets}</span>
           </div>
-          <div>
-            <div className="flex items-center gap-2.5">
-              <h2 className="text-xl font-black text-white tracking-wide">
-                Heartbeat Modules
-              </h2>
-              <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${modulesHealthAnalysis.hasCriticalIssue
-                ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse'
-                : 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
-                }`}>
-                {serverModules.length} Modul
-              </span>
-            </div>
-            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 mt-1 font-medium">
-              {/* Healthy Badge */}
-              <span className="flex items-center gap-1.5 font-mono text-[11px] text-emerald-400 font-bold bg-slate-950/60 px-2.5 py-0.5 rounded-lg border border-slate-800">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                {modulesHealthAnalysis.healthyList.length} Active
-              </span>
 
-              {/* Warning Badge (if any) */}
-              {modulesHealthAnalysis.warningList.length > 0 && (
-                <span className="flex items-center gap-1.5 font-mono text-[11px] text-amber-400 font-bold bg-amber-500/15 px-2.5 py-0.5 rounded-lg border border-amber-500/30">
-                  <Clock size={11} />
-                  {modulesHealthAnalysis.warningList.length} Delayed (&gt;4s)
-                </span>
-              )}
+          {/* Healthy Count */}
+          <button
+            onClick={() => setHealthFilter((prev) => (prev === 'HEALTHY' ? 'ALL' : 'HEALTHY'))}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold cursor-pointer transition ${healthFilter === 'HEALTHY'
+              ? 'bg-emerald-500/25 text-emerald-300 border-emerald-500/40 shadow-sm'
+              : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
+              }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>{modulesHealthAnalysis.healthyList.length} Live OK</span>
+          </button>
 
-              {/* Dead Badge (if any) */}
-              {modulesHealthAnalysis.deadList.length > 0 && (
-                <span className="flex items-center gap-1.5 font-mono text-[11px] text-rose-400 font-bold bg-rose-500/20 px-2.5 py-0.5 rounded-lg border border-rose-500/40 animate-pulse">
-                  <AlertTriangle size={11} />
-                  {modulesHealthAnalysis.deadList.length} DEAD (&gt;12s)
-                </span>
-              )}
+          {/* Warning / Delay Count */}
+          {modulesHealthAnalysis.warningList.length > 0 && (
+            <button
+              onClick={() => setHealthFilter((prev) => (prev === 'WARNING' ? 'ALL' : 'WARNING'))}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold cursor-pointer transition ${healthFilter === 'WARNING'
+                ? 'bg-amber-500/25 text-amber-300 border-amber-500/40 shadow-sm'
+                : 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20'
+                }`}
+            >
+              <AlertTriangle size={13} className="text-amber-400" />
+              <span>{modulesHealthAnalysis.warningList.length} Delay</span>
+            </button>
+          )}
 
-              <span className="text-slate-600">•</span>
-              <span className="flex items-center gap-1.5 font-mono text-[11px] text-slate-400 bg-slate-950/60 px-2 py-0.5 rounded-lg border border-slate-800">
-                <Radio size={11} className="text-cyan-400 animate-pulse" />
-                {totalReceivedPackets} Paket Diterima
-              </span>
-            </div>
-          </div>
+          {/* Dead / Frozen Critical Count */}
+          {(modulesHealthAnalysis.deadList.length > 0 || modulesHealthAnalysis.frozenList.length > 0) && (
+            <button
+              onClick={() => setHealthFilter((prev) => (prev === 'CRITICAL' ? 'ALL' : 'CRITICAL'))}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold cursor-pointer transition animate-pulse ${healthFilter === 'CRITICAL'
+                ? 'bg-rose-500/30 text-rose-200 border-rose-500/50 shadow-sm'
+                : 'bg-rose-500/15 text-rose-300 border-rose-500/30 hover:bg-rose-500/25'
+                }`}
+            >
+              <AlertCircle size={13} className="text-rose-400" />
+              <span>{modulesHealthAnalysis.deadList.length + modulesHealthAnalysis.frozenList.length} Mati / Macet</span>
+            </button>
+          )}
         </div>
 
-        {/* Right: Search Box, Health Filter Pills, Alarm Toggle, & Actions */}
-        <div className="flex items-center gap-2.5 flex-wrap">
-          {/* Quick Search */}
-          <div className="relative w-full sm:w-64 md:w-72 lg:w-80">
-            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+        {/* Right: Search, Legend & Actions */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Search Input */}
+          <div className="relative">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari ID, Modul, Port, Topik..."
-              className="w-full pl-9 pr-8 py-2 bg-slate-950/90 border border-slate-800 focus:border-cyan-400 rounded-xl text-white text-xs outline-none transition-all placeholder:text-slate-500 shadow-inner"
+              placeholder="Cari modul / port (ttyUSB)..."
+              className="bg-slate-950/80 border border-slate-800 text-slate-200 text-xs rounded-xl pl-8 pr-7 py-2 focus:outline-none focus:border-cyan-500/70 w-44 sm:w-56 font-medium placeholder:text-slate-500"
             />
             {searchQuery && (
               <button
-                type="button"
                 onClick={() => setSearchQuery('')}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white p-1 rounded-md hover:bg-slate-800 transition cursor-pointer"
                 title="Hapus pencarian"
@@ -685,77 +726,22 @@ export default function PodHeartbeatDetailTab({
             )}
           </div>
 
-          {/* Sound Alarm Toggle Button */}
-          <button
-            onClick={toggleSoundAlert}
-            className={`p-2.5 rounded-xl border transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer ${soundAlertEnabled
-              ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25'
-              : 'bg-slate-800/80 text-slate-400 border-slate-700/60 hover:text-slate-200'
-              }`}
-            title={soundAlertEnabled ? 'Alarm Suara Aktif (Klik untuk Mute)' : 'Alarm Suara Mati (Klik untuk Aktifkan)'}
-          >
-            {soundAlertEnabled ? <Volume2 size={14} className="text-emerald-400 animate-pulse" /> : <VolumeX size={14} />}
-            <span className="hidden sm:inline">{soundAlertEnabled ? 'Alarm ON' : 'Alarm OFF'}</span>
+          <button onClick={toggleSoundAlert} className={`p-2 rounded-xl border ${soundAlertEnabled ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-slate-800 text-slate-400 border-slate-700'}`} title="Toggle Alarm">
+             {soundAlertEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
           </button>
-
-          {/* Panduan Status / Legend Button */}
-          <button
-            onClick={() => setIsLegendModalOpen(true)}
-            className="p-2.5 bg-slate-800/80 hover:bg-slate-700 text-cyan-300 hover:text-white rounded-xl border border-slate-700/60 shadow flex items-center gap-1.5 text-xs font-bold cursor-pointer transition"
-            title="Buka Panduan Arti Warna & Status Modul"
-          >
-            <HelpCircle size={14} className="text-cyan-400" />
-            <span>Panduan Status</span>
+          <button onClick={handleOpenManageModal} className="p-2 bg-slate-800 border border-slate-700 text-slate-300 rounded-xl" title="Manage">
+             <Settings size={14} />
           </button>
-
-          {/* Manage Modules Button (Opens JSON Config Editor Modal) */}
-          <button
-            onClick={handleOpenManageModal}
-            className="p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition-all text-cyan-300 hover:text-white border border-slate-700/60 shadow flex items-center gap-1.5 text-xs font-bold cursor-pointer"
-            title="Kelola & Simpan Konfigurasi Modul ke JSON Backend"
-          >
-            <Settings size={14} className="text-cyan-400" />
-            <span>Manage</span>
+          <button onClick={handleStatusAll} className="p-2 bg-slate-800 border border-slate-700 text-slate-300 rounded-xl" title="Check All">
+             <RefreshCw size={14} />
           </button>
-
-          {/* Check All Status Button */}
-          <button
-            onClick={handleStatusAll}
-            className="p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition-all text-slate-300 hover:text-white border border-slate-700/60 shadow text-xs font-bold flex items-center gap-1.5 cursor-pointer"
-            title="Kirim request status ke seluruh modul"
-          >
-            <RefreshCw size={13} />
-            <span className="hidden sm:inline">Check All</span>
-          </button>
-
-          {/* Collapse / Expand All */}
-          <button
-            onClick={toggleCollapseAll}
-            className="p-2.5 bg-slate-800/80 hover:bg-slate-700 rounded-xl transition-all text-slate-300 hover:text-white border border-slate-700/60 shadow text-xs font-bold flex items-center gap-1 cursor-pointer"
-            title={areAllCollapsed ? 'Buka Semua Card' : 'Tutup Semua Card'}
-          >
-            {areAllCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-            <span className="hidden sm:inline">{areAllCollapsed ? 'Expand' : 'Collapse'}</span>
+          <button onClick={toggleCollapseAll} className="p-2 bg-slate-800 border border-slate-700 text-slate-300 rounded-xl" title="Toggle All">
+             {areAllCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
           </button>
         </div>
       </div>
 
-      {/* Quick Inline Color Legend Strip */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <InlineStatusLegendStrip onOpenFullGuide={() => setIsLegendModalOpen(true)} />
-      </div>
-
-      {/* 3. TOAST FEEDBACK NOTIFICATION */}
-      {actionFeedback && (
-        <div className="p-3.5 bg-emerald-500/90 text-white text-xs font-bold rounded-xl shadow-xl flex items-center justify-between animate-in fade-in duration-150 backdrop-blur-md">
-          <div className="flex items-center gap-2">
-            <Check size={15} />
-            <span>{actionFeedback.message}</span>
-          </div>
-        </div>
-      )}
-
-      {/* 4. 2-COLUMN GRID OF HEARTBEAT MODULE CARDS (WITH HIGH-PRECISION HEALTH STATUS) */}
+      {/* 4. 2-COLUMN GRID OF HEARTBEAT MODULE CARDS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {filteredModules.map((mod) => {
           const data = moduleDataMap[mod.id] || {};
@@ -763,13 +749,15 @@ export default function PodHeartbeatDetailTab({
           const isFlashing = Boolean(flashingCards[mod.id]);
           const hasPort = Boolean(data.port || mod.defaultPort);
           const portName = data.port || mod.defaultPort;
-          const elapsedSec = data.lastSeenAt ? Math.floor((nowTimestamp - data.lastSeenAt) / 1000) : null;
 
-          // Health classification
-          const isDead = !data.lastSeenAt || elapsedSec > 12;
-          const isFrozen = data.isFrozen;
-          const isDelay = elapsedSec !== null && elapsedSec > 4 && elapsedSec <= 12;
-          const isHealthy = elapsedSec !== null && elapsedSec <= 4 && !isFrozen;
+          const packetElapsedSec = data.lastSeenAt ? Math.floor((nowTimestamp - data.lastSeenAt) / 1000) : null;
+          const hbElapsedSec = data.lastHbChangeAt ? Math.floor((nowTimestamp - data.lastHbChangeAt) / 1000) : null;
+
+          // High-precision dynamic live health classification (ZERO GREEN IF HB NOT RUNNING)
+          const isDead = !data.lastSeenAt || packetElapsedSec > 8;
+          const isFrozen = !isDead && data.hb !== null && hbElapsedSec !== null && hbElapsedSec > 3;
+          const isDelay = !isDead && !isFrozen && ((packetElapsedSec !== null && packetElapsedSec > 2) || (hbElapsedSec !== null && hbElapsedSec > 2));
+          const isHealthy = !isDead && !isFrozen && !isDelay && packetElapsedSec !== null && packetElapsedSec <= 2 && hbElapsedSec !== null && hbElapsedSec <= 2;
 
           const isStatusLoading = buttonLoadingMap[`${mod.id}_status`];
           const isResetLoading = buttonLoadingMap[`${mod.id}_reset`];
@@ -832,17 +820,17 @@ export default function PodHeartbeatDetailTab({
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
                       </span>
-                      <span>DEAD ({elapsedSec ? `${elapsedSec}s` : 'NO DATA'})</span>
+                      <span>DEAD ({packetElapsedSec ? `${packetElapsedSec}s` : 'NO DATA'})</span>
                     </span>
                   ) : isFrozen ? (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-[0_0_10px_rgba(192,132,252,0.2)]">
                       <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
-                      <span>FROZEN</span>
+                      <span>FROZEN ({hbElapsedSec}s)</span>
                     </span>
                   ) : isDelay ? (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-[0_0_8px_rgba(251,191,36,0.15)]">
                       <span className="w-2 h-2 rounded-full bg-amber-400" />
-                      <span>DELAY ({elapsedSec}s)</span>
+                      <span>DELAY ({Math.max(packetElapsedSec || 0, hbElapsedSec || 0)}s)</span>
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shadow-[0_0_10px_rgba(52,211,153,0.15)]">
@@ -899,10 +887,10 @@ export default function PodHeartbeatDetailTab({
                           {data.date || '—'}
                         </span>
                       </div>
-                      {elapsedSec !== null && (
-                        <span className={`text-[10px] font-mono mt-0.5 ${isDead ? 'text-rose-400 font-bold' : isDelay ? 'text-amber-400' : 'text-slate-500'
+                      {packetElapsedSec !== null && (
+                        <span className={`text-[10px] font-mono mt-0.5 ${isDead ? 'text-rose-400 font-bold' : isFrozen ? 'text-purple-400 font-bold' : isDelay ? 'text-amber-400' : isHealthy ? 'text-emerald-400 font-bold' : 'text-slate-500'
                           }`}>
-                          {elapsedSec < 3 ? '● live' : `${elapsedSec}s lalu`}
+                          {isDead ? (packetElapsedSec ? `${packetElapsedSec}s lalu` : 'mati') : isFrozen ? `macet di #${data.hb}` : isDelay ? `delay ${Math.max(packetElapsedSec || 0, hbElapsedSec || 0)}s` : isHealthy ? '● live' : `${packetElapsedSec}s lalu`}
                         </span>
                       )}
                     </div>
@@ -937,9 +925,11 @@ export default function PodHeartbeatDetailTab({
                                 ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,1)]'
                                 : isDelay
                                   ? 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)]'
-                                  : 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,1)]'
+                                  : isFrozen
+                                    ? 'bg-purple-400 shadow-[0_0_6px_rgba(192,132,252,0.8)]'
+                                    : 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,1)]'
                                 }`}
-                              title={`Port ${portName} (${isHealthy ? 'Aktif' : isDelay ? 'Delay' : 'Mati / Timeout'})`}
+                              title={`Port ${portName} (${isHealthy ? 'Aktif' : isDelay ? 'Delay' : isFrozen ? 'Counter Macet' : 'Mati / Timeout'})`}
                             />
                           </span>
                         </div>
@@ -989,191 +979,19 @@ export default function PodHeartbeatDetailTab({
       </div>
 
       {/* 5. MANAGE MODULES MODAL (JSON CONFIG EDITOR) */}
-      {isManageModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-800 bg-slate-950/80">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 text-cyan-400 rounded-2xl border border-cyan-500/30 shadow-lg shadow-cyan-500/10">
-                  <Settings size={20} />
-                </div>
-                <div>
-                  <h3 className="text-base font-black text-white tracking-wide">
-                    Kelola Konfigurasi Modul Server Heartbeat
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Disimpan langsung ke file JSON di backend (<code>backend/src/data/heartbeat_modules_config.json</code>)
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsManageModalOpen(false)}
-                className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition cursor-pointer"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Modal Body: Editable Module List */}
-            <div className="p-6 overflow-y-auto flex flex-col gap-4 max-h-[calc(90vh-150px)]">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-300">
-                  Daftar Modul ({editModulesList.length} Item)
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const nextId = (editModulesList.reduce((max, m) => Math.max(max, m.id || 0), 500) + 1);
-                    setEditModulesList((prev) => [
-                      ...prev,
-                      {
-                        id: nextId,
-                        name: `New Module ${nextId}`,
-                        topic: `mod_server/${nextId}/data`,
-                        defaultPort: 'ttyUSB0',
-                        description: ''
-                      }
-                    ]);
-                  }}
-                  className="px-3.5 py-1.5 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 font-bold text-xs rounded-xl border border-cyan-500/30 transition flex items-center gap-1.5 cursor-pointer shadow"
-                >
-                  <Plus size={14} />
-                  <span>Tambah Modul Baru</span>
-                </button>
-              </div>
-
-              <div className="flex flex-col gap-3">
-                {editModulesList.map((m, idx) => (
-                  <div
-                    key={idx}
-                    className="p-4 bg-slate-950/60 border border-slate-800 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center gap-3 justify-between"
-                  >
-                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 flex-1 w-full">
-                      {/* ID Module Input */}
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold text-slate-400">ID Module</label>
-                        <input
-                          type="number"
-                          value={m.id}
-                          onChange={(e) => {
-                            const val = Number(e.target.value);
-                            const updated = [...editModulesList];
-                            updated[idx].id = val;
-                            if (updated[idx].topic.startsWith('mod_server/')) {
-                              updated[idx].topic = `mod_server/${val}/data`;
-                            }
-                            setEditModulesList(updated);
-                          }}
-                          className="bg-slate-900 border border-slate-800 focus:border-cyan-400 rounded-xl px-3 py-2 text-xs text-cyan-300 font-mono font-bold outline-none shadow-inner"
-                        />
-                      </div>
-
-                      {/* Name Input */}
-                      <div className="flex flex-col gap-1 sm:col-span-1">
-                        <label className="text-[10px] font-bold text-slate-400">Nama Modul</label>
-                        <input
-                          type="text"
-                          value={m.name}
-                          onChange={(e) => {
-                            const updated = [...editModulesList];
-                            updated[idx].name = e.target.value;
-                            setEditModulesList(updated);
-                          }}
-                          className="bg-slate-900 border border-slate-800 focus:border-cyan-400 rounded-xl px-3 py-2 text-xs text-white font-bold outline-none shadow-inner"
-                        />
-                      </div>
-
-                      {/* Topic Input */}
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold text-slate-400">Topik MQTT</label>
-                        <input
-                          type="text"
-                          value={m.topic}
-                          onChange={(e) => {
-                            const updated = [...editModulesList];
-                            updated[idx].topic = e.target.value;
-                            setEditModulesList(updated);
-                          }}
-                          className="bg-slate-900 border border-slate-800 focus:border-cyan-400 rounded-xl px-3 py-2 text-xs text-indigo-300 font-mono outline-none shadow-inner"
-                        />
-                      </div>
-
-                      {/* Port Input */}
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] font-bold text-slate-400">Port (e.g. ttyUSB0)</label>
-                        <input
-                          type="text"
-                          value={m.defaultPort || ''}
-                          placeholder="(opsional / null)"
-                          onChange={(e) => {
-                            const updated = [...editModulesList];
-                            updated[idx].defaultPort = e.target.value.trim() || null;
-                            setEditModulesList(updated);
-                          }}
-                          className="bg-slate-900 border border-slate-800 focus:border-cyan-400 rounded-xl px-3 py-2 text-xs text-emerald-300 font-mono outline-none shadow-inner placeholder:text-slate-600"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Delete Module Button */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (editModulesList.length <= 1) {
-                          alert('Minimal harus ada 1 modul.');
-                          return;
-                        }
-                        setEditModulesList(editModulesList.filter((_, i) => i !== idx));
-                      }}
-                      className="p-2 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition cursor-pointer mt-2 sm:mt-4"
-                      title="Hapus Modul"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-6 py-4 border-t border-slate-800 bg-slate-950/80">
-              <button
-                type="button"
-                onClick={handleResetToDefaultConfig}
-                disabled={isSavingConfig}
-                className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-amber-300 hover:bg-amber-500/10 rounded-xl border border-transparent hover:border-amber-500/30 transition cursor-pointer"
-              >
-                ↺ Reset ke 9 Modul Default
-              </button>
-
-              <div className="flex items-center gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setIsManageModalOpen(false)}
-                  disabled={isSavingConfig}
-                  className="px-4 py-2 text-xs font-bold text-slate-300 hover:bg-slate-800 rounded-xl border border-slate-700 transition cursor-pointer"
-                >
-                  Batal
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveModulesConfig}
-                  disabled={isSavingConfig}
-                  className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black text-xs rounded-xl shadow-lg shadow-cyan-500/20 transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {isSavingConfig ? (
-                    <RefreshCw size={14} className="animate-spin" />
-                  ) : (
-                    <Save size={14} />
-                  )}
-                  <span>Simpan Konfigurasi (POST JSON)</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <PodHeartbeatModuleConfigModal
+        isOpen={isManageModalOpen}
+        onClose={() => setIsManageModalOpen(false)}
+        currentModules={serverModules}
+        onSaveSuccess={(updated) => {
+          setServerModules(updated);
+          setActionFeedback({
+            type: 'save',
+            message: 'Konfigurasi modul berhasil diperbarui dari JSON backend!'
+          });
+          setTimeout(() => setActionFeedback(null), 3500);
+        }}
+      />
 
       {/* 6. STATUS GUIDE & LEGEND MODAL */}
       <PodHeartbeatLegendModal
