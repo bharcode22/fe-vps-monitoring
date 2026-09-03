@@ -34,7 +34,7 @@ export default function PodActivityPage({ onBack }) {
       if (saved && ['ALL', 'OCCUPIED', 'VACANT'].includes(saved)) {
         return saved;
       }
-    } catch (e) {}
+    } catch (e) { }
     return 'ALL';
   });
 
@@ -44,7 +44,7 @@ export default function PodActivityPage({ onBack }) {
       if (saved && ['cards', 'table', 'matrix'].includes(saved)) {
         return saved;
       }
-    } catch (e) {}
+    } catch (e) { }
     return 'matrix'; // Default to matrix view mode
   });
 
@@ -62,21 +62,21 @@ export default function PodActivityPage({ onBack }) {
   useEffect(() => {
     try {
       localStorage.setItem('vps_pod_activity_view_mode', viewMode);
-    } catch (e) {}
+    } catch (e) { }
   }, [viewMode]);
 
   // Persist activeTab changes
   useEffect(() => {
     try {
       localStorage.setItem('vps_pod_activity_active_tab', activeTab);
-    } catch (e) {}
+    } catch (e) { }
   }, [activeTab]);
 
   // Persist showMqttFeed changes
   useEffect(() => {
     try {
       localStorage.setItem('vps_pod_activity_show_mqtt', String(showMqttFeed));
-    } catch (e) {}
+    } catch (e) { }
   }, [showMqttFeed]);
 
   const [selectedPodForTopicModal, setSelectedPodForTopicModal] = useState(() => {
@@ -369,6 +369,7 @@ export default function PodActivityPage({ onBack }) {
         <PodFleetHeartbeatMatrix
           pods={data.pods || []}
           mqttFeed={mqttActivityFeed}
+          heartbeatSnapshot={data.heartbeatSnapshot || {}}
           onSelectPod={setSelectedPodForTopicModal}
           onPublish={handlePublish}
         />

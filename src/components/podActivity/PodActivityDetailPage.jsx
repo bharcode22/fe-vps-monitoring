@@ -1,9 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Activity, Server, Radio, Cpu } from 'lucide-react';
+import { ArrowLeft, Activity, Server, Radio, Cpu, Clock, ShieldAlert } from 'lucide-react';
 import io from 'socket.io-client';
 import { SOCKET_URL } from '../../config';
 import PodActivityTopicCards from './PodActivityTopicCards';
 import PodHeartbeatDetailTab from './PodHeartbeatDetailTab';
+import { fetchHeartbeatThresholdsApi } from '../../api/podActivityApi';
+import {
+  DEFAULT_HB_THRESHOLDS,
+  getStoredHbThresholds,
+  setStoredHbThresholds,
+  EVENT_HB_THRESHOLDS_UPDATED,
+  evaluateModuleHealth
+} from '../../utils/heartbeatThresholds';
 
 function parseOccupancy(payload) {
   if (payload === null || payload === undefined) return null;
@@ -30,15 +38,40 @@ export default function PodActivityDetailPage({ pod, onBack }) {
     try {
       const saved = localStorage.getItem('vps_pod_detail_active_tab');
       if (saved && ['activity', 'heartbeat'].includes(saved)) return saved;
-    } catch (e) {}
+    } catch (e) { }
     return 'heartbeat';
   });
 
   useEffect(() => {
     try {
       localStorage.setItem('vps_pod_detail_active_tab', activeTab);
-    } catch (e) {}
+    } catch (e) { }
   }, [activeTab]);
+
+  // Load Heartbeat Thresholds dynamically from backend JSON
+  const [thresholds, setThresholds] = useState(getStoredHbThresholds);
+
+  useEffect(() => {
+    loadThresholds();
+
+    const handleThresholdsUpdated = (e) => {
+      if (e.detail) setThresholds(e.detail);
+    };
+    window.addEventListener(EVENT_HB_THRESHOLDS_UPDATED, handleThresholdsUpdated);
+    return () => window.removeEventListener(EVENT_HB_THRESHOLDS_UPDATED, handleThresholdsUpdated);
+  }, []);
+
+  const loadThresholds = async () => {
+    try {
+      const data = await fetchHeartbeatThresholdsApi();
+      if (data && typeof data === 'object') {
+        setThresholds(data);
+        setStoredHbThresholds(data);
+      }
+    } catch (err) {
+      console.warn('Gagal memuat ambang batas heartbeat:', err.message);
+    }
+  };
 
   const [mqttActivityFeed, setMqttActivityFeed] = useState([]);
   const [mqttStatus, setMqttStatus] = useState({ connected: false });
@@ -208,8 +241,8 @@ export default function PodActivityDetailPage({ pod, onBack }) {
                   <>
                     <span className="text-slate-600">•</span>
                     <span className={`inline-flex items-center gap-1.5 text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-md border ${occupancyState === 1
-                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                        : 'bg-slate-800/90 text-slate-300 border-slate-700'
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                      : 'bg-slate-800/90 text-slate-300 border-slate-700'
                       }`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${occupancyState === 1 ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
                       {occupancyState === 1 ? 'OCCUPIED (1)' : 'AVAILABLE (0)'}
@@ -220,6 +253,14 @@ export default function PodActivityDetailPage({ pod, onBack }) {
                 <span className="flex items-center gap-1.5 font-mono text-[11px] text-slate-400 bg-slate-950/60 px-2 py-0.5 rounded-lg border border-slate-800">
                   <Radio size={11} className="text-cyan-400 animate-pulse" />
                   {mqttActivityFeed.length} Paket Diterima
+                </span>
+                <span className="text-slate-600">•</span>
+                <span
+                  className="flex items-center gap-1 font-mono text-[11px] text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/20 shadow-sm"
+                  title={`Ambang Batas Status (backend JSON):\n• Live: ≤ ${thresholds.delaySec}s\n• Delay: ${thresholds.delaySec} - ${thresholds.frozenSec}s\n• Frozen: ${thresholds.frozenSec} - ${thresholds.deadSec}s\n• Dead: ≥ ${thresholds.deadSec}s`}
+                >
+                  <Clock size={11} className="text-amber-400" />
+                  <span>Ambang Batas HB: {thresholds.delaySec}s / {thresholds.frozenSec}s / {thresholds.deadSec}s</span>
                 </span>
               </div>
             </div>
@@ -264,6 +305,8 @@ export default function PodActivityDetailPage({ pod, onBack }) {
           pod={pod}
           feed={mqttActivityFeed}
           mqttStatus={mqttStatus}
+          thresholds={thresholds}
+          onThresholdsUpdated={setThresholds}
           onPublish={handlePublish}
         />
       )}

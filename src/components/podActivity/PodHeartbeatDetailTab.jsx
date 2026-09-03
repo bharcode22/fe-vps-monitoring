@@ -142,6 +142,8 @@ export default function PodHeartbeatDetailTab({
   pod,
   feed = [],
   mqttStatus = { connected: false },
+  thresholds: propThresholds,
+  onThresholdsUpdated,
   onPublish
 }) {
   // Modules list loaded dynamically from backend JSON file
@@ -217,7 +219,15 @@ export default function PodHeartbeatDetailTab({
   });
 
   // Heartbeat status thresholds config state
-  const [thresholds, setThresholds] = useState(getStoredHbThresholds);
+  const [thresholds, setThresholds] = useState(() => {
+    return propThresholds || getStoredHbThresholds();
+  });
+
+  useEffect(() => {
+    if (propThresholds) {
+      setThresholds(propThresholds);
+    }
+  }, [propThresholds]);
 
   // Load modules & thresholds from backend JSON file on mount
   useEffect(() => {
@@ -1029,6 +1039,7 @@ export default function PodHeartbeatDetailTab({
         thresholds={thresholds}
         onThresholdsUpdated={(updated) => {
           setThresholds(updated);
+          if (onThresholdsUpdated) onThresholdsUpdated(updated);
           setActionFeedback({
             type: 'save',
             message: 'Ambang batas status berhasil diperbarui dari JSON backend!'

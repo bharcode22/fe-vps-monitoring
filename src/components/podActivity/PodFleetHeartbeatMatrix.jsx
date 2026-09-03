@@ -106,6 +106,7 @@ function playFleetAlertChime() {
 export default function PodFleetHeartbeatMatrix({
   pods = [],
   mqttFeed = [],
+  heartbeatSnapshot = {},
   onSelectPod,
   onPublish
 }) {
@@ -148,7 +149,41 @@ export default function PodFleetHeartbeatMatrix({
   }, []);
 
   // Fleet Heartbeat State Registry: { [podId]: { [moduleId]: { hb, lastSeenAt, port, isFrozen, lastHbChangeAt, totalPackets } } }
-  const [fleetModuleMap, setFleetModuleMap] = useState({});
+  const [fleetModuleMap, setFleetModuleMap] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem('vps_fleet_heartbeat_snapshot');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
+          return parsed;
+        }
+      }
+    } catch (_) {}
+    return heartbeatSnapshot || {};
+  });
+
+  // Sync incoming instant snapshot from backend on connect / load
+  useEffect(() => {
+    if (heartbeatSnapshot && Object.keys(heartbeatSnapshot).length > 0) {
+      setFleetModuleMap((prev) => {
+        const merged = { ...prev };
+        for (const [podId, podModules] of Object.entries(heartbeatSnapshot)) {
+          merged[podId] = { ...(merged[podId] || {}) };
+          for (const [modId, modData] of Object.entries(podModules || {})) {
+            // Only update if not already more recently updated locally
+            const existing = merged[podId][modId];
+            if (!existing || (modData.lastSeenAt && modData.lastSeenAt >= (existing.lastSeenAt || 0))) {
+              merged[podId][modId] = { ...existing, ...modData };
+            }
+          }
+        }
+        try {
+          sessionStorage.setItem('vps_fleet_heartbeat_snapshot', JSON.stringify(merged));
+        } catch (_) {}
+        return merged;
+      });
+    }
+  }, [heartbeatSnapshot]);
 
   // Flashing cells map: { [`${podId}_${moduleId}`]: boolean }
   const [flashingCells, setFlashingCells] = useState({});
@@ -268,6 +303,12 @@ export default function PodFleetHeartbeatMatrix({
             }
           }
         };
+
+        try {
+          sessionStorage.setItem('vps_fleet_heartbeat_snapshot', JSON.stringify(nextState));
+        } catch (_) {}
+
+        return nextState;
       });
 
       // Trigger cell flash ONLY if the HB counter actually incremented / changed

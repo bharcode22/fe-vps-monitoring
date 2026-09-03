@@ -9,6 +9,7 @@ import NavbarAddMenu from './navbar/NavbarAddMenu';
 import NavbarUtilities from './navbar/NavbarUtilities';
 import NavbarUserProfile from './navbar/NavbarUserProfile';
 import NavbarMobileDrawer from './navbar/NavbarMobileDrawer';
+import NavbarBandwidthWidget from './navbar/NavbarBandwidthWidget';
 
 export default function Navbar({
   onOpenAddModal,
@@ -51,8 +52,8 @@ export default function Navbar({
   };
 
   return (
-    <header className="sticky top-0 z-50 rounded-b-2xl px-3 sm:px-5 lg:px-6 py-3 mb-6 backdrop-blur-xl bg-slate-900/90 border-b border-cyan-500/20 shadow-2xl transition-all duration-300">
-      <div className="flex items-center justify-between gap-2 md:gap-4">
+    <header className="sticky top-0 z-50 rounded-b-2xl px-3 sm:px-4 lg:px-5 py-2.5 mb-6 backdrop-blur-xl bg-slate-900/90 border-b border-cyan-500/20 shadow-2xl transition-all duration-300">
+      <div className="flex items-center justify-between gap-2 md:gap-3">
 
         {/* ========================================================================= */}
         {/* LEFT: Brand Logo & Title */}
@@ -66,7 +67,7 @@ export default function Navbar({
         {/* CENTER: Grouped Navigation Menus & Dropdowns (Desktop & Tablet) */}
         {/* ========================================================================= */}
         {onNavigateView && (
-          <div className="hidden lg:flex items-center gap-1 bg-slate-950/70 p-1 rounded-xl border border-slate-800 shadow-inner">
+          <div className="hidden lg:flex items-center gap-0.5 xl:gap-1 bg-slate-950/70 p-1 rounded-xl border border-slate-800 shadow-inner">
             {/* 1. Primary Direct Navigation Buttons */}
             {PRIMARY_NAV_ITEMS.map((item) => {
               if (item.authRequired && !isAuthenticated) return null;
@@ -79,7 +80,7 @@ export default function Navbar({
                 <button
                   key={item.id}
                   onClick={() => onNavigateView(item.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${isActive
+                  className={`px-2.5 xl:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${isActive
                     ? 'bg-gradient-to-r from-cyan-500/25 to-blue-500/25 text-cyan-300 border border-cyan-500/40 shadow-sm'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                     }`}
@@ -112,7 +113,10 @@ export default function Navbar({
         {/* ========================================================================= */}
         {/* RIGHT: Actions, Utilities & User Profile Menu */}
         {/* ========================================================================= */}
-        <div className="hidden md:flex items-center gap-2 lg:gap-2.5 shrink-0">
+        <div className="hidden md:flex items-center gap-1.5 xl:gap-2 shrink-0">
+          {/* Client Bandwidth & Internet Speed Widget */}
+          <NavbarBandwidthWidget />
+
           {/* "+ Tambah" Dropdown Button */}
           {isAuthenticated && (
             <NavbarAddMenu
@@ -148,7 +152,8 @@ export default function Navbar({
         {/* ========================================================================= */}
         {/* MOBILE MENU TOGGLE BUTTON (Screens < lg) */}
         {/* ========================================================================= */}
-        <div className="flex lg:hidden items-center gap-1.5">
+        <div className="flex md:hidden items-center gap-1.5">
+          <NavbarBandwidthWidget />
           {isAuthenticated && (
             <button
               onClick={onRefresh}

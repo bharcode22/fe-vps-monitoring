@@ -26,7 +26,7 @@ export default function NavbarAddMenu({
     <div className="relative" ref={addMenuRef}>
       <button
         onClick={onToggle}
-        className="bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 px-3 py-1.5 rounded-xl font-extrabold text-xs flex items-center gap-1.5 shadow-md shadow-cyan-500/20 transition-all duration-200 cursor-pointer"
+        className="bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 px-2.5 xl:px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-md shadow-cyan-500/20 transition-all duration-200 cursor-pointer"
         title="Tambah VPS / Service Baru"
       >
         <Plus size={14} />

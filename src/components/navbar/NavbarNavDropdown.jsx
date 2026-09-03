@@ -46,7 +46,7 @@ export default function NavbarNavDropdown({
       {/* Dropdown Button */}
       <button
         onClick={onToggle}
-        className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer border ${active
+        className={`px-2.5 xl:px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${active
           ? `${activeStyles} shadow-sm`
           : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border-transparent'
           }`}

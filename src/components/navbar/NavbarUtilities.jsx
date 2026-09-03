@@ -34,7 +34,7 @@ export default function NavbarUtilities({
       {/* TV Mode Switch (Full Width UI) */}
       <button
         onClick={onToggleTvMode}
-        className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all duration-200 cursor-pointer ${
+        className={`px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all duration-200 cursor-pointer ${
           isTvMode
             ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
             : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
@@ -42,7 +42,7 @@ export default function NavbarUtilities({
         title={isTvMode ? 'Keluar dari TV Mode (Kembali ke Tampilan Normal)' : 'Aktifkan TV Mode (Tampilan Full Width Layar Besar / NOC Wall)'}
       >
         <Tv size={14} className={isTvMode ? 'text-cyan-400' : 'text-slate-400'} />
-        <span className="hidden xl:inline">{isTvMode ? t('normalView') : t('tvMode')}</span>
+        <span className="hidden 2xl:inline">{isTvMode ? t('normalView') : t('tvMode')}</span>
       </button>
 
       {/* Browser Native Fullscreen (F11) Toggle */}
