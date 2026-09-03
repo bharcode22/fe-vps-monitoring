@@ -24,10 +24,18 @@ import {
 import {
   fetchHeartbeatModulesApi,
   saveHeartbeatModulesApi,
-  resetHeartbeatModulesApi
+  resetHeartbeatModulesApi,
+  fetchHeartbeatThresholdsApi
 } from '../../api/podActivityApi';
 import PodHeartbeatLegendModal, { InlineStatusLegendStrip } from './PodHeartbeatLegendModal';
 import PodHeartbeatModuleConfigModal from './PodHeartbeatModuleConfigModal';
+import {
+  DEFAULT_HB_THRESHOLDS,
+  getStoredHbThresholds,
+  setStoredHbThresholds,
+  EVENT_HB_THRESHOLDS_UPDATED,
+  evaluateModuleHealth
+} from '../../utils/heartbeatThresholds';
 
 // Default 9 modules template
 const DEFAULT_SERVER_MODULES = [
@@ -208,10 +216,32 @@ export default function PodHeartbeatDetailTab({
     return initial;
   });
 
-  // Load modules from backend JSON file on mount
+  // Heartbeat status thresholds config state
+  const [thresholds, setThresholds] = useState(getStoredHbThresholds);
+
+  // Load modules & thresholds from backend JSON file on mount
   useEffect(() => {
     loadModulesConfig();
+    loadThresholdsConfig();
+
+    const handleThresholdsChanged = (e) => {
+      if (e.detail) setThresholds(e.detail);
+    };
+    window.addEventListener(EVENT_HB_THRESHOLDS_UPDATED, handleThresholdsChanged);
+    return () => window.removeEventListener(EVENT_HB_THRESHOLDS_UPDATED, handleThresholdsChanged);
   }, []);
+
+  const loadThresholdsConfig = async () => {
+    try {
+      const data = await fetchHeartbeatThresholdsApi();
+      if (data && typeof data === 'object') {
+        setThresholds(data);
+        setStoredHbThresholds(data);
+      }
+    } catch (err) {
+      console.warn('Gagal memuat ambang batas heartbeat dari backend:', err.message);
+    }
+  };
 
   const loadModulesConfig = async () => {
     setIsLoadingModules(true);
@@ -500,48 +530,39 @@ export default function PodHeartbeatDetailTab({
     const healthyList = [];
     const frozenList = [];
 
+    const { delaySec = 2, frozenSec = 10, deadSec = 30 } = thresholds;
+
     serverModules.forEach((mod) => {
       const data = moduleDataMap[mod.id];
-      const packetElapsedSec = data?.lastSeenAt ? Math.floor((nowTimestamp - data.lastSeenAt) / 1000) : null;
-      const hbElapsedSec = data?.lastHbChangeAt ? Math.floor((nowTimestamp - data.lastHbChangeAt) / 1000) : null;
+      const health = evaluateModuleHealth(data, thresholds, nowTimestamp);
+      const { status, reason, packetElapsedSec, hbElapsedSec, elapsedSec } = health;
 
-      // ULTRA-STRICT HEALTH THRESHOLDS (NO GREEN IF HB IS NOT ACTIVELY RUNNING):
-      // 1. DEAD: No data at all OR packet timeout > 8s
-      const isDead = !data?.lastSeenAt || packetElapsedSec > 8;
-      // 2. FROZEN: HB counter has not incremented for > 3s (Immediate freeze detection)
-      const isFrozen = !isDead && data?.hb !== null && hbElapsedSec !== null && hbElapsedSec > 3;
-      // 3. DELAY: Slight lag (> 2s for packet or HB)
-      const isDelay = !isDead && !isFrozen && ((packetElapsedSec !== null && packetElapsedSec > 2) || (hbElapsedSec !== null && hbElapsedSec > 2));
-      // 4. HEALTHY / LIVE: MUST be beating & incrementing actively <= 2s
-      const isHealthy = !isDead && !isFrozen && !isDelay && packetElapsedSec !== null && packetElapsedSec <= 2 && hbElapsedSec !== null && hbElapsedSec <= 2;
-
-      if (isDead) {
+      if (status === 'DEAD') {
         deadList.push({
           mod,
           data,
-          elapsedSec: packetElapsedSec,
-          reason: !data?.lastSeenAt ? 'Belum ada data' : `Mati ${packetElapsedSec}s lalu`
+          elapsedSec,
+          reason
         });
-      } else if (isFrozen) {
+      } else if (status === 'FROZEN') {
         frozenList.push({
           mod,
           data,
-          elapsedSec: hbElapsedSec,
-          reason: `HB macet di #${data.hb} (${hbElapsedSec}s)`
+          elapsedSec,
+          reason
         });
-      } else if (isDelay) {
-        const delaySec = Math.max(packetElapsedSec || 0, hbElapsedSec || 0);
+      } else if (status === 'DELAY') {
         warningList.push({
           mod,
           data,
-          elapsedSec: delaySec,
-          reason: `Delay ${delaySec}s`
+          elapsedSec,
+          reason
         });
       } else {
         healthyList.push({
           mod,
           data,
-          elapsedSec: packetElapsedSec
+          elapsedSec
         });
       }
     });
@@ -572,15 +593,15 @@ export default function PodHeartbeatDetailTab({
 
   // Filtered modules
   const filteredModules = useMemo(() => {
+    const { delaySec = 2, frozenSec = 10, deadSec = 30 } = thresholds;
+
     return serverModules.filter((m) => {
       const data = moduleDataMap[m.id];
-      const packetElapsedSec = data?.lastSeenAt ? Math.floor((nowTimestamp - data.lastSeenAt) / 1000) : null;
-      const hbElapsedSec = data?.lastHbChangeAt ? Math.floor((nowTimestamp - data.lastHbChangeAt) / 1000) : null;
-
-      const isDead = !data?.lastSeenAt || packetElapsedSec > 8;
-      const isFrozen = !isDead && data?.hb !== null && hbElapsedSec !== null && hbElapsedSec > 3;
-      const isWarning = !isDead && !isFrozen && ((packetElapsedSec !== null && packetElapsedSec > 2) || (hbElapsedSec !== null && hbElapsedSec > 2));
-      const isHealthy = !isDead && !isFrozen && !isWarning && packetElapsedSec !== null && packetElapsedSec <= 2 && hbElapsedSec !== null && hbElapsedSec <= 2;
+      const health = evaluateModuleHealth(data, thresholds, nowTimestamp);
+      const isDead = health.status === 'DEAD';
+      const isFrozen = health.status === 'FROZEN';
+      const isWarning = health.status === 'DELAY';
+      const isHealthy = health.status === 'LIVE';
 
       if (healthFilter === 'CRITICAL' && !(isDead || isFrozen)) return false;
       if (healthFilter === 'WARNING' && !isWarning) return false;
@@ -726,16 +747,24 @@ export default function PodHeartbeatDetailTab({
             )}
           </div>
 
-          <button onClick={toggleSoundAlert} className={`p-2 rounded-xl border ${soundAlertEnabled ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-slate-800 text-slate-400 border-slate-700'}`} title="Toggle Alarm">
-             {soundAlertEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+          <button
+            onClick={() => setIsLegendModalOpen(true)}
+            className="p-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-300 hover:text-white rounded-xl flex items-center gap-1.5 text-xs font-bold transition cursor-pointer"
+            title="Buka Panduan Status & Atur Ambang Batas Waktu (JSON Backend)"
+          >
+            <HelpCircle size={14} className="text-cyan-400" />
+            <span className="hidden sm:inline">Panduan & Atur Waktu</span>
           </button>
-          <button onClick={handleOpenManageModal} className="p-2 bg-slate-800 border border-slate-700 text-slate-300 rounded-xl" title="Manage">
+          <button onClick={toggleSoundAlert} className={`p-2 rounded-xl border cursor-pointer transition ${soundAlertEnabled ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-slate-800 text-slate-400 border-slate-700'}`} title="Toggle Alarm">
+             {soundAlertEnabled ? <Volume2 size={14} className="text-emerald-400 animate-pulse" /> : <VolumeX size={14} />}
+          </button>
+          <button onClick={handleOpenManageModal} className="p-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-xl cursor-pointer transition" title="Kelola Modul (JSON)">
              <Settings size={14} />
           </button>
-          <button onClick={handleStatusAll} className="p-2 bg-slate-800 border border-slate-700 text-slate-300 rounded-xl" title="Check All">
+          <button onClick={handleStatusAll} className="p-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-xl cursor-pointer transition" title="Check All Status">
              <RefreshCw size={14} />
           </button>
-          <button onClick={toggleCollapseAll} className="p-2 bg-slate-800 border border-slate-700 text-slate-300 rounded-xl" title="Toggle All">
+          <button onClick={toggleCollapseAll} className="p-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-xl cursor-pointer transition" title="Toggle All">
              {areAllCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
           </button>
         </div>
@@ -750,14 +779,14 @@ export default function PodHeartbeatDetailTab({
           const hasPort = Boolean(data.port || mod.defaultPort);
           const portName = data.port || mod.defaultPort;
 
-          const packetElapsedSec = data.lastSeenAt ? Math.floor((nowTimestamp - data.lastSeenAt) / 1000) : null;
-          const hbElapsedSec = data.lastHbChangeAt ? Math.floor((nowTimestamp - data.lastHbChangeAt) / 1000) : null;
-
-          // High-precision dynamic live health classification (ZERO GREEN IF HB NOT RUNNING)
-          const isDead = !data.lastSeenAt || packetElapsedSec > 8;
-          const isFrozen = !isDead && data.hb !== null && hbElapsedSec !== null && hbElapsedSec > 3;
-          const isDelay = !isDead && !isFrozen && ((packetElapsedSec !== null && packetElapsedSec > 2) || (hbElapsedSec !== null && hbElapsedSec > 2));
-          const isHealthy = !isDead && !isFrozen && !isDelay && packetElapsedSec !== null && packetElapsedSec <= 2 && hbElapsedSec !== null && hbElapsedSec <= 2;
+          const health = evaluateModuleHealth(data, thresholds, nowTimestamp);
+          const isDead = health.status === 'DEAD';
+          const isFrozen = health.status === 'FROZEN';
+          const isDelay = health.status === 'DELAY';
+          const isHealthy = health.status === 'LIVE';
+          const packetElapsedSec = health.packetElapsedSec;
+          const hbElapsedSec = health.hbElapsedSec;
+          const elapsedSec = health.elapsedSec;
 
           const isStatusLoading = buttonLoadingMap[`${mod.id}_status`];
           const isResetLoading = buttonLoadingMap[`${mod.id}_reset`];
@@ -993,10 +1022,19 @@ export default function PodHeartbeatDetailTab({
         }}
       />
 
-      {/* 6. STATUS GUIDE & LEGEND MODAL */}
+      {/* 6. STATUS GUIDE & THRESHOLDS CONFIG MODAL */}
       <PodHeartbeatLegendModal
         isOpen={isLegendModalOpen}
         onClose={() => setIsLegendModalOpen(false)}
+        thresholds={thresholds}
+        onThresholdsUpdated={(updated) => {
+          setThresholds(updated);
+          setActionFeedback({
+            type: 'save',
+            message: 'Ambang batas status berhasil diperbarui dari JSON backend!'
+          });
+          setTimeout(() => setActionFeedback(null), 3500);
+        }}
       />
     </div>
   );

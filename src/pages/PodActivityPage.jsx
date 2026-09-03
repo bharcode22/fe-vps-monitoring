@@ -26,13 +26,59 @@ export default function PodActivityPage({ onBack }) {
   const [error, setError] = useState('');
   const [actionSuccess, setActionSuccess] = useState('');
 
-  // UI Filter & View states
+  // UI Filter & View states with reload persistence
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('ALL'); // 'ALL' | 'OCCUPIED' | 'VACANT'
-  const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'table'
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      const saved = localStorage.getItem('vps_pod_activity_active_tab');
+      if (saved && ['ALL', 'OCCUPIED', 'VACANT'].includes(saved)) {
+        return saved;
+      }
+    } catch (e) {}
+    return 'ALL';
+  });
+
+  const [viewMode, setViewMode] = useState(() => {
+    try {
+      const saved = localStorage.getItem('vps_pod_activity_view_mode');
+      if (saved && ['cards', 'table', 'matrix'].includes(saved)) {
+        return saved;
+      }
+    } catch (e) {}
+    return 'matrix'; // Default to matrix view mode
+  });
+
   const [showSimulator, setShowSimulator] = useState(false);
-  const [showMqttFeed, setShowMqttFeed] = useState(false);
+  const [showMqttFeed, setShowMqttFeed] = useState(() => {
+    try {
+      return localStorage.getItem('vps_pod_activity_show_mqtt') === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
   const [recentFlashPodId, setRecentFlashPodId] = useState(null);
+
+  // Persist viewMode changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('vps_pod_activity_view_mode', viewMode);
+    } catch (e) {}
+  }, [viewMode]);
+
+  // Persist activeTab changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('vps_pod_activity_active_tab', activeTab);
+    } catch (e) {}
+  }, [activeTab]);
+
+  // Persist showMqttFeed changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('vps_pod_activity_show_mqtt', String(showMqttFeed));
+    } catch (e) {}
+  }, [showMqttFeed]);
+
   const [selectedPodForTopicModal, setSelectedPodForTopicModal] = useState(() => {
     try {
       const saved = sessionStorage.getItem('vps_monitoring_selected_pod');

@@ -104,3 +104,42 @@ export async function resetHeartbeatModulesApi() {
   return data;
 }
 
+/**
+ * Fetch heartbeat status thresholds config from backend JSON file
+ */
+export async function fetchHeartbeatThresholdsApi() {
+  const res = await fetch(`${BACKEND_URL}/api/pod-activity/heartbeat-thresholds`, {
+    method: 'GET',
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memuat konfigurasi ambang batas heartbeat');
+  return data.data || { delaySec: 2, frozenSec: 10, deadSec: 30 };
+}
+
+/**
+ * Save heartbeat status thresholds config to backend JSON file
+ */
+export async function saveHeartbeatThresholdsApi(thresholds) {
+  const res = await fetch(`${BACKEND_URL}/api/pod-activity/heartbeat-thresholds`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(thresholds)
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal menyimpan konfigurasi ambang batas heartbeat');
+  return data;
+}
+
+/**
+ * Reset heartbeat status thresholds config to default in backend JSON file
+ */
+export async function resetHeartbeatThresholdsApi() {
+  const res = await fetch(`${BACKEND_URL}/api/pod-activity/heartbeat-thresholds/reset`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal mereset konfigurasi ambang batas heartbeat');
+  return data;
+}

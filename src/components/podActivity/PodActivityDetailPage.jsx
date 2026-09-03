@@ -26,7 +26,20 @@ function parseOccupancy(payload) {
 }
 
 export default function PodActivityDetailPage({ pod, onBack }) {
-  const [activeTab, setActiveTab] = useState('activity'); // 'activity' | 'heartbeat'
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      const saved = localStorage.getItem('vps_pod_detail_active_tab');
+      if (saved && ['activity', 'heartbeat'].includes(saved)) return saved;
+    } catch (e) {}
+    return 'heartbeat';
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('vps_pod_detail_active_tab', activeTab);
+    } catch (e) {}
+  }, [activeTab]);
+
   const [mqttActivityFeed, setMqttActivityFeed] = useState([]);
   const [mqttStatus, setMqttStatus] = useState({ connected: false });
   const [occupancyState, setOccupancyState] = useState(pod?.stateValue ?? null);

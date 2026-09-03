@@ -21,9 +21,16 @@ import {
   ArrowRight,
   HelpCircle
 } from 'lucide-react';
-import { fetchHeartbeatModulesApi } from '../../api/podActivityApi';
+import { fetchHeartbeatModulesApi, fetchHeartbeatThresholdsApi } from '../../api/podActivityApi';
 import PodHeartbeatLegendModal, { InlineStatusLegendStrip } from './PodHeartbeatLegendModal';
 import PodHeartbeatModuleConfigModal from './PodHeartbeatModuleConfigModal';
+import {
+  DEFAULT_HB_THRESHOLDS,
+  getStoredHbThresholds,
+  setStoredHbThresholds,
+  EVENT_HB_THRESHOLDS_UPDATED,
+  evaluateModuleHealth
+} from '../../utils/heartbeatThresholds';
 
 // Default fallback modules if config not yet loaded
 const DEFAULT_SERVER_MODULES = [
@@ -150,10 +157,31 @@ export default function PodFleetHeartbeatMatrix({
   const [pingLoading, setPingLoading] = useState(false);
   const [feedbackToast, setFeedbackToast] = useState(null);
 
-  // Load modules config from backend JSON
+  // Load modules & thresholds config from backend JSON
+  const [thresholds, setThresholds] = useState(getStoredHbThresholds);
+
   useEffect(() => {
     loadModulesConfig();
+    loadThresholdsConfig();
+
+    const handleThresholdsChanged = (e) => {
+      if (e.detail) setThresholds(e.detail);
+    };
+    window.addEventListener(EVENT_HB_THRESHOLDS_UPDATED, handleThresholdsChanged);
+    return () => window.removeEventListener(EVENT_HB_THRESHOLDS_UPDATED, handleThresholdsChanged);
   }, []);
+
+  const loadThresholdsConfig = async () => {
+    try {
+      const data = await fetchHeartbeatThresholdsApi();
+      if (data && typeof data === 'object') {
+        setThresholds(data);
+        setStoredHbThresholds(data);
+      }
+    } catch (err) {
+      console.warn('Gagal memuat ambang batas heartbeat dari backend:', err.message);
+    }
+  };
 
   const loadModulesConfig = async () => {
     setIsLoadingModules(true);
@@ -276,62 +304,40 @@ export default function PodFleetHeartbeatMatrix({
       serverModules.forEach((mod) => {
         totalMonitoredModules++;
         const modData = podModulesData[mod.id];
-        totalPacketsCount += (modData?.totalPackets || 0);
+        const health = evaluateModuleHealth(modData, thresholds, nowTimestamp);
+        const { status, reason, packetElapsedSec, hbElapsedSec, elapsedSec } = health;
 
-        const packetElapsedSec = modData?.lastSeenAt
-          ? Math.floor((nowTimestamp - modData.lastSeenAt) / 1000)
-          : null;
-        const hbElapsedSec = modData?.lastHbChangeAt
-          ? Math.floor((nowTimestamp - modData.lastHbChangeAt) / 1000)
-          : null;
-
-        let status = 'DEAD';
-        let reason = !modData?.lastSeenAt ? 'Belum ada data' : `Mati ${packetElapsedSec}s lalu`;
-
-        // ULTRA-STRICT HEALTH THRESHOLDS (NO GREEN IF HB IS NOT ACTIVELY RUNNING):
-        // 1. DEAD: No data at all OR packet timeout > 8s
-        if (!modData?.lastSeenAt || packetElapsedSec > 8) {
-          status = 'DEAD';
-          reason = !modData?.lastSeenAt ? 'Belum ada data' : `Mati ${packetElapsedSec}s lalu`;
+        if (status === 'DEAD') {
           podDeadCount++;
           totalDeadModules++;
           deadModulesGlobalList.push({
             pod,
             mod,
-            elapsedSec: packetElapsedSec,
+            elapsedSec,
             reason
           });
-        // 2. FROZEN: HB counter has not incremented for > 3s (Immediate freeze detection)
-        } else if (modData?.hb !== null && hbElapsedSec !== null && hbElapsedSec > 3) {
-          status = 'FROZEN';
-          reason = `Macet di #${modData.hb} (${hbElapsedSec}s)`;
+        } else if (status === 'FROZEN') {
           podFrozenCount++;
           totalFrozenModules++;
           deadModulesGlobalList.push({
             pod,
             mod,
-            elapsedSec: hbElapsedSec,
+            elapsedSec,
             reason
           });
-        // 3. DELAY: Slight lag (> 2s for packet or HB)
-        } else if ((packetElapsedSec !== null && packetElapsedSec > 2) || (hbElapsedSec !== null && hbElapsedSec > 2)) {
-          status = 'DELAY';
+        } else if (status === 'DELAY') {
           podDelayCount++;
           totalDelayedModules++;
-          const delaySec = Math.max(packetElapsedSec || 0, hbElapsedSec || 0);
-          reason = `Delay ${delaySec}s`;
-        // 4. LIVE: MUST be actively beating & incrementing <= 2s
         } else {
-          status = 'LIVE';
           podHealthyCount++;
           totalHealthyModules++;
-          reason = 'Live OK';
         }
 
         moduleStatusMap[mod.id] = {
           data: modData,
           status,
-          elapsedSec: packetElapsedSec,
+          elapsedSec,
+          packetElapsedSec,
           hbElapsedSec,
           reason
         };
@@ -620,7 +626,10 @@ export default function PodFleetHeartbeatMatrix({
 
       {/* Quick Inline Color Legend Strip */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <InlineStatusLegendStrip onOpenFullGuide={() => setIsLegendModalOpen(true)} />
+        <InlineStatusLegendStrip
+          onOpenFullGuide={() => setIsLegendModalOpen(true)}
+          thresholds={thresholds}
+        />
       </div>
 
       {/* Toast Notification */}
@@ -924,10 +933,16 @@ export default function PodFleetHeartbeatMatrix({
         </div>
       </div>
 
-      {/* 5. STATUS GUIDE & LEGEND MODAL */}
+      {/* 5. STATUS GUIDE & THRESHOLDS CONFIG MODAL */}
       <PodHeartbeatLegendModal
         isOpen={isLegendModalOpen}
         onClose={() => setIsLegendModalOpen(false)}
+        thresholds={thresholds}
+        onThresholdsUpdated={(updated) => {
+          setThresholds(updated);
+          setFeedbackToast('Ambang batas status berhasil diperbarui dari JSON backend!');
+          setTimeout(() => setFeedbackToast(null), 3500);
+        }}
       />
 
       {/* 6. MANAGE HEARTBEAT MODULES CONFIG MODAL (JSON EDITOR) */}
