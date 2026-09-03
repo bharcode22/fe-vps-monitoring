@@ -136,7 +136,7 @@ export const NAV_DROPDOWN_GROUPS = [
       {
         id: 'pod-heartbeat-records',
         aliases: ['heartbeat-records', 'pod-records', 'pod-storage-viewer'],
-        label: 'Pusat Rekaman Heartbeat JSON',
+        label: 'Heartbeat JSON',
         desc: 'Penjelajah Berkas JSON & Analisis Detak Modul',
         icon: FileCode,
         badge: 'BETA',
@@ -181,7 +181,7 @@ export const NAV_DROPDOWN_GROUPS = [
       {
         id: 'installation',
         aliases: ['instalation'],
-        label: 'Installation Guide',
+        label: 'Installation',
         desc: 'Panduan & Skrip Instalasi Server',
         icon: Download,
         colorClass: 'text-blue-400',

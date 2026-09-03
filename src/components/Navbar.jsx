@@ -114,8 +114,8 @@ export default function Navbar({
         {/* RIGHT: Actions, Utilities & User Profile Menu */}
         {/* ========================================================================= */}
         <div className="hidden md:flex items-center gap-1.5 xl:gap-2 shrink-0">
-          {/* Client Bandwidth & Internet Speed Widget */}
-          <NavbarBandwidthWidget />
+          {/* Unified Telemetry & Daemon Status Widget */}
+          <NavbarBandwidthWidget onNavigateView={onNavigateView} />
 
           {/* "+ Tambah" Dropdown Button */}
           {isAuthenticated && (
@@ -153,7 +153,7 @@ export default function Navbar({
         {/* MOBILE MENU TOGGLE BUTTON (Screens < lg) */}
         {/* ========================================================================= */}
         <div className="flex md:hidden items-center gap-1.5">
-          <NavbarBandwidthWidget />
+          <NavbarBandwidthWidget onNavigateView={onNavigateView} />
           {isAuthenticated && (
             <button
               onClick={onRefresh}

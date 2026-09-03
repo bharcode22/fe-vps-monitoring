@@ -253,4 +253,16 @@ export function getPodHeartbeatsDownloadUrl(podId, { date = null, format = 'json
   return `${BACKEND_URL}/api/pod-activity/pods/${podId}/heartbeats/download?${params.toString()}`;
 }
 
+/**
+ * Fetch background ingestion daemon health and status
+ */
+export async function fetchPodDaemonStatusApi() {
+  const res = await fetch(`${BACKEND_URL}/api/pod-activity/daemon-status`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memuat status daemon perekam');
+  return data.data;
+}
+
 
