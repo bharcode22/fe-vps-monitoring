@@ -17,7 +17,7 @@ import PodActivityTableView from '../components/podActivity/PodActivityTableView
 import PodActivityDetailPage from '../components/podActivity/PodActivityDetailPage';
 import PodFleetHeartbeatMatrix from '../components/podActivity/PodFleetHeartbeatMatrix';
 
-export default function PodActivityPage({ onBack }) {
+export default function PodActivityPage({ onBack, onNavigateView = null }) {
   const socketRef = useRef(null);
   const [data, setData] = useState({ summary: {}, pods: [], recentLogs: [] });
   const [isLoading, setIsLoading] = useState(true);
@@ -301,6 +301,7 @@ export default function PodActivityPage({ onBack }) {
       <PodActivityDetailPage
         pod={selectedPodForTopicModal}
         onBack={() => setSelectedPodForTopicModal(null)}
+        onNavigateView={onNavigateView}
       />
     );
   }

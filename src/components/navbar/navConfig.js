@@ -129,8 +129,19 @@ export const NAV_DROPDOWN_GROUPS = [
         label: 'POD Activity & Heartbeat',
         desc: 'Monitoring Keterisian POB & Fleet Heartbeat Modul Pod',
         icon: UserCheck,
+        badge: 'BETA',
         colorClass: 'text-emerald-400',
         bgActiveClass: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+      },
+      {
+        id: 'pod-heartbeat-records',
+        aliases: ['heartbeat-records', 'pod-records', 'pod-storage-viewer'],
+        label: 'Pusat Rekaman Heartbeat JSON',
+        desc: 'Penjelajah Berkas JSON & Analisis Detak Modul',
+        icon: FileCode,
+        badge: 'BETA',
+        colorClass: 'text-cyan-400',
+        bgActiveClass: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
       },
       {
         id: 'storage-manager',
@@ -163,6 +174,7 @@ export const NAV_DROPDOWN_GROUPS = [
         label: 'Content Management',
         desc: 'Sinkronisasi Multimedia ke mobile-synch di POD',
         icon: Shuffle,
+        badge: 'BETA',
         colorClass: 'text-indigo-400',
         bgActiveClass: 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30'
       },

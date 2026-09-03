@@ -359,16 +359,24 @@ export default function InstallationPage({ onBack }) {
   }, [feSelectedAppIds, feEnv]);
 
   // Selection toggle handlers for Backend
-  const toggleServerSelect = (idStr) => {
-    setSelectedServerIds(prev => prev.includes(idStr) ? prev.filter(i => i !== idStr) : [...prev, idStr]);
+  const toggleServerSelect = (id) => {
+    const idStr = String(id);
+    setSelectedServerIds(prev => {
+      const normalized = prev.map(String);
+      return normalized.includes(idStr) ? normalized.filter(i => i !== idStr) : [...normalized, idStr];
+    });
   };
   const toggleAppSelect = (appId) => {
     setSelectedAppIds(prev => prev.includes(appId) ? prev.filter(a => a !== appId) : [...prev, appId]);
   };
 
   // Selection toggle handlers for Frontend
-  const toggleFeServerSelect = (idStr) => {
-    setFeSelectedServerIds(prev => prev.includes(idStr) ? prev.filter(i => i !== idStr) : [...prev, idStr]);
+  const toggleFeServerSelect = (id) => {
+    const idStr = String(id);
+    setFeSelectedServerIds(prev => {
+      const normalized = prev.map(String);
+      return normalized.includes(idStr) ? normalized.filter(i => i !== idStr) : [...normalized, idStr];
+    });
   };
   const toggleFeAppSelect = (appId) => {
     setFeSelectedAppIds(prev => prev.includes(appId) ? prev.filter(a => a !== appId) : [...prev, appId]);

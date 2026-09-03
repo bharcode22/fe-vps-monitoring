@@ -19,16 +19,24 @@ import {
   Clock,
   Activity,
   AlertCircle,
-  HelpCircle
+  HelpCircle,
+  History,
+  FileCode,
+  ExternalLink,
+  HardDrive,
+  Folder,
+  Download
 } from 'lucide-react';
 import {
   fetchHeartbeatModulesApi,
   saveHeartbeatModulesApi,
   resetHeartbeatModulesApi,
-  fetchHeartbeatThresholdsApi
+  fetchHeartbeatThresholdsApi,
+  fetchPodStorageFilesApi
 } from '../../api/podActivityApi';
 import PodHeartbeatLegendModal, { InlineStatusLegendStrip } from './PodHeartbeatLegendModal';
 import PodHeartbeatModuleConfigModal from './PodHeartbeatModuleConfigModal';
+import PodIncidentHistoryModal from './PodIncidentHistoryModal';
 import {
   DEFAULT_HB_THRESHOLDS,
   getStoredHbThresholds,
@@ -144,7 +152,8 @@ export default function PodHeartbeatDetailTab({
   mqttStatus = { connected: false },
   thresholds: propThresholds,
   onThresholdsUpdated,
-  onPublish
+  onPublish,
+  onNavigateView = null
 }) {
   // Modules list loaded dynamically from backend JSON file
   const [serverModules, setServerModules] = useState(DEFAULT_SERVER_MODULES);
@@ -166,11 +175,27 @@ export default function PodHeartbeatDetailTab({
 
   // Manage Modules Modal State
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [editModulesList, setEditModulesList] = useState(DEFAULT_SERVER_MODULES);
   const [isSavingConfig, setIsSavingConfig] = useState(false);
 
   // Legend Guide Modal State
   const [isLegendModalOpen, setIsLegendModalOpen] = useState(false);
+
+  // Physical Storage Files State (backend/src/data/pod_storage)
+  const [storageFilesInfo, setStorageFilesInfo] = useState(null);
+  const [isStorageFilesExpanded, setIsStorageFilesExpanded] = useState(false);
+
+  useEffect(() => {
+    if (!pod?.id) return;
+    fetchPodStorageFilesApi(pod.id)
+      .then(res => {
+        if (res && res.success) {
+          setStorageFilesInfo(res);
+        }
+      })
+      .catch(() => {});
+  }, [pod?.id]);
 
   // Collapsed state map for each module card
   const [collapsedMap, setCollapsedMap] = useState({});
@@ -757,6 +782,27 @@ export default function PodHeartbeatDetailTab({
             )}
           </div>
 
+          {onNavigateView && (
+            <button
+              onClick={() => onNavigateView('pod-heartbeat-records', { podId: pod?.id })}
+              className="p-2 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 hover:from-cyan-500/30 hover:to-blue-500/30 border border-cyan-500/40 text-cyan-300 hover:text-white rounded-xl flex items-center gap-1.5 text-xs font-bold transition cursor-pointer shadow-sm"
+              title="Buka Pusat Rekaman JSON & Analisis Detak di Halaman Khusus"
+            >
+              <FileCode size={14} className="text-cyan-400" />
+              <span className="hidden sm:inline">Pusat Rekaman JSON</span>
+              <ExternalLink size={12} className="text-cyan-400/80" />
+            </button>
+          )}
+
+          <button
+            onClick={() => setIsHistoryModalOpen(true)}
+            className="p-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-300 hover:text-white rounded-xl flex items-center gap-1.5 text-xs font-bold transition cursor-pointer"
+            title="Lihat Riwayat Insiden & Unduh Log Harian (.jsonl)"
+          >
+            <History size={14} className="text-amber-400" />
+            <span className="hidden sm:inline">Log Insiden (.jsonl)</span>
+          </button>
+
           <button
             onClick={() => setIsLegendModalOpen(true)}
             className="p-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-300 hover:text-white rounded-xl flex items-center gap-1.5 text-xs font-bold transition cursor-pointer"
@@ -766,19 +812,92 @@ export default function PodHeartbeatDetailTab({
             <span className="hidden sm:inline">Panduan & Atur Waktu</span>
           </button>
           <button onClick={toggleSoundAlert} className={`p-2 rounded-xl border cursor-pointer transition ${soundAlertEnabled ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-slate-800 text-slate-400 border-slate-700'}`} title="Toggle Alarm">
-             {soundAlertEnabled ? <Volume2 size={14} className="text-emerald-400 animate-pulse" /> : <VolumeX size={14} />}
+            {soundAlertEnabled ? <Volume2 size={14} className="text-emerald-400 animate-pulse" /> : <VolumeX size={14} />}
           </button>
           <button onClick={handleOpenManageModal} className="p-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-xl cursor-pointer transition" title="Kelola Modul (JSON)">
-             <Settings size={14} />
+            <Settings size={14} />
           </button>
           <button onClick={handleStatusAll} className="p-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-xl cursor-pointer transition" title="Check All Status">
-             <RefreshCw size={14} />
+            <RefreshCw size={14} />
           </button>
           <button onClick={toggleCollapseAll} className="p-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-xl cursor-pointer transition" title="Toggle All">
-             {areAllCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+            {areAllCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
           </button>
         </div>
       </div>
+
+      {/* 3.5. PHYSICAL STORAGE FILES SUMMARY (pod_storage) */}
+      {storageFilesInfo && storageFilesInfo.totalFiles > 0 && (
+        <div className="p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-slate-900/90 via-slate-900/70 to-cyan-950/20 border border-slate-800 shadow-lg">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 shrink-0">
+                <HardDrive size={18} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold text-white">Arsip Berkas Rekaman Fisik:</span>
+                  <code className="px-2 py-0.5 rounded bg-slate-950 text-cyan-300 font-mono text-[11px] border border-slate-800">
+                    backend/src/data/pod_storage/{storageFilesInfo.storagePath}
+                  </code>
+                  <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono text-[10px] border border-slate-700">
+                    {storageFilesInfo.totalFiles} berkas ({storageFilesInfo.totalSizeFormatted})
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Tersimpan di disk lokal server dengan masa retensi 14 hari.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {onNavigateView && (
+                <button
+                  onClick={() => onNavigateView('pod-heartbeat-records', { podId: pod?.id })}
+                  className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs shadow-md shadow-cyan-600/20 transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <FileCode size={13} />
+                  <span>Buka di Penjelajah JSON</span>
+                  <ExternalLink size={11} />
+                </button>
+              )}
+              <button
+                onClick={() => setIsStorageFilesExpanded(prev => !prev)}
+                className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold transition cursor-pointer flex items-center gap-1"
+              >
+                <span>{isStorageFilesExpanded ? 'Sembunyikan' : 'Rincian Berkas'}</span>
+                {isStorageFilesExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Expanded Files List */}
+          {isStorageFilesExpanded && (
+            <div className="mt-3 pt-3 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+              {storageFilesInfo.files.map((file, idx) => (
+                <div key={idx} className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/80 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FileCode size={14} className={file.type === 'heartbeats' ? 'text-cyan-400 shrink-0' : file.type === 'events' ? 'text-amber-400 shrink-0' : 'text-emerald-400 shrink-0'} />
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-white truncate font-mono">{file.name}</div>
+                      <div className="text-[10px] text-slate-400 truncate">{file.category} &bull; {file.sizeFormatted}</div>
+                    </div>
+                  </div>
+                  {onNavigateView && (
+                    <button
+                      onClick={() => onNavigateView('pod-heartbeat-records', { podId: pod?.id })}
+                      className="p-1 text-slate-400 hover:text-cyan-300 hover:bg-slate-800 rounded transition cursor-pointer shrink-0"
+                      title="Lihat Berkas di Halaman Khusus"
+                    >
+                      <ExternalLink size={12} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 4. 2-COLUMN GRID OF HEARTBEAT MODULE CARDS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -1046,6 +1165,16 @@ export default function PodHeartbeatDetailTab({
           });
           setTimeout(() => setActionFeedback(null), 3500);
         }}
+      />
+
+      {/* 7. INCIDENT HISTORY & JSONL LOGS MODAL */}
+      <PodIncidentHistoryModal
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+        podId={pod?.id}
+        podName={pod?.name}
+        pod={pod}
+        onNavigateView={onNavigateView}
       />
     </div>
   );

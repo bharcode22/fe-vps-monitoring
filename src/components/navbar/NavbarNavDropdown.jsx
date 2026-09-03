@@ -94,7 +94,14 @@ export default function NavbarNavDropdown({
                 >
                   <ItemIcon size={15} className={`${item.colorClass} shrink-0`} />
                   <div className="flex-1 overflow-hidden">
-                    <div className="truncate">{item.label}</div>
+                    <div className="flex items-center gap-1.5 truncate">
+                      <span className="truncate">{item.label}</span>
+                      {item.badge && (
+                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase tracking-wider shrink-0">
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
                     {item.desc && (
                       <div className="text-[10px] text-slate-400 font-normal truncate">
                         {item.desc}

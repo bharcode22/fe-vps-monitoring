@@ -27,6 +27,7 @@ import PodLogsSyncPage from './pages/PodLogsSyncPage';
 import PodActivityPage from './pages/PodActivityPage';
 import SettingsPage from './pages/SettingsPage';
 import UserActivityLogsPage from './pages/UserActivityLogsPage';
+import PodHeartbeatRecordsPage from './pages/PodHeartbeatRecordsPage';
 import { useServers } from './hooks/useServers';
 import { useSocket } from './hooks/useSocket';
 import { fetchSettingsApi, saveSettingApi } from './api/vpsApi';
@@ -73,6 +74,7 @@ export default function App() {
   const [storageReturnView, setStorageReturnView] = useState(() => {
     return localStorage.getItem('storageManagerReturnView') || null;
   });
+  const [heartbeatInitialPodId, setHeartbeatInitialPodId] = useState(null);
 
   const handleNavigateView = (view, extraParams = null) => {
     if (extraParams?.code) {
@@ -86,6 +88,9 @@ export default function App() {
       } else {
         localStorage.removeItem('storageManagerReturnView');
       }
+    }
+    if (extraParams?.podId !== undefined) {
+      setHeartbeatInitialPodId(extraParams.podId);
     }
     setCurrentView(view);
   };
@@ -220,7 +225,11 @@ export default function App() {
     'content-manager',
     'content',
     'pod-logs-sync',
-    'pod-logs'
+    'pod-logs',
+    'pod-heartbeat-records',
+    'heartbeat-records',
+    'pod-records',
+    'pod-storage-viewer'
   ].includes(currentView);
 
   return (
@@ -230,7 +239,7 @@ export default function App() {
         : isMultimediaSyncView
           ? 'w-full max-w-none px-2 sm:px-4 lg:px-6 pb-2'
           : isFullWidthView
-            ? 'w-full max-w-[1920px] px-2 sm:px-5 lg:px-8 pb-10'
+            ? 'w-full max-w-[1920px] px-2 sm:px-4 lg:px-6 pb-2'
             : 'max-w-7xl px-4 sm:px-6 pb-10'
       }`}>
 
@@ -264,7 +273,13 @@ export default function App() {
       ) : currentView === 'database-users' || currentView === 'db-users' || currentView === 'user-manager' ? (
         <UserManagerPage onBack={() => handleNavigateView('dashboard')} />
       ) : currentView === 'pod-activity' || currentView === 'pod-occupancy' || currentView === 'pod-heartbeat' || currentView === 'heartbeat-monitoring' || currentView === 'fleet-heartbeat' ? (
-        <PodActivityPage onBack={() => handleNavigateView('dashboard')} />
+        <PodActivityPage onBack={() => handleNavigateView('dashboard')} onNavigateView={handleNavigateView} />
+      ) : currentView === 'pod-heartbeat-records' || currentView === 'heartbeat-records' || currentView === 'pod-records' || currentView === 'pod-storage-viewer' ? (
+        <PodHeartbeatRecordsPage
+          onBack={() => handleNavigateView('dashboard')}
+          initialPodId={heartbeatInitialPodId}
+          onNavigateView={handleNavigateView}
+        />
       ) : currentView === 'pod-logs-sync' || currentView === 'pod-logs' ? (
         <PodLogsSyncPage onBack={() => handleNavigateView('dashboard')} />
       ) : currentView === 'tnc-sync-manager' ? (

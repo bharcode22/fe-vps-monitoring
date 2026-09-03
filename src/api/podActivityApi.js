@@ -143,3 +143,114 @@ export async function resetHeartbeatThresholdsApi() {
   if (!data.success) throw new Error(data.error || 'Gagal mereset konfigurasi ambang batas heartbeat');
   return data;
 }
+
+/**
+ * Fetch daily events list for a specific pod from .jsonl file
+ */
+export async function fetchPodEventsApi(podId, date = null) {
+  const url = date
+    ? `${BACKEND_URL}/api/pod-activity/pods/${podId}/events?date=${encodeURIComponent(date)}`
+    : `${BACKEND_URL}/api/pod-activity/pods/${podId}/events`;
+
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memuat log peristiwa POD');
+  return data.events || [];
+}
+
+/**
+ * Fetch latest state.json snapshot for a specific pod
+ */
+export async function fetchPodStateApi(podId) {
+  const res = await fetch(`${BACKEND_URL}/api/pod-activity/pods/${podId}/state`, {
+    method: 'GET',
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memuat state POD');
+  return data.state || null;
+}
+
+/**
+ * Fetch raw heartbeat ticks stream for a specific pod from .jsonl file / memory
+ * Supports either (podId, date, limit) or (podId, optionsObject)
+ */
+export async function fetchPodHeartbeatsApi(podId, dateOrOptions = null, defaultLimit = 500) {
+  let date = null;
+  let limit = defaultLimit;
+  let moduleId = null;
+  let startTime = null;
+  let endTime = null;
+  let source = 'auto';
+
+  if (typeof dateOrOptions === 'object' && dateOrOptions !== null) {
+    date = dateOrOptions.date || null;
+    limit = dateOrOptions.limit || defaultLimit;
+    moduleId = dateOrOptions.moduleId || null;
+    startTime = dateOrOptions.startTime || null;
+    endTime = dateOrOptions.endTime || null;
+    source = dateOrOptions.source || 'auto';
+  } else {
+    date = dateOrOptions;
+  }
+
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (date) params.append('date', date);
+  if (moduleId && moduleId !== 'ALL') params.append('moduleId', String(moduleId));
+  if (startTime) params.append('startTime', String(startTime));
+  if (endTime) params.append('endTime', String(endTime));
+  if (source) params.append('source', source);
+
+  const res = await fetch(`${BACKEND_URL}/api/pod-activity/pods/${podId}/heartbeats?${params.toString()}`, {
+    method: 'GET',
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memuat aliran detak heartbeat');
+  return data.heartbeats || [];
+}
+
+/**
+ * Fetch available log dates for a specific pod
+ */
+export async function fetchPodLogDatesApi(podId) {
+  const res = await fetch(`${BACKEND_URL}/api/pod-activity/pods/${podId}/log-dates`, {
+    method: 'GET',
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memuat daftar tanggal log');
+  return data.dates || [];
+}
+
+/**
+ * Fetch physical storage files list for a pod
+ */
+export async function fetchPodStorageFilesApi(podId) {
+  const res = await fetch(`${BACKEND_URL}/api/pod-activity/pods/${podId}/storage-files`, {
+    method: 'GET',
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memuat berkas penyimpanan pod');
+  return data;
+}
+
+/**
+ * Get direct download URL for pod heartbeats (JSON or JSONL)
+ */
+export function getPodHeartbeatsDownloadUrl(podId, { date = null, format = 'json', moduleId = null, startTime = null, endTime = null } = {}) {
+  const params = new URLSearchParams();
+  if (date) params.append('date', date);
+  if (format) params.append('format', format);
+  if (moduleId && moduleId !== 'ALL') params.append('moduleId', String(moduleId));
+  if (startTime) params.append('startTime', String(startTime));
+  if (endTime) params.append('endTime', String(endTime));
+
+  return `${BACKEND_URL}/api/pod-activity/pods/${podId}/heartbeats/download?${params.toString()}`;
+}
+
+

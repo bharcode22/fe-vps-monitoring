@@ -77,7 +77,7 @@ export default function BackendInstallationTab({
               return (
                 <div
                   key={srv.id}
-                  onClick={() => toggleServerSelect(srv.id)}
+                  onClick={() => toggleServerSelect(String(srv.id))}
                   className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between ${isSelected
                     ? 'bg-cyan-500/20 border-cyan-500/50 text-white shadow-lg shadow-cyan-500/10'
                     : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 text-slate-400'
@@ -214,7 +214,8 @@ export default function BackendInstallationTab({
               const minioFolder = appId === 'mobile-consume' ? 'mobile-consumer' : appId;
 
               const appVersions = appVersionsMap[appId] || [];
-              const currentVersion = selectedAppVersions[appId] || '';
+              const rawCurrentVer = selectedAppVersions[appId];
+              const currentVersion = typeof rawCurrentVer === 'object' && rawCurrentVer ? (rawCurrentVer.version || rawCurrentVer.name || '') : (rawCurrentVer || '');
               const isLoadingVersions = Boolean(isAppVersionsLoadingMap[appId]);
 
               return (
@@ -238,7 +239,7 @@ export default function BackendInstallationTab({
                       <select
                         value={currentVersion}
                         onChange={(e) => setSelectedAppVersions({ ...selectedAppVersions, [appId]: e.target.value })}
-                        disabled={isLoadingVersions}
+                        disabled={isLoadingVersions || appVersions.length === 0}
                         className="w-full bg-slate-900 border border-slate-700 text-xs font-mono text-cyan-300 px-3 py-2 rounded-xl outline-none focus:border-cyan-400 cursor-pointer disabled:opacity-50"
                       >
                         {isLoadingVersions ? (
@@ -246,11 +247,14 @@ export default function BackendInstallationTab({
                         ) : appVersions.length === 0 ? (
                           <option value="">Tidak ada artefak ditemukan</option>
                         ) : (
-                          appVersions.map(v => (
-                            <option key={v.version || v.name} value={v.version || v.name}>
-                              {v.version || v.name}
-                            </option>
-                          ))
+                          appVersions.map((v, idx) => {
+                            const verString = typeof v === 'object' && v ? (v.version || v.name || '') : String(v);
+                            return (
+                              <option key={idx} value={verString}>
+                                {verString} {idx === 0 ? '(Terbaru)' : ''}
+                              </option>
+                            );
+                          })
                         )}
                       </select>
                     </div>

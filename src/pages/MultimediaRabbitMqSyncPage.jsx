@@ -128,19 +128,6 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
     });
   };
 
-  const handleCopyTrackJson = (item) => {
-    if (!item) return;
-    const payload = {
-      music: item.music || '',
-      video: item.video || '',
-      lamp: item.lamp || '',
-      album: item.album || ''
-    };
-    navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
-    setCopiedJson(true);
-    setTimeout(() => setCopiedJson(false), 2000);
-  };
-
   // Fetch or retrieve cached actual filenames for this sound scape from AWS S3
   const getOrFetchS3Filenames = async (soundScape) => {
     if (s3FolderFilesMap[soundScape]?.files) {

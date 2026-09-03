@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Activity, Server, Radio, Cpu, Clock, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, Activity, Server, Radio, Cpu, Clock, ShieldAlert, History } from 'lucide-react';
 import io from 'socket.io-client';
 import { SOCKET_URL } from '../../config';
 import PodActivityTopicCards from './PodActivityTopicCards';
 import PodHeartbeatDetailTab from './PodHeartbeatDetailTab';
+import PodIncidentHistoryModal from './PodIncidentHistoryModal';
 import { fetchHeartbeatThresholdsApi } from '../../api/podActivityApi';
 import {
   DEFAULT_HB_THRESHOLDS,
@@ -33,7 +34,7 @@ function parseOccupancy(payload) {
   return null;
 }
 
-export default function PodActivityDetailPage({ pod, onBack }) {
+export default function PodActivityDetailPage({ pod, onBack, onNavigateView = null }) {
   const [activeTab, setActiveTab] = useState(() => {
     try {
       const saved = localStorage.getItem('vps_pod_detail_active_tab');
@@ -41,6 +42,7 @@ export default function PodActivityDetailPage({ pod, onBack }) {
     } catch (e) { }
     return 'heartbeat';
   });
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -267,28 +269,40 @@ export default function PodActivityDetailPage({ pod, onBack }) {
           </div>
         </div>
 
-        {/* Tab Switcher Controls */}
-        <div className="flex items-center gap-1.5 bg-slate-950/90 p-1.5 rounded-2xl border border-slate-800 shadow-inner">
+        {/* Header Action Buttons & Tab Switcher */}
+        <div className="flex items-center gap-2.5 flex-wrap">
           <button
-            onClick={() => setActiveTab('activity')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${activeTab === 'activity'
-              ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-500/10'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
-              }`}
+            onClick={() => setIsHistoryModalOpen(true)}
+            className="px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 text-amber-300 hover:text-white border border-amber-500/40 shadow-lg shadow-amber-500/10 cursor-pointer"
+            title="Buka Riwayat Insiden & Unduh Log Harian (.jsonl)"
           >
-            <Activity size={15} className={activeTab === 'activity' ? 'text-cyan-400' : ''} />
-            <span>Activity Detail</span>
+            <History size={15} className="text-amber-400" />
+            <span>Log Insiden (.jsonl)</span>
           </button>
-          <button
-            onClick={() => setActiveTab('heartbeat')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${activeTab === 'heartbeat'
-              ? 'bg-gradient-to-r from-indigo-500/25 to-purple-500/25 text-indigo-300 border border-indigo-500/40 shadow-lg shadow-indigo-500/10'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
-              }`}
-          >
-            <Cpu size={15} className={activeTab === 'heartbeat' ? 'text-indigo-400 animate-pulse' : ''} />
-            <span>Heartbeat Detail</span>
-          </button>
+
+          {/* Tab Switcher Controls */}
+          <div className="flex items-center gap-1.5 bg-slate-950/90 p-1.5 rounded-2xl border border-slate-800 shadow-inner">
+            <button
+              onClick={() => setActiveTab('activity')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${activeTab === 'activity'
+                ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-500/10'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+            >
+              <Activity size={15} className={activeTab === 'activity' ? 'text-cyan-400' : ''} />
+              <span>Activity Detail</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('heartbeat')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${activeTab === 'heartbeat'
+                ? 'bg-gradient-to-r from-indigo-500/25 to-purple-500/25 text-indigo-300 border border-indigo-500/40 shadow-lg shadow-indigo-500/10'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+            >
+              <Cpu size={15} className={activeTab === 'heartbeat' ? 'text-indigo-400 animate-pulse' : ''} />
+              <span>Heartbeat Detail</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -308,8 +322,19 @@ export default function PodActivityDetailPage({ pod, onBack }) {
           thresholds={thresholds}
           onThresholdsUpdated={setThresholds}
           onPublish={handlePublish}
+          onNavigateView={onNavigateView}
         />
       )}
+
+      {/* Incident History & Daily JSONL Logs Modal */}
+      <PodIncidentHistoryModal
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+        podId={pod?.id}
+        podName={pod?.name}
+        pod={pod}
+        onNavigateView={onNavigateView}
+      />
     </div>
   );
 }
