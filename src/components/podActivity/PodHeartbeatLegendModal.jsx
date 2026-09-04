@@ -230,7 +230,7 @@ export default function PodHeartbeatLegendModal({
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150">
       <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
-        
+
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-800 bg-slate-950/80">
           <div className="flex items-center gap-3">
@@ -256,7 +256,7 @@ export default function PodHeartbeatLegendModal({
 
         {/* Body */}
         <div className="p-6 overflow-y-auto flex flex-col gap-5 max-h-[calc(92vh-140px)]">
-          
+
           {/* Toast Notification */}
           {feedbackToast && (
             <div className="p-3.5 bg-emerald-500/90 text-white text-xs font-bold rounded-xl shadow-xl flex items-center gap-2 animate-in fade-in duration-150 backdrop-blur-md">
@@ -297,7 +297,7 @@ export default function PodHeartbeatLegendModal({
 
             {/* Inputs & Sliders Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              
+
               {/* 1. Delay Threshold */}
               <div className="p-3.5 bg-slate-900/90 border border-amber-500/30 rounded-xl flex flex-col gap-2">
                 <div className="flex items-center justify-between">
@@ -432,9 +432,8 @@ export default function PodHeartbeatLegendModal({
             </div>
 
             {telegramFeedback && (
-              <div className={`p-2.5 rounded-xl text-xs font-bold flex items-center gap-2 animate-in fade-in duration-150 ${
-                telegramFeedback.type === 'success' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-              }`}>
+              <div className={`p-2.5 rounded-xl text-xs font-bold flex items-center gap-2 animate-in fade-in duration-150 ${telegramFeedback.type === 'success' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                }`}>
                 <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
                 <span>{telegramFeedback.message}</span>
               </div>

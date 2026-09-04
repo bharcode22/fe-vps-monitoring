@@ -439,6 +439,21 @@ export default function PodFleetHeartbeatMatrix({
     };
   }, [pods, serverModules, fleetModuleMap, nowTimestamp]);
 
+  // Group dead modules by pod for concise overview in incident banner
+  const affectedPodsSummary = useMemo(() => {
+    const map = new Map();
+    fleetAnalysis.deadModulesGlobalList.forEach(({ pod, mod, elapsedSec, reason }) => {
+      if (!map.has(pod.id)) {
+        map.set(pod.id, {
+          pod,
+          modules: []
+        });
+      }
+      map.get(pod.id).modules.push({ mod, elapsedSec, reason });
+    });
+    return Array.from(map.values());
+  }, [fleetAnalysis.deadModulesGlobalList]);
+
   // Trigger sound alarm ONLY if new DEAD modules are detected anywhere across the fleet (Hanya status DEAD)
   useEffect(() => {
     const currentDeadCount = fleetAnalysis.totalDeadModules;
@@ -491,47 +506,75 @@ export default function PodFleetHeartbeatMatrix({
     <div className="flex flex-col gap-6 w-full animate-in fade-in duration-200">
       {/* 1. CRITICAL INCIDENT BANNER (FLEET-WIDE) */}
       {fleetAnalysis.hasCriticalFleetIssue && (
-        <div className="p-4 sm:p-5 2xl:p-6 min-[1920px]:p-7 bg-gradient-to-r from-rose-950/90 via-slate-900/95 to-rose-950/90 border border-rose-500/60 rounded-2xl 2xl:rounded-3xl backdrop-blur-md shadow-xl shadow-rose-500/15 flex flex-col lg:flex-row lg:items-center justify-between gap-4 2xl:gap-6 ring-1 ring-rose-500/30 animate-in fade-in duration-200 w-full">
-          <div className="flex items-center gap-3.5 2xl:gap-4 shrink-0">
-            <div className="p-2.5 2xl:p-3.5 min-[1920px]:p-4 bg-rose-500/25 border border-rose-500/40 text-rose-400 rounded-xl 2xl:rounded-2xl shrink-0 animate-pulse">
-              <ShieldAlert className="w-5 h-5 2xl:w-7 2xl:h-7 min-[1920px]:w-8 min-[1920px]:h-8" />
+        <div className="p-4 sm:p-5 2xl:p-5 min-[1920px]:p-6 bg-gradient-to-r from-rose-950/90 via-slate-900/95 to-rose-950/90 border border-rose-500/60 rounded-2xl 2xl:rounded-3xl backdrop-blur-md shadow-xl shadow-rose-500/15 flex flex-col gap-3.5 ring-1 ring-rose-500/30 animate-in fade-in duration-200 w-full">
+          {/* Top Row: Title, Impact Summary, and Ping Action Button */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-rose-500/20 pb-3">
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="p-2.5 bg-rose-500/25 border border-rose-500/40 text-rose-400 rounded-xl shrink-0 animate-pulse">
+                <ShieldAlert className="w-5 h-5 2xl:w-6 2xl:h-6" />
+              </div>
+              <div>
+                <h3 className="text-xs sm:text-sm md:text-base 2xl:text-lg font-black text-rose-300 uppercase tracking-wider flex items-center gap-2 flex-wrap">
+                  <span className="w-2 h-2 2xl:w-2.5 2xl:h-2.5 rounded-full bg-rose-400 animate-ping shrink-0" />
+                  PERINGATAN DINI: {fleetAnalysis.deadModulesGlobalList.length} MODUL MATI PADA FLEET
+                  <span className="text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full bg-rose-500/25 text-rose-200 border border-rose-500/40 normal-case">
+                    {affectedPodsSummary.length} Pod Terdampak
+                  </span>
+                </h3>
+                <p className="text-[11px] sm:text-xs 2xl:text-sm text-rose-200/80 font-medium hidden sm:block mt-0.5">
+                  Kehilangan detak heartbeat (&gt;12s). Periksa koneksi kabel USB & daya hardware unit:
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-xs sm:text-sm md:text-base 2xl:text-lg min-[1920px]:text-xl font-black text-rose-300 uppercase tracking-wider flex items-center gap-2 2xl:gap-3">
-                <span className="w-2 h-2 2xl:w-3 2xl:h-3 min-[1920px]:w-3.5 min-[1920px]:h-3.5 rounded-full bg-rose-400 animate-ping shrink-0" />
-                PERINGATAN DINI: {fleetAnalysis.deadModulesGlobalList.length} MODUL MATI PADA FLEET
-              </h3>
-              <p className="text-[11px] sm:text-xs md:text-sm 2xl:text-base text-rose-200/80 font-medium hidden sm:block mt-0.5 2xl:mt-1">
-                Kehilangan detak heartbeat (&gt;12s). Periksa koneksi kabel USB & daya hardware unit:
-              </p>
+
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+              <button
+                onClick={handlePingAllDeadModules}
+                disabled={pingLoading}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 active:scale-95 text-white font-black text-xs sm:text-sm 2xl:text-base rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer disabled:opacity-50 whitespace-nowrap"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 2xl:w-4 2xl:h-4 ${pingLoading ? 'animate-spin' : ''}`} />
+                <span>Ping Semua Modul Mati</span>
+              </button>
             </div>
           </div>
 
-          {/* Badges of Dead Modules with Pod Names (Expansive & Flexible on Large/TV screens) */}
-          <div className="flex-1 min-w-0 flex items-center gap-2 2xl:gap-3 overflow-x-auto 2xl:flex-wrap py-1.5 scrollbar-thin scrollbar-thumb-rose-500/30 scrollbar-track-transparent pr-1">
-            {fleetAnalysis.deadModulesGlobalList.map(({ pod, mod, elapsedSec, reason }, idx) => (
-              <span
-                key={idx}
+          {/* Bottom Row: Full-width Horizontal Scroll Ribbon for Affected Pods and Module Details */}
+          <div className="w-full flex items-center gap-2.5 overflow-x-auto flex-nowrap py-1 scrollbar-thin scrollbar-thumb-rose-500/30 scrollbar-track-transparent">
+            {/* 1. Pod Summary Badges (clickable to open that Pod) */}
+            {affectedPodsSummary.map(({ pod, modules }) => (
+              <button
+                key={`pod-${pod.id}`}
                 onClick={() => onSelectPod && onSelectPod(pod)}
-                className="inline-flex items-center gap-1.5 2xl:gap-2 px-3 py-1.5 2xl:px-4 2xl:py-2.5 rounded-lg 2xl:rounded-xl text-xs 2xl:text-sm min-[1920px]:text-base font-mono font-bold bg-rose-500/20 text-rose-200 border border-rose-500/50 hover:bg-rose-500/35 cursor-pointer shadow-sm transition shrink-0 whitespace-nowrap select-none"
-                title={`Klik untuk buka detail ${pod.name}`}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs 2xl:text-sm font-mono font-bold bg-rose-950/80 text-rose-200 border border-rose-500/60 hover:bg-rose-900 hover:border-rose-400 cursor-pointer shadow-sm transition shrink-0 whitespace-nowrap select-none"
+                title={`Klik untuk buka detail ${pod.name} (${modules.length} modul bermasalah)`}
               >
-                <AlertCircle className="w-3.5 h-3.5 2xl:w-4 2xl:h-4 text-rose-400 shrink-0" />
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                <span className="font-extrabold text-white">{pod.name}</span>
+                <span className="px-1.5 py-0.5 rounded bg-rose-500/30 text-rose-300 text-[11px]">
+                  {modules.length} Modul Macet
+                </span>
+              </button>
+            ))}
+
+            {/* Divider between Pod summaries and individual modules */}
+            {affectedPodsSummary.length > 0 && fleetAnalysis.deadModulesGlobalList.length > 0 && (
+              <div className="h-5 w-px bg-rose-500/30 shrink-0 mx-1" />
+            )}
+
+            {/* 2. Detailed individual module badges */}
+            {fleetAnalysis.deadModulesGlobalList.map(({ pod, mod, reason }, idx) => (
+              <span
+                key={`mod-${idx}`}
+                onClick={() => onSelectPod && onSelectPod(pod)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs 2xl:text-sm font-mono bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500/25 hover:text-white cursor-pointer shadow-sm transition shrink-0 whitespace-nowrap select-none"
+                title={`Klik untuk buka detail ${pod.name} → ${mod.name}`}
+              >
+                <AlertCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
                 <span>{pod.name} → {mod.name} (ID: {mod.id})</span>
-                <span className="text-rose-300 font-normal tabular-nums">[{reason}]</span>
+                <span className="text-rose-400/90 font-normal tabular-nums">[{reason}]</span>
               </span>
             ))}
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0 self-end lg:self-center">
-            <button
-              onClick={handlePingAllDeadModules}
-              disabled={pingLoading}
-              className="px-4 py-2.5 2xl:px-6 2xl:py-3.5 bg-rose-600 hover:bg-rose-500 active:scale-95 text-white font-black text-xs sm:text-sm 2xl:text-base rounded-xl 2xl:rounded-2xl shadow-lg transition flex items-center gap-2 2xl:gap-2.5 cursor-pointer disabled:opacity-50 whitespace-nowrap"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 2xl:w-5 2xl:h-5 ${pingLoading ? 'animate-spin' : ''}`} />
-              <span>Ping Semua Modul Mati</span>
-            </button>
           </div>
         </div>
       )}
@@ -602,26 +645,27 @@ export default function PodFleetHeartbeatMatrix({
         </div>
       </div>
 
-      {/* 3. TOOLBAR: SEARCH, HEALTH FILTER PILLS, ALARM TOGGLE */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-900/80 p-4 rounded-2xl border border-slate-800 backdrop-blur-md shadow-xl">
-        {/* Left: Search Box */}
-        <div className="relative w-full sm:w-80 md:w-96">
-          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Cari nama Pod, IP LAN, kode..."
-            className="w-full pl-9 pr-4 py-2 bg-slate-950/90 border border-slate-800 focus:border-cyan-400 rounded-xl text-white text-xs outline-none transition-all placeholder:text-slate-500 shadow-inner"
-          />
-        </div>
+      {/* 3. TOOLBAR: SEARCH, HEALTH FILTER PILLS, ACTIONS & ALARM TOGGLES */}
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3.5 bg-slate-900/80 p-3.5 sm:p-4 rounded-2xl border border-slate-800 backdrop-blur-md shadow-xl">
+        {/* Left Side: Search Box & Filter Pills Segment */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1 min-w-0">
+          {/* Search Box */}
+          <div className="relative w-full sm:w-60 md:w-68 lg:w-72 shrink-0">
+            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Cari nama Pod, IP LAN, kode..."
+              className="w-full pl-9 pr-4 py-2 bg-slate-950/90 border border-slate-800 focus:border-cyan-400 rounded-xl text-white text-xs outline-none transition-all placeholder:text-slate-500 shadow-inner"
+            />
+          </div>
 
-        {/* Center & Right: Filter Pills & Sound Alarm Button */}
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <div className="flex items-center gap-1 bg-slate-950/90 p-1 rounded-xl border border-slate-800 shadow-inner">
+          {/* Filter Pills Segment */}
+          <div className="flex items-center gap-1 bg-slate-950/90 p-1 rounded-xl border border-slate-800 shadow-inner overflow-x-auto scrollbar-none shrink-0">
             <button
               onClick={() => setFleetFilter('ALL')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${fleetFilter === 'ALL'
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${fleetFilter === 'ALL'
                 ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200'
                 }`}
@@ -630,7 +674,7 @@ export default function PodFleetHeartbeatMatrix({
             </button>
             <button
               onClick={() => setFleetFilter('ONLINE_ONLY')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${fleetFilter === 'ONLINE_ONLY'
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${fleetFilter === 'ONLINE_ONLY'
                 ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200'
                 }`}
@@ -639,7 +683,7 @@ export default function PodFleetHeartbeatMatrix({
             </button>
             <button
               onClick={() => setFleetFilter('ISSUES_ONLY')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${fleetFilter === 'ISSUES_ONLY'
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${fleetFilter === 'ISSUES_ONLY'
                 ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200'
                 }`}
@@ -649,7 +693,7 @@ export default function PodFleetHeartbeatMatrix({
             </button>
             <button
               onClick={() => setFleetFilter('HEALTHY_ONLY')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${fleetFilter === 'HEALTHY_ONLY'
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${fleetFilter === 'HEALTHY_ONLY'
                 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200'
                 }`}
@@ -658,42 +702,49 @@ export default function PodFleetHeartbeatMatrix({
               <span>100% Sehat ({fleetAnalysis.podsHealthList.filter((p) => p.is100PercentHealthy).length})</span>
             </button>
           </div>
+        </div>
 
-          {/* Manage Modules Button */}
-          <button
-            onClick={() => setIsManageModalOpen(true)}
-            className="p-2.5 bg-slate-800/80 hover:bg-slate-700 text-cyan-300 hover:text-white rounded-xl border border-slate-700/60 transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer shadow"
-            title="Kelola Daftar Modul (Edit / Tambah / Hapus file JSON)"
-          >
-            <Sliders size={14} className="text-cyan-400" />
-            <span>Kelola Modul (JSON)</span>
-          </button>
+        {/* Right Side: Tools & Notification Toggles */}
+        <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap justify-start xl:justify-end">
+          {/* Action Modals */}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setIsManageModalOpen(true)}
+              className="px-3 py-1.5 bg-slate-800/90 hover:bg-slate-700 text-cyan-300 hover:text-white rounded-xl border border-slate-700/60 transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer shadow-sm whitespace-nowrap active:scale-95"
+              title="Kelola Daftar Modul (Edit / Tambah / Hapus file JSON)"
+            >
+              <Sliders size={13} className="text-cyan-400 shrink-0" />
+              <span>Kelola Modul (JSON)</span>
+            </button>
 
-          {/* Legend / Guide Button */}
-          <button
-            onClick={() => setIsLegendModalOpen(true)}
-            className="p-2.5 bg-slate-800/80 hover:bg-slate-700 text-cyan-300 hover:text-white rounded-xl border border-slate-700/60 transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer shadow"
-            title="Buka Panduan Arti Warna & Keterangan Status Modul"
-          >
-            <HelpCircle size={14} className="text-cyan-400" />
-            <span>Panduan Status</span>
-          </button>
+            <button
+              onClick={() => setIsLegendModalOpen(true)}
+              className="px-3 py-1.5 bg-slate-800/90 hover:bg-slate-700 text-cyan-300 hover:text-white rounded-xl border border-slate-700/60 transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer shadow-sm whitespace-nowrap active:scale-95"
+              title="Buka Panduan Arti Warna & Keterangan Status Modul"
+            >
+              <HelpCircle size={13} className="text-cyan-400 shrink-0" />
+              <span>Panduan Status</span>
+            </button>
+          </div>
 
-          {/* Sound Alarm Toggle */}
-          <button
-            onClick={toggleSoundAlarm}
-            className={`p-2.5 rounded-xl border transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer ${soundAlarmEnabled
-              ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25'
-              : 'bg-slate-800/80 text-slate-400 border-slate-700/60 hover:text-slate-200'
-              }`}
-            title={soundAlarmEnabled ? 'Alarm Suara Aktif (Klik untuk Mute)' : 'Alarm Suara Mati (Klik untuk Aktifkan)'}
-          >
-            {soundAlarmEnabled ? <Volume2 size={14} className="text-emerald-400 animate-pulse" /> : <VolumeX size={14} />}
-            <span className="hidden sm:inline">{soundAlarmEnabled ? 'Alarm ON' : 'Alarm OFF'}</span>
-          </button>
+          <div className="h-5 w-px bg-slate-800 hidden sm:block mx-0.5" />
 
-          {/* Telegram DEAD Alert Toggle */}
-          <PodTelegramAlertToggle />
+          {/* Alert Toggles (Alarm Suara & Telegram) */}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={toggleSoundAlarm}
+              className={`px-3 py-1.5 rounded-xl border transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer whitespace-nowrap active:scale-95 ${soundAlarmEnabled
+                ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25 shadow-sm shadow-emerald-500/10'
+                : 'bg-slate-800/90 text-slate-400 border-slate-700/60 hover:text-slate-200'
+                }`}
+              title={soundAlarmEnabled ? 'Alarm Suara Aktif (Klik untuk Mute)' : 'Alarm Suara Mati (Klik untuk Aktifkan)'}
+            >
+              {soundAlarmEnabled ? <Volume2 size={13} className="text-emerald-400 animate-pulse shrink-0" /> : <VolumeX size={13} className="shrink-0" />}
+              <span>{soundAlarmEnabled ? 'Alarm ON' : 'Alarm OFF'}</span>
+            </button>
+
+            <PodTelegramAlertToggle />
+          </div>
         </div>
       </div>
 
