@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import io from 'socket.io-client';
-import { SOCKET_URL } from '../config';
+import { getSharedSocket } from '../utils/socketService';
 import {
   fetchPodActivityStatusApi,
   simulatePodActivityApi,
@@ -24,6 +23,7 @@ export default function PodActivityPage({ onBack, onNavigateView = null }) {
 
   const socketRef = useRef(null);
   const [data, setData] = useState({ summary: {}, pods: [], recentLogs: [] });
+  const [latestBatchedHeartbeat, setLatestBatchedHeartbeat] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
@@ -76,11 +76,20 @@ export default function PodActivityPage({ onBack, onNavigateView = null }) {
     } catch (e) { }
   }, [activeTab]);
 
-  // Persist showMqttFeed changes
+  // Persist showMqttFeed changes & manage room subscription
   useEffect(() => {
     try {
       localStorage.setItem('vps_pod_activity_show_mqtt', String(showMqttFeed));
     } catch (e) { }
+
+    const socket = getSharedSocket();
+    if (socket && socket.connected) {
+      if (showMqttFeed) {
+        socket.emit('subscribe:mqtt-feed');
+      } else {
+        socket.emit('unsubscribe:mqtt-feed');
+      }
+    }
   }, [showMqttFeed]);
 
   const [selectedPodForTopicModal, setSelectedPodForTopicModal] = useState(() => {
@@ -117,23 +126,24 @@ export default function PodActivityPage({ onBack, onNavigateView = null }) {
     loadStatus();
   }, []);
 
-  // Socket.io Real-time Event Subscriptions
+  // Socket.io Real-time Event Subscriptions via Shared Socket
   useEffect(() => {
-    const socket = io(SOCKET_URL, {
-      transports: ['websocket', 'polling']
-    });
+    const socket = getSharedSocket();
     socketRef.current = socket;
+    setIsSocketConnected(socket.connected);
 
-    socket.on('connect', () => {
+    const handleConnect = () => {
       setIsSocketConnected(true);
-    });
+      if (showMqttFeed) {
+        socket.emit('subscribe:mqtt-feed');
+      }
+    };
 
-    socket.on('disconnect', () => {
+    const handleDisconnect = () => {
       setIsSocketConnected(false);
-    });
+    };
 
-    // When full initial state is delivered
-    socket.on('pod-activity:initial', (initialData) => {
+    const handleInitial = (initialData) => {
       if (initialData) {
         setData(initialData);
         if (Array.isArray(initialData.modulesConfig)) {
@@ -147,31 +157,27 @@ export default function PodActivityPage({ onBack, onNavigateView = null }) {
         }
         setIsLoading(false);
       }
-    });
+    };
 
-    // When modules config is updated (added/edited/deleted) by any admin
-    socket.on('pod-heartbeat:modules-updated', (newModules) => {
+    const handleModulesUpdated = (newModules) => {
       if (Array.isArray(newModules) && newModules.length > 0) {
         setStoredHbModules(newModules);
       }
-    });
+    };
 
-    // When thresholds config is updated by any admin
-    socket.on('pod-heartbeat:thresholds-updated', (newThresholds) => {
+    const handleThresholdsUpdated = (newThresholds) => {
       if (newThresholds && typeof newThresholds === 'object') {
         setStoredHbThresholds(newThresholds);
       }
-    });
+    };
 
-    // When telegram alert config is toggled or updated
-    socket.on('pod-heartbeat:telegram-config-updated', (newConfig) => {
+    const handleTelegramUpdated = (newConfig) => {
       if (newConfig && typeof newConfig === 'object') {
         setStoredTelegramConfig(newConfig);
       }
-    });
+    };
 
-    // When a single POD changes occupancy state (0 -> 1 or 1 -> 0)
-    socket.on('pod-activity:state-changed', (eventPayload) => {
+    const handleStateChanged = (eventPayload) => {
       const { pod, log, summary } = eventPayload || {};
       if (!pod) return;
 
@@ -207,25 +213,56 @@ export default function PodActivityPage({ onBack, onNavigateView = null }) {
           recentLogs: updatedLogs
         };
       });
-    });
+    };
 
-    // When a broker connection status changes
-    socket.on('pod-activity:broker-status', ({ serverId, connected }) => {
+    const handleBrokerStatus = ({ serverId, connected }) => {
       setData((prev) => {
         const pods = (prev.pods || []).map((p) =>
           p.id === serverId ? { ...p, brokerConnected: connected } : p
         );
         return { ...prev, pods };
       });
-    });
+    };
 
-    // When raw MQTT log stream is received
-    socket.on('pod-activity:mqtt-log', (logEntry) => {
+    const handleMqttLog = (logEntry) => {
       setMqttActivityFeed((prev) => [logEntry, ...prev].slice(0, 200));
-    });
+    };
+
+    const handleBatchHeartbeat = (batch) => {
+      if (batch && typeof batch === 'object') {
+        setLatestBatchedHeartbeat(batch);
+      }
+    };
+
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
+    socket.on('pod-activity:initial', handleInitial);
+    socket.on('pod-heartbeat:modules-updated', handleModulesUpdated);
+    socket.on('pod-heartbeat:thresholds-updated', handleThresholdsUpdated);
+    socket.on('pod-heartbeat:telegram-config-updated', handleTelegramUpdated);
+    socket.on('pod-activity:state-changed', handleStateChanged);
+    socket.on('pod-activity:broker-status', handleBrokerStatus);
+    socket.on('pod-activity:mqtt-log', handleMqttLog);
+    socket.on('pod-heartbeat:batch-update', handleBatchHeartbeat);
+
+    if (socket.connected && showMqttFeed) {
+      socket.emit('subscribe:mqtt-feed');
+    }
 
     return () => {
-      socket.disconnect();
+      socket.off('connect', handleConnect);
+      socket.off('disconnect', handleDisconnect);
+      socket.off('pod-activity:initial', handleInitial);
+      socket.off('pod-heartbeat:modules-updated', handleModulesUpdated);
+      socket.off('pod-heartbeat:thresholds-updated', handleThresholdsUpdated);
+      socket.off('pod-heartbeat:telegram-config-updated', handleTelegramUpdated);
+      socket.off('pod-activity:state-changed', handleStateChanged);
+      socket.off('pod-activity:broker-status', handleBrokerStatus);
+      socket.off('pod-activity:mqtt-log', handleMqttLog);
+      socket.off('pod-heartbeat:batch-update', handleBatchHeartbeat);
+      if (socket.connected) {
+        socket.emit('unsubscribe:mqtt-feed');
+      }
     };
   }, []);
 
@@ -415,6 +452,7 @@ export default function PodActivityPage({ onBack, onNavigateView = null }) {
         <PodFleetHeartbeatMatrix
           pods={data.pods || []}
           mqttFeed={mqttActivityFeed}
+          batchedHeartbeat={latestBatchedHeartbeat}
           heartbeatSnapshot={data.heartbeatSnapshot || {}}
           onSelectPod={setSelectedPodForTopicModal}
           onPublish={handlePublish}

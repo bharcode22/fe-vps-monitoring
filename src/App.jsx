@@ -105,22 +105,12 @@ export default function App() {
     }
   });
 
-  // Sync settings from backend SQLite DB on mount
-  useEffect(() => {
-    fetchSettingsApi().then(settings => {
-      if (settings && settings.tv_mode !== undefined) {
-        const val = settings.tv_mode === 'true';
-        setIsTvMode(val);
-        localStorage.setItem('vps_monitoring_tv_mode', String(val));
-      }
-    });
-  }, []);
-
   const handleToggleTvMode = () => {
     const nextMode = !isTvMode;
     setIsTvMode(nextMode);
-    localStorage.setItem('vps_monitoring_tv_mode', String(nextMode));
-    saveSettingApi('tv_mode', String(nextMode));
+    try {
+      localStorage.setItem('vps_monitoring_tv_mode', String(nextMode));
+    } catch (e) { }
   };
 
   const handleStartEdit = (srv) => {

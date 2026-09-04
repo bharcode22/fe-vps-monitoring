@@ -99,6 +99,7 @@ function playFleetAlertChime() {
 export default function PodFleetHeartbeatMatrix({
   pods = [],
   mqttFeed = [],
+  batchedHeartbeat = null,
   heartbeatSnapshot = {},
   onSelectPod,
   onPublish
@@ -238,7 +239,76 @@ export default function PodFleetHeartbeatMatrix({
     }
   };
 
-  // Ingest incoming MQTT feed across all pods
+  // High-performance batched heartbeat ingestion (1x per second)
+  useEffect(() => {
+    if (!batchedHeartbeat || typeof batchedHeartbeat !== 'object' || Object.keys(batchedHeartbeat).length === 0) return;
+
+    const newFlashing = {};
+    const timestamp = Date.now();
+
+    setFleetModuleMap((prev) => {
+      const merged = { ...prev };
+
+      for (const [podIdStr, podModules] of Object.entries(batchedHeartbeat)) {
+        const podId = Number(podIdStr);
+        const currentPodData = merged[podId] || {};
+        merged[podId] = { ...currentPodData };
+
+        for (const [modIdStr, tick] of Object.entries(podModules || {})) {
+          const modId = Number(modIdStr);
+          const modData = currentPodData[modId] || {
+            hb: null,
+            lastSeenAt: null,
+            lastHbChangeAt: tick.timestamp || timestamp,
+            isFrozen: false,
+            port: null,
+            totalPackets: 0
+          };
+
+          const currentHbNum = (modData.hb !== null && modData.hb !== undefined && !isNaN(Number(modData.hb))) ? Number(modData.hb) : null;
+          const newHbNum = (tick.hb !== null && tick.hb !== undefined && !isNaN(Number(tick.hb))) ? Number(tick.hb) : null;
+          const hasHbChanged = currentHbNum !== null && newHbNum !== null && currentHbNum !== newHbNum;
+
+          if (hasHbChanged) {
+            newFlashing[`${podId}_${modId}`] = true;
+          }
+
+          const lastHbChangeAt = hasHbChanged ? (tick.timestamp || timestamp) : (modData.lastHbChangeAt || timestamp);
+          const isFrozen = !hasHbChanged && (timestamp - lastHbChangeAt > 3000);
+
+          merged[podId][modId] = {
+            hb: newHbNum !== null ? newHbNum : modData.hb,
+            lastSeenAt: tick.timestamp || timestamp,
+            lastHbChangeAt,
+            isFrozen,
+            port: tick.port || modData.port,
+            totalPackets: (modData.totalPackets || 0) + 1
+          };
+        }
+      }
+
+      try {
+        sessionStorage.setItem('vps_fleet_heartbeat_snapshot', JSON.stringify(merged));
+      } catch (_) { }
+
+      return merged;
+    });
+
+    if (Object.keys(newFlashing).length > 0) {
+      setFlashingCells((prev) => ({ ...prev, ...newFlashing }));
+      setTimeout(() => {
+        setFlashingCells((prev) => {
+          const reset = { ...prev };
+          for (const key of Object.keys(newFlashing)) {
+            reset[key] = false;
+          }
+          return reset;
+        });
+      }, 600);
+    }
+  }, [batchedHeartbeat]);
+
+  // Ingest incoming MQTT feed across all pods (fallback / live debug)
   useEffect(() => {
     if (!mqttFeed || mqttFeed.length === 0) return;
 

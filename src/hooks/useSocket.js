@@ -1,57 +1,75 @@
 import { useState, useEffect, useRef } from 'react';
-import io from 'socket.io-client';
-import { SOCKET_URL } from '../config';
+import { getSharedSocket } from '../utils/socketService';
 
 export function useSocket(onMetricsUpdate, onServerListUpdated, currentView = 'dashboard') {
   const [isConnected, setIsConnected] = useState(false);
   const [activeUsers, setActiveUsers] = useState([]);
   const [totalActiveUsers, setTotalActiveUsers] = useState(0);
-  const socketRef = useRef(null);
 
-  // Initialize socket
+  const onMetricsUpdateRef = useRef(onMetricsUpdate);
+  const onServerListUpdatedRef = useRef(onServerListUpdated);
+  const currentViewRef = useRef(currentView);
+
   useEffect(() => {
-    const socket = io(SOCKET_URL, {
-      transports: ['websocket', 'polling']
-    });
-    socketRef.current = socket;
+    onMetricsUpdateRef.current = onMetricsUpdate;
+  }, [onMetricsUpdate]);
 
-    socket.on('connect', () => {
-      console.log('✅ WebSocket Connected');
+  useEffect(() => {
+    onServerListUpdatedRef.current = onServerListUpdated;
+  }, [onServerListUpdated]);
+
+  useEffect(() => {
+    currentViewRef.current = currentView;
+  }, [currentView]);
+
+  // Initialize socket using singleton
+  useEffect(() => {
+    const socket = getSharedSocket();
+    setIsConnected(socket.connected);
+
+    const handleConnect = () => {
       setIsConnected(true);
-
-      // Join presence with user token if logged in
       const token = localStorage.getItem('vps_monitoring_token') || localStorage.getItem('token') || '';
-      socket.emit('presence:join', { token, currentView });
+      socket.emit('presence:join', { token, currentView: currentViewRef.current });
       socket.emit('presence:request-snapshot');
-    });
+    };
 
-    socket.on('disconnect', () => {
-      console.log('❌ WebSocket Disconnected');
+    const handleDisconnect = () => {
       setIsConnected(false);
-    });
+    };
 
-    socket.on('metrics_update', (updatedMetrics) => {
-      if (onMetricsUpdate) {
-        onMetricsUpdate(updatedMetrics);
+    const handleMetricsUpdate = (updatedMetrics) => {
+      if (onMetricsUpdateRef.current) {
+        onMetricsUpdateRef.current(updatedMetrics);
       }
-    });
+    };
 
-    socket.on('server_list_updated', () => {
+    const handleServerListUpdated = () => {
       console.log('🔔 Server list configuration updated via socket');
-      if (onServerListUpdated) {
-        onServerListUpdated();
+      if (onServerListUpdatedRef.current) {
+        onServerListUpdatedRef.current();
       }
-    });
+    };
 
-    // Real-time active users presence update
-    socket.on('presence:users-update', (data) => {
+    const handleUsersUpdate = (data) => {
       if (data) {
         setActiveUsers(data.activeUsers || []);
         setTotalActiveUsers(data.totalActiveUsers || 0);
       }
-    });
+    };
 
-    // Setup 30s presence heartbeat interval
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
+    socket.on('metrics_update', handleMetricsUpdate);
+    socket.on('server_list_updated', handleServerListUpdated);
+    socket.on('presence:users-update', handleUsersUpdate);
+
+    // If already connected when this component mounts, join presence immediately
+    if (socket.connected) {
+      handleConnect();
+    }
+
+    // 30s presence heartbeat interval
     const heartbeatInterval = setInterval(() => {
       if (socket.connected) {
         socket.emit('presence:heartbeat');
@@ -60,20 +78,26 @@ export function useSocket(onMetricsUpdate, onServerListUpdated, currentView = 'd
 
     return () => {
       clearInterval(heartbeatInterval);
-      socket.disconnect();
+      socket.off('connect', handleConnect);
+      socket.off('disconnect', handleDisconnect);
+      socket.off('metrics_update', handleMetricsUpdate);
+      socket.off('server_list_updated', handleServerListUpdated);
+      socket.off('presence:users-update', handleUsersUpdate);
     };
-  }, [onMetricsUpdate, onServerListUpdated]);
+  }, []); // Run ONCE on mount using shared socket, no unnecessary disconnect loops
 
   // Emit presence navigation change when currentView changes
   useEffect(() => {
-    if (socketRef.current && socketRef.current.connected) {
-      socketRef.current.emit('presence:navigate', { currentView });
+    const socket = getSharedSocket();
+    if (socket && socket.connected) {
+      socket.emit('presence:navigate', { currentView });
     }
   }, [currentView]);
 
   const requestPresenceSnapshot = () => {
-    if (socketRef.current && socketRef.current.connected) {
-      socketRef.current.emit('presence:request-snapshot');
+    const socket = getSharedSocket();
+    if (socket && socket.connected) {
+      socket.emit('presence:request-snapshot');
     }
   };
 

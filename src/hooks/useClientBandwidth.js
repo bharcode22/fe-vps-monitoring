@@ -171,9 +171,8 @@ export function useClientBandwidth() {
       navConn.addEventListener('change', updateFromNavConnection);
     }
 
-    // Initial speed test on startup
+    // Lightweight initial ping probe on startup (full speedtest is user-triggered only)
     const timer = setTimeout(() => {
-      runSpeedTest(250000);
       pingBackend();
     }, 1500);
 

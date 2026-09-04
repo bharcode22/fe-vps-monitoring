@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Activity, Server, Radio, Cpu, Clock, ShieldAlert, History } from 'lucide-react';
-import io from 'socket.io-client';
-import { SOCKET_URL } from '../../config';
+import { getSharedSocket } from '../../utils/socketService';
 import PodActivityTopicCards from './PodActivityTopicCards';
 import PodHeartbeatDetailTab from './PodHeartbeatDetailTab';
 import PodIncidentHistoryModal from './PodIncidentHistoryModal';
@@ -86,12 +85,10 @@ export default function PodActivityDetailPage({ pod, heartbeatSnapshot = {}, onB
     if (!pod?.id) return;
 
     const token = localStorage.getItem('vps_monitoring_token');
-    const socket = io(SOCKET_URL, {
-      transports: ['websocket', 'polling']
-    });
+    const socket = getSharedSocket();
     socketRef.current = socket;
 
-    socket.on('connect', () => {
+    const startSniffing = () => {
       // Start sniffing on this POD's MQTT broker
       socket.emit('mqtt:start-sniff', {
         token,
@@ -99,7 +96,12 @@ export default function PodActivityDetailPage({ pod, heartbeatSnapshot = {}, onB
         brokerHost: pod.host,
         brokerUrl: `tcp://${pod.host}:1883`
       });
-    });
+    };
+
+    if (socket.connected) {
+      startSniffing();
+    }
+    socket.on('connect', startSniffing);
 
     socket.on('mqtt:status', (status) => {
       setMqttStatus(status);
@@ -197,7 +199,15 @@ export default function PodActivityDetailPage({ pod, heartbeatSnapshot = {}, onB
 
     return () => {
       socket.emit('mqtt:stop-sniff');
-      socket.disconnect();
+      socket.off('connect', startSniffing);
+      socket.off('mqtt:status');
+      socket.off('mqtt:packet');
+      socket.off('pod-activity:state-changed');
+      socket.off('pod-activity:mqtt-log');
+      socket.off('pod-heartbeat:thresholds-updated');
+      socket.off('pod-heartbeat:modules-updated');
+      socket.off('mqtt:inject-success');
+      socket.off('mqtt:inject-error');
     };
   }, [pod]);
 
