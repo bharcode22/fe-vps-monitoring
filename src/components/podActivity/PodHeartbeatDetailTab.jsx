@@ -20,77 +20,18 @@ import {
   EVENT_HB_THRESHOLDS_UPDATED,
   evaluateModuleHealth
 } from '../../utils/heartbeatThresholds';
-
-// Default 9 modules template
-const DEFAULT_SERVER_MODULES = [
-  {
-    id: 501,
-    name: 'Manual Control',
-    topic: 'mod_server/501/data',
-    defaultPort: 'ttyUSB0',
-    description: 'Kontrol manual dan override input perangkat'
-  },
-  {
-    id: 502,
-    name: 'Chair Module',
-    topic: 'mod_server/502/data',
-    defaultPort: 'ttyUSB1',
-    description: 'Sensor kursi (POB), PEMF, & Schumann'
-  },
-  {
-    id: 503,
-    name: 'Lighting Module',
-    topic: 'mod_server/503/data',
-    defaultPort: 'ttyUSB4',
-    description: 'Kontrol RGB, UVC/UVB/UVA, & Strobo'
-  },
-  {
-    id: 504,
-    name: 'Olfactory Module',
-    topic: 'mod_server/504/data',
-    defaultPort: 'ttyUSB5',
-    description: 'Modul aroma wewangian & difusi'
-  },
-  {
-    id: 505,
-    name: 'Door Module',
-    topic: 'mod_server/505/data',
-    defaultPort: null,
-    description: 'Sensor status pintu & magnetic lock'
-  },
-  {
-    id: 506,
-    name: 'AirCon Module',
-    topic: 'mod_server/506/data',
-    defaultPort: null,
-    description: 'Kontrol suhu & ventilasi udara'
-  },
-  {
-    id: 507,
-    name: 'Audio Module',
-    topic: 'mod_server/507/data',
-    defaultPort: 'ttyUSB2',
-    description: 'Soundscape, voice guide, & haptic amplifier'
-  },
-  {
-    id: 508,
-    name: 'Power Module',
-    topic: 'mod_server/508/data',
-    defaultPort: 'ttyUSB3',
-    description: 'Distribusi daya, relay baterai, & proteksi'
-  },
-  {
-    id: 509,
-    name: 'Biofeedback Module',
-    topic: 'mod_server/509/data',
-    defaultPort: null,
-    description: 'Sensor GSR, detak jantung, & biometrik'
-  }
-];
+import {
+  getStoredHbModules,
+  setStoredHbModules,
+  EVENT_HB_MODULES_UPDATED
+} from '../../utils/heartbeatModules';
 
 // Helper to initialize module data map with instant snapshot / cache fallback
-function buildInitialModuleDataMap(podId, heartbeatSnapshot = {}) {
+function buildInitialModuleDataMap(podId, heartbeatSnapshot = {}, modulesList = []) {
   const initial = {};
+  const activeModules = (Array.isArray(modulesList) && modulesList.length > 0)
+    ? modulesList
+    : getStoredHbModules();
 
   // 1. Try to read snapshot from props or sessionStorage
   let snapshotPodData = heartbeatSnapshot?.[podId] || null;
@@ -115,7 +56,7 @@ function buildInitialModuleDataMap(podId, heartbeatSnapshot = {}) {
     }
   } catch (_) { }
 
-  DEFAULT_SERVER_MODULES.forEach((mod) => {
+  activeModules.forEach((mod) => {
     const snapMod = snapshotPodData?.[mod.id] || snapshotPodData?.[String(mod.id)];
     const localMod = podLocalCache?.[mod.id] || podLocalCache?.[String(mod.id)];
     const source = snapMod || localMod || {};
@@ -190,8 +131,8 @@ export default function PodHeartbeatDetailTab({
   onPublish,
   onNavigateView = null
 }) {
-  // Modules list initialized immediately from defaults without blocking
-  const [serverModules, setServerModules] = useState(DEFAULT_SERVER_MODULES);
+  // Modules list initialized immediately from dynamic cache / defaults without blocking
+  const [serverModules, setServerModules] = useState(getStoredHbModules);
 
   // Sound alert toggle (persisted in localStorage)
   const [soundAlertEnabled, setSoundAlertEnabled] = useState(() => {
@@ -314,11 +255,48 @@ export default function PodHeartbeatDetailTab({
     loadModulesConfig();
     loadThresholdsConfig();
 
+    const handleModulesChanged = (e) => {
+      if (e.detail && Array.isArray(e.detail) && e.detail.length > 0) {
+        setServerModules(e.detail);
+        setModuleDataMap((prev) => {
+          const updated = { ...prev };
+          e.detail.forEach((mod) => {
+            if (!updated[mod.id]) {
+              updated[mod.id] = {
+                id: mod.id,
+                name: mod.name,
+                topic: mod.topic,
+                hb: null,
+                version: 'v2.1',
+                date: null,
+                port: mod.defaultPort,
+                lastSeenAt: null,
+                previousHb: null,
+                lastHbChangeAt: null,
+                isFrozen: false,
+                rawPayload: null,
+                isOnline: false,
+                totalPackets: 0,
+                history: []
+              };
+            }
+          });
+          return updated;
+        });
+      }
+    };
+
     const handleThresholdsChanged = (e) => {
       if (e.detail) setThresholds(e.detail);
     };
+
+    window.addEventListener(EVENT_HB_MODULES_UPDATED, handleModulesChanged);
     window.addEventListener(EVENT_HB_THRESHOLDS_UPDATED, handleThresholdsChanged);
-    return () => window.removeEventListener(EVENT_HB_THRESHOLDS_UPDATED, handleThresholdsChanged);
+
+    return () => {
+      window.removeEventListener(EVENT_HB_MODULES_UPDATED, handleModulesChanged);
+      window.removeEventListener(EVENT_HB_THRESHOLDS_UPDATED, handleThresholdsChanged);
+    };
   }, []);
 
   const loadThresholdsConfig = async () => {
@@ -338,6 +316,7 @@ export default function PodHeartbeatDetailTab({
       const data = await fetchHeartbeatModulesApi();
       if (Array.isArray(data) && data.length > 0) {
         setServerModules(data);
+        setStoredHbModules(data);
 
         setModuleDataMap((prev) => {
           const updated = { ...prev };
@@ -573,6 +552,8 @@ export default function PodHeartbeatDetailTab({
   };
 
   // Health evaluation for all modules
+  const isPodOffline = Boolean(pod && pod.brokerConnected === false && !mqttStatus?.connected);
+
   const modulesHealthAnalysis = useMemo(() => {
     const deadList = [];
     const warningList = [];
@@ -585,34 +566,43 @@ export default function PodHeartbeatDetailTab({
       const { status, reason, elapsedSec } = health;
 
       if (status === 'DEAD') {
-        deadList.push({ mod, data, elapsedSec, reason });
+        deadList.push({ mod, data, elapsedSec, reason, isPodOffline });
       } else if (status === 'FROZEN') {
-        frozenList.push({ mod, data, elapsedSec, reason });
+        frozenList.push({ mod, data, elapsedSec, reason, isPodOffline });
       } else if (status === 'DELAY') {
-        warningList.push({ mod, data, elapsedSec, reason });
+        warningList.push({ mod, data, elapsedSec, reason, isPodOffline });
       } else {
-        healthyList.push({ mod, data, elapsedSec });
+        healthyList.push({ mod, data, elapsedSec, isPodOffline });
       }
     });
+
+    const activeDeadIssues = isPodOffline
+      ? []
+      : deadList.filter(d => d.reason !== 'Belum ada data');
+    const activeFrozenIssues = isPodOffline
+      ? []
+      : frozenList;
 
     return {
       deadList,
       warningList,
       healthyList,
       frozenList,
-      hasCriticalIssue: deadList.length > 0 || frozenList.length > 0,
-      hasWarningIssue: warningList.length > 0
+      isPodOffline,
+      hasCriticalIssue: !isPodOffline && (activeDeadIssues.length > 0 || activeFrozenIssues.length > 0),
+      hasWarningIssue: !isPodOffline && warningList.length > 0
     };
-  }, [serverModules, moduleDataMap, thresholds, nowTimestamp]);
+  }, [serverModules, moduleDataMap, thresholds, nowTimestamp, isPodOffline]);
 
-  // Trigger sound alarm ONLY if newly DEAD modules are detected
+  // Trigger sound alarm ONLY if newly DEAD modules are detected on an ONLINE pod
   useEffect(() => {
-    const currentDeadCount = modulesHealthAnalysis.deadList.length;
+    if (isPodOffline) return;
+    const currentDeadCount = modulesHealthAnalysis.deadList.filter(d => d.reason !== 'Belum ada data').length;
     if (currentDeadCount > previousDeadCountRef.current && soundAlertEnabled) {
       playAlertChime();
     }
     previousDeadCountRef.current = currentDeadCount;
-  }, [modulesHealthAnalysis.deadList.length, soundAlertEnabled]);
+  }, [modulesHealthAnalysis.deadList, soundAlertEnabled, isPodOffline]);
 
   // Total Heartbeat packets count across all modules
   const totalReceivedPackets = useMemo(() => {
@@ -659,7 +649,9 @@ export default function PodHeartbeatDetailTab({
       <PodHeartbeatIncidentBanner
         analysis={modulesHealthAnalysis}
         onPingIssues={handlePingIssues}
+        isPodOffline={isPodOffline}
       />
+
 
       {/* 2. TOOLBAR & STATS BAR */}
       <PodHeartbeatToolbar

@@ -31,19 +31,11 @@ import {
   EVENT_HB_THRESHOLDS_UPDATED,
   evaluateModuleHealth
 } from '../../utils/heartbeatThresholds';
-
-// Default fallback modules if config not yet loaded
-const DEFAULT_SERVER_MODULES = [
-  { id: 501, name: 'Manual', fullName: 'Manual Control', topic: 'mod_server/501/data', defaultPort: 'ttyUSB0' },
-  { id: 502, name: 'Chair', fullName: 'Chair Module', topic: 'mod_server/502/data', defaultPort: 'ttyUSB1' },
-  { id: 503, name: 'Lighting', fullName: 'Lighting Module', topic: 'mod_server/503/data', defaultPort: 'ttyUSB4' },
-  { id: 504, name: 'Aroma', fullName: 'Olfactory Module', topic: 'mod_server/504/data', defaultPort: 'ttyUSB5' },
-  { id: 505, name: 'Door', fullName: 'Door Module', topic: 'mod_server/505/data', defaultPort: null },
-  { id: 506, name: 'AirCon', fullName: 'AirCon Module', topic: 'mod_server/506/data', defaultPort: null },
-  { id: 507, name: 'Audio', fullName: 'Audio Module', topic: 'mod_server/507/data', defaultPort: 'ttyUSB2' },
-  { id: 508, name: 'Power', fullName: 'Power Module', topic: 'mod_server/508/data', defaultPort: 'ttyUSB3' },
-  { id: 509, name: 'Bio', fullName: 'Biofeedback Module', topic: 'mod_server/509/data', defaultPort: null }
-];
+import {
+  getStoredHbModules,
+  setStoredHbModules,
+  EVENT_HB_MODULES_UPDATED
+} from '../../utils/heartbeatModules';
 
 // Helper to get clean, short concise names for table headers
 const getModuleShortName = (mod) => {
@@ -110,8 +102,8 @@ export default function PodFleetHeartbeatMatrix({
   onSelectPod,
   onPublish
 }) {
-  // Configured server modules
-  const [serverModules, setServerModules] = useState(DEFAULT_SERVER_MODULES);
+  // Configured server modules (dynamically synchronized)
+  const [serverModules, setServerModules] = useState(getStoredHbModules);
   const [isLoadingModules, setIsLoadingModules] = useState(false);
 
   // Search & Filter state
@@ -199,11 +191,23 @@ export default function PodFleetHeartbeatMatrix({
     loadModulesConfig();
     loadThresholdsConfig();
 
+    const handleModulesChanged = (e) => {
+      if (e.detail && Array.isArray(e.detail) && e.detail.length > 0) {
+        setServerModules(e.detail);
+      }
+    };
+
     const handleThresholdsChanged = (e) => {
       if (e.detail) setThresholds(e.detail);
     };
+
+    window.addEventListener(EVENT_HB_MODULES_UPDATED, handleModulesChanged);
     window.addEventListener(EVENT_HB_THRESHOLDS_UPDATED, handleThresholdsChanged);
-    return () => window.removeEventListener(EVENT_HB_THRESHOLDS_UPDATED, handleThresholdsChanged);
+
+    return () => {
+      window.removeEventListener(EVENT_HB_MODULES_UPDATED, handleModulesChanged);
+      window.removeEventListener(EVENT_HB_THRESHOLDS_UPDATED, handleThresholdsChanged);
+    };
   }, []);
 
   const loadThresholdsConfig = async () => {
@@ -224,6 +228,7 @@ export default function PodFleetHeartbeatMatrix({
       const data = await fetchHeartbeatModulesApi();
       if (Array.isArray(data) && data.length > 0) {
         setServerModules(data);
+        setStoredHbModules(data);
       }
     } catch (err) {
       console.warn('Gagal memuat modul:', err.message);
@@ -334,6 +339,7 @@ export default function PodFleetHeartbeatMatrix({
     const deadModulesGlobalList = [];
 
     pods.forEach((pod) => {
+      const isEntirePodOffline = Boolean(pod.brokerConnected === false);
       const podModulesData = fleetModuleMap[pod.id] || {};
       let podHealthyCount = 0;
       let podDeadCount = 0;
@@ -343,35 +349,48 @@ export default function PodFleetHeartbeatMatrix({
       const moduleStatusMap = {};
 
       serverModules.forEach((mod) => {
-        totalMonitoredModules++;
         const modData = podModulesData[mod.id];
         const health = evaluateModuleHealth(modData, thresholds, nowTimestamp);
         const { status, reason, packetElapsedSec, hbElapsedSec, elapsedSec } = health;
 
+        // Hanya hitung modul termonitor jika Pod dalam keadaan online
+        if (!isEntirePodOffline) {
+          totalMonitoredModules++;
+        }
+
         if (status === 'DEAD') {
           podDeadCount++;
-          totalDeadModules++;
-          deadModulesGlobalList.push({
-            pod,
-            mod,
-            elapsedSec,
-            reason
-          });
+          // Pod offline TIDAK dimasukkan ke banner insiden dan alarm modular
+          if (!isEntirePodOffline && reason !== 'Belum ada data') {
+            totalDeadModules++;
+            deadModulesGlobalList.push({
+              pod,
+              mod,
+              elapsedSec,
+              reason
+            });
+          }
         } else if (status === 'FROZEN') {
           podFrozenCount++;
-          totalFrozenModules++;
-          deadModulesGlobalList.push({
-            pod,
-            mod,
-            elapsedSec,
-            reason
-          });
+          if (!isEntirePodOffline) {
+            totalFrozenModules++;
+            deadModulesGlobalList.push({
+              pod,
+              mod,
+              elapsedSec,
+              reason
+            });
+          }
         } else if (status === 'DELAY') {
           podDelayCount++;
-          totalDelayedModules++;
+          if (!isEntirePodOffline) {
+            totalDelayedModules++;
+          }
         } else {
           podHealthyCount++;
-          totalHealthyModules++;
+          if (!isEntirePodOffline) {
+            totalHealthyModules++;
+          }
         }
 
         moduleStatusMap[mod.id] = {
@@ -384,12 +403,16 @@ export default function PodFleetHeartbeatMatrix({
         };
       });
 
-      const hasCriticalIssue = podDeadCount > 0 || podFrozenCount > 0;
-      const hasWarningIssue = podDelayCount > 0;
-      const is100PercentHealthy = podHealthyCount === serverModules.length;
+      // Pod offline tidak dihitung sebagai critical issue modul individual
+      const hasCriticalIssue = !isEntirePodOffline && (
+        Object.values(moduleStatusMap).some(m => (m.status === 'DEAD' && m.reason !== 'Belum ada data') || m.status === 'FROZEN')
+      );
+      const hasWarningIssue = !isEntirePodOffline && podDelayCount > 0;
+      const is100PercentHealthy = !isEntirePodOffline && podHealthyCount === serverModules.length;
 
       podsHealthList.push({
         pod,
+        isEntirePodOffline,
         moduleStatusMap,
         podHealthyCount,
         podDeadCount,
@@ -445,9 +468,10 @@ export default function PodFleetHeartbeatMatrix({
 
   // Filtered Pod list for matrix display
   const filteredPodsHealthList = useMemo(() => {
-    return fleetAnalysis.podsHealthList.filter(({ pod, hasCriticalIssue, is100PercentHealthy }) => {
+    return fleetAnalysis.podsHealthList.filter(({ pod, isEntirePodOffline, hasCriticalIssue, is100PercentHealthy }) => {
       if (fleetFilter === 'ISSUES_ONLY' && !hasCriticalIssue) return false;
       if (fleetFilter === 'HEALTHY_ONLY' && !is100PercentHealthy) return false;
+      if (fleetFilter === 'ONLINE_ONLY' && isEntirePodOffline) return false;
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
@@ -460,6 +484,7 @@ export default function PodFleetHeartbeatMatrix({
       return true;
     });
   }, [fleetAnalysis.podsHealthList, fleetFilter, searchQuery]);
+
 
   return (
     <div className="flex flex-col gap-6 w-full animate-in fade-in duration-200">
@@ -601,6 +626,15 @@ export default function PodFleetHeartbeatMatrix({
                 }`}
             >
               Semua Pod ({pods.length})
+            </button>
+            <button
+              onClick={() => setFleetFilter('ONLINE_ONLY')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${fleetFilter === 'ONLINE_ONLY'
+                ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+                }`}
+            >
+              Pod Online ({fleetAnalysis.podsHealthList.filter((p) => !p.isEntirePodOffline).length})
             </button>
             <button
               onClick={() => setFleetFilter('ISSUES_ONLY')}

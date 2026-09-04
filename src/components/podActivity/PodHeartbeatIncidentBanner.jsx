@@ -1,10 +1,20 @@
 import React from 'react';
 import { ShieldAlert, AlertCircle, RefreshCw } from 'lucide-react';
 
-export default function PodHeartbeatIncidentBanner({ analysis, onPingIssues }) {
+export default function PodHeartbeatIncidentBanner({ analysis, onPingIssues, isPodOffline = false }) {
+  if (isPodOffline) return null;
   if (!analysis?.hasCriticalIssue) return null;
 
-  const issueList = [...(analysis.deadList || []), ...(analysis.frozenList || [])];
+  const rawList = [...(analysis.deadList || []), ...(analysis.frozenList || [])];
+  // Modul dari pod offline atau yang belum pernah mengirim data sama sekali tidak ditampilkan di banner insiden
+  const issueList = rawList.filter((item) => {
+    if (item.isPodOffline) return false;
+    if (item.reason === 'Belum ada data') return false;
+    return true;
+  });
+
+  if (issueList.length === 0) return null;
+
 
   return (
     <div className="p-3.5 sm:p-4 bg-gradient-to-r from-rose-950/90 via-slate-900/95 to-rose-950/90 border border-rose-500/60 rounded-2xl backdrop-blur-md shadow-xl shadow-rose-500/15 flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 ring-1 ring-rose-500/30 animate-in fade-in duration-200">

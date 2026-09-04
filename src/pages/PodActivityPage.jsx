@@ -16,8 +16,11 @@ import PodActivityCardGrid from '../components/podActivity/PodActivityCardGrid';
 import PodActivityTableView from '../components/podActivity/PodActivityTableView';
 import PodActivityDetailPage from '../components/podActivity/PodActivityDetailPage';
 import PodFleetHeartbeatMatrix from '../components/podActivity/PodFleetHeartbeatMatrix';
+import { setStoredHbModules } from '../utils/heartbeatModules';
+import { setStoredHbThresholds } from '../utils/heartbeatThresholds';
 
 export default function PodActivityPage({ onBack, onNavigateView = null }) {
+
   const socketRef = useRef(null);
   const [data, setData] = useState({ summary: {}, pods: [], recentLogs: [] });
   const [isLoading, setIsLoading] = useState(true);
@@ -132,7 +135,27 @@ export default function PodActivityPage({ onBack, onNavigateView = null }) {
     socket.on('pod-activity:initial', (initialData) => {
       if (initialData) {
         setData(initialData);
+        if (Array.isArray(initialData.modulesConfig)) {
+          setStoredHbModules(initialData.modulesConfig);
+        }
+        if (initialData.thresholdsConfig && typeof initialData.thresholdsConfig === 'object') {
+          setStoredHbThresholds(initialData.thresholdsConfig);
+        }
         setIsLoading(false);
+      }
+    });
+
+    // When modules config is updated (added/edited/deleted) by any admin
+    socket.on('pod-heartbeat:modules-updated', (newModules) => {
+      if (Array.isArray(newModules) && newModules.length > 0) {
+        setStoredHbModules(newModules);
+      }
+    });
+
+    // When thresholds config is updated by any admin
+    socket.on('pod-heartbeat:thresholds-updated', (newThresholds) => {
+      if (newThresholds && typeof newThresholds === 'object') {
+        setStoredHbThresholds(newThresholds);
       }
     });
 
@@ -201,6 +224,12 @@ export default function PodActivityPage({ onBack, onNavigateView = null }) {
     try {
       const res = await fetchPodActivityStatusApi();
       setData(res);
+      if (Array.isArray(res?.modulesConfig)) {
+        setStoredHbModules(res.modulesConfig);
+      }
+      if (res?.thresholdsConfig && typeof res.thresholdsConfig === 'object') {
+        setStoredHbThresholds(res.thresholdsConfig);
+      }
     } catch (err) {
       setError(err.message || 'Gagal memuat status aktivitas POD');
     } finally {
@@ -208,6 +237,7 @@ export default function PodActivityPage({ onBack, onNavigateView = null }) {
       setIsRefreshing(false);
     }
   };
+
 
   const handleReconnectMqtt = async () => {
     setIsRefreshing(true);

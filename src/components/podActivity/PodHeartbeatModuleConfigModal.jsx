@@ -16,6 +16,7 @@ import {
   saveHeartbeatModulesApi,
   resetHeartbeatModulesApi
 } from '../../api/podActivityApi';
+import { setStoredHbModules } from '../../utils/heartbeatModules';
 
 export default function PodHeartbeatModuleConfigModal({
   isOpen,
@@ -146,6 +147,7 @@ export default function PodHeartbeatModuleConfigModal({
       const res = await saveHeartbeatModulesApi(payload);
       const savedData = res.data || payload;
 
+      setStoredHbModules(savedData);
       setModulesList(savedData);
       setJsonText(JSON.stringify(savedData, null, 2));
       showToast('Konfigurasi modul berhasil disimpan ke file JSON backend!');
@@ -175,6 +177,7 @@ export default function PodHeartbeatModuleConfigModal({
       const res = await resetHeartbeatModulesApi();
       const defaultData = res.data || [];
 
+      setStoredHbModules(defaultData);
       setModulesList(defaultData);
       setJsonText(JSON.stringify(defaultData, null, 2));
       showToast('Konfigurasi modul berhasil direset ke 9 modul default!');
