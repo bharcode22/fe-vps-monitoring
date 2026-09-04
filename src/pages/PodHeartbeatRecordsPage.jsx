@@ -268,11 +268,15 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
   };
 
   // Trigger file download
-  const handleTriggerDownload = (format = 'json') => {
+  const handleTriggerDownload = (format = 'json', customModuleId = undefined) => {
     if (!selectedPodId) return;
+    const effectiveModuleId = customModuleId !== undefined
+      ? (customModuleId !== 'ALL' ? customModuleId : undefined)
+      : (selectedModuleFilter !== 'ALL' ? selectedModuleFilter : undefined);
+
     const downloadUrl = getPodHeartbeatsDownloadUrl(selectedPodId, {
       date: selectedDate,
-      moduleId: selectedModuleFilter !== 'ALL' ? selectedModuleFilter : undefined,
+      moduleId: effectiveModuleId,
       startTime: startTime || undefined,
       endTime: endTime || undefined,
       format
@@ -366,6 +370,7 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
                     isLoadingFiles={isLoadingFiles}
                     onSelectCategory={setActiveCategory}
                     onSelectDate={setSelectedDate}
+                    onSelectModule={setSelectedModuleFilter}
                     onViewModeChange={setViewMode}
                     onTriggerDownload={handleTriggerDownload}
                   />

@@ -34,7 +34,7 @@ function parseOccupancy(payload) {
   return null;
 }
 
-export default function PodActivityDetailPage({ pod, onBack, onNavigateView = null }) {
+export default function PodActivityDetailPage({ pod, heartbeatSnapshot = {}, onBack, onNavigateView = null }) {
   const [activeTab, setActiveTab] = useState(() => {
     try {
       const saved = localStorage.getItem('vps_pod_detail_active_tab');
@@ -318,6 +318,7 @@ export default function PodActivityDetailPage({ pod, onBack, onNavigateView = nu
         <PodHeartbeatDetailTab
           pod={pod}
           feed={mqttActivityFeed}
+          heartbeatSnapshot={heartbeatSnapshot}
           mqttStatus={mqttStatus}
           thresholds={thresholds}
           onThresholdsUpdated={setThresholds}

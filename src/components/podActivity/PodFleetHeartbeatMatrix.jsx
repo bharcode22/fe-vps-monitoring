@@ -158,7 +158,7 @@ export default function PodFleetHeartbeatMatrix({
           return parsed;
         }
       }
-    } catch (_) {}
+    } catch (_) { }
     return heartbeatSnapshot || {};
   });
 
@@ -179,7 +179,7 @@ export default function PodFleetHeartbeatMatrix({
         }
         try {
           sessionStorage.setItem('vps_fleet_heartbeat_snapshot', JSON.stringify(merged));
-        } catch (_) {}
+        } catch (_) { }
         return merged;
       });
     }
@@ -306,7 +306,7 @@ export default function PodFleetHeartbeatMatrix({
 
         try {
           sessionStorage.setItem('vps_fleet_heartbeat_snapshot', JSON.stringify(nextState));
-        } catch (_) {}
+        } catch (_) { }
 
         return nextState;
       });
@@ -465,51 +465,45 @@ export default function PodFleetHeartbeatMatrix({
     <div className="flex flex-col gap-6 w-full animate-in fade-in duration-200">
       {/* 1. CRITICAL INCIDENT BANNER (FLEET-WIDE) */}
       {fleetAnalysis.hasCriticalFleetIssue && (
-        <div className="p-5 bg-gradient-to-r from-rose-950/90 via-slate-900/95 to-rose-950/90 border-2 border-rose-500 rounded-2xl backdrop-blur-md shadow-2xl shadow-rose-500/25 flex flex-col lg:flex-row lg:items-center justify-between gap-4 ring-2 ring-rose-500/30 animate-in slide-in-from-top-3 duration-200">
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-rose-500/25 border border-rose-500/40 text-rose-400 rounded-2xl shrink-0 animate-pulse">
-              <ShieldAlert size={28} />
+        <div className="p-3.5 sm:p-4 bg-gradient-to-r from-rose-950/90 via-slate-900/95 to-rose-950/90 border border-rose-500/60 rounded-2xl backdrop-blur-md shadow-xl shadow-rose-500/15 flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 ring-1 ring-rose-500/30 animate-in fade-in duration-200">
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="p-2.5 bg-rose-500/25 border border-rose-500/40 text-rose-400 rounded-xl shrink-0 animate-pulse">
+              <ShieldAlert size={22} />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-black text-rose-300 uppercase tracking-wider flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-rose-400 animate-ping" />
-                  PERINGATAN DINI: {fleetAnalysis.deadModulesGlobalList.length} MODUL MATI PADA FLEET POD!
-                </h3>
-              </div>
-              <p className="text-xs text-rose-200/90 mt-1 font-medium">
-                Ditemukan modul yang kehilangan detak heartbeat (&gt;12s). Segera periksa koneksi kabel USB & daya hardware pada unit berikut:
+              <h3 className="text-xs sm:text-sm font-black text-rose-300 uppercase tracking-wider flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-rose-400 animate-ping" />
+                PERINGATAN DINI: {fleetAnalysis.deadModulesGlobalList.length} MODUL MATI PADA FLEET
+              </h3>
+              <p className="text-[11px] text-rose-200/80 font-medium hidden sm:block">
+                Kehilangan detak heartbeat (&gt;12s). Periksa koneksi kabel USB & daya hardware unit:
               </p>
-              {/* Badges of Dead Modules with Pod Names */}
-              <div className="flex flex-wrap gap-2 mt-3 max-h-32 overflow-y-auto pr-1">
-                {fleetAnalysis.deadModulesGlobalList.slice(0, 12).map(({ pod, mod, elapsedSec, reason }, idx) => (
-                  <span
-                    key={idx}
-                    onClick={() => onSelectPod && onSelectPod(pod)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono font-black bg-rose-500/20 text-rose-200 border border-rose-500/50 hover:bg-rose-500/30 cursor-pointer shadow-sm transition"
-                    title={`Klik untuk buka detail ${pod.name}`}
-                  >
-                    <AlertCircle size={13} className="text-rose-400" />
-                    <span>{pod.name} → {mod.name} (ID: {mod.id})</span>
-                    <span className="text-rose-300 font-normal">[{reason}]</span>
-                  </span>
-                ))}
-                {fleetAnalysis.deadModulesGlobalList.length > 12 && (
-                  <span className="text-xs font-bold text-rose-300 self-center">
-                    +{fleetAnalysis.deadModulesGlobalList.length - 12} modul lainnya...
-                  </span>
-                )}
-              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0 self-end lg:self-center">
+          {/* Badges of Dead Modules with Pod Names (Single Row Horizontal Scroll, Zero Layout Shift) */}
+          <div className="flex items-center gap-2 overflow-x-auto py-1 max-w-full lg:max-w-xl xl:max-w-2xl scrollbar-thin scrollbar-thumb-rose-500/30 scrollbar-track-transparent pr-1">
+            {fleetAnalysis.deadModulesGlobalList.map(({ pod, mod, elapsedSec, reason }, idx) => (
+              <span
+                key={idx}
+                onClick={() => onSelectPod && onSelectPod(pod)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-rose-500/20 text-rose-200 border border-rose-500/50 hover:bg-rose-500/35 cursor-pointer shadow-sm transition shrink-0 whitespace-nowrap select-none"
+                title={`Klik untuk buka detail ${pod.name}`}
+              >
+                <AlertCircle size={12} className="text-rose-400 shrink-0" />
+                <span>{pod.name} → {mod.name} (ID: {mod.id})</span>
+                <span className="text-rose-300 font-normal tabular-nums">[{reason}]</span>
+              </span>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 self-end lg:self-center">
             <button
               onClick={handlePingAllDeadModules}
               disabled={pingLoading}
-              className="px-5 py-2.5 bg-rose-600 hover:bg-rose-500 active:scale-95 text-white font-black text-xs rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              className="px-3.5 py-2 bg-rose-600 hover:bg-rose-500 active:scale-95 text-white font-black text-xs rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50 whitespace-nowrap"
             >
-              <RefreshCw size={14} className={pingLoading ? 'animate-spin' : ''} />
+              <RefreshCw size={13} className={pingLoading ? 'animate-spin' : ''} />
               <span>Ping Semua Modul Mati</span>
             </button>
           </div>

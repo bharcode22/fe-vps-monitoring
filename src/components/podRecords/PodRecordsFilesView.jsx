@@ -5,7 +5,9 @@ import {
   FolderOpen,
   FileCode,
   Eye,
-  Download
+  Download,
+  Calendar,
+  Layers
 } from 'lucide-react';
 
 export default function PodRecordsFilesView({
@@ -13,6 +15,7 @@ export default function PodRecordsFilesView({
   isLoadingFiles,
   onSelectCategory,
   onSelectDate,
+  onSelectModule,
   onViewModeChange,
   onTriggerDownload
 }) {
@@ -89,8 +92,13 @@ export default function PodRecordsFilesView({
                     return (
                       <tr key={idx} className="hover:bg-slate-800/40 transition-colors">
                         <td className="py-3 px-4 font-bold text-white flex items-center gap-2 whitespace-nowrap">
-                          <FileCode size={15} className="text-cyan-400 shrink-0" />
+                          <FileCode size={15} className={file.type === 'heartbeats' ? 'text-cyan-400 shrink-0' : file.type === 'events' ? 'text-amber-400 shrink-0' : 'text-emerald-400 shrink-0'} />
                           <span>{file.name}</span>
+                          {file.moduleId && (
+                            <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono text-[10px] border border-cyan-500/40">
+                              Mod {file.moduleId}
+                            </span>
+                          )}
                         </td>
                         <td className="py-3 px-4 whitespace-nowrap font-sans">
                           <span
@@ -120,7 +128,10 @@ export default function PodRecordsFilesView({
                               <button
                                 onClick={() => {
                                   onSelectCategory(file.type);
-                                  onSelectDate(file.date);
+                                  if (file.date) onSelectDate(file.date);
+                                  if (onSelectModule) {
+                                    onSelectModule(file.moduleId !== undefined && file.moduleId !== null ? file.moduleId : 'ALL');
+                                  }
                                   onViewModeChange('table');
                                 }}
                                 className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 font-sans text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer"
@@ -134,6 +145,9 @@ export default function PodRecordsFilesView({
                               onClick={() => {
                                 onSelectCategory(file.type);
                                 if (file.date) onSelectDate(file.date);
+                                if (onSelectModule) {
+                                  onSelectModule(file.moduleId !== undefined && file.moduleId !== null ? file.moduleId : 'ALL');
+                                }
                                 onViewModeChange('json');
                               }}
                               className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-sans text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer"
@@ -145,8 +159,8 @@ export default function PodRecordsFilesView({
                             {file.type === 'heartbeats' && (
                               <button
                                 onClick={() => {
-                                  onSelectDate(file.date);
-                                  onTriggerDownload('json');
+                                  if (file.date) onSelectDate(file.date);
+                                  onTriggerDownload('json', file.moduleId !== undefined && file.moduleId !== null ? file.moduleId : undefined);
                                 }}
                                 className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 transition-all cursor-pointer"
                                 title="Unduh .json berkas ini"
