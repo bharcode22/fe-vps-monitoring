@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { X, Terminal, RefreshCw, Copy, Check, AlertCircle, Radio, Play, Square } from 'lucide-react';
-import { io } from 'socket.io-client';
-import { SOCKET_URL } from '../../config';
+import { getSharedSocket } from '../../utils/socketService';
 import { fetchDockerLogsApi } from '../../api/vpsApi';
 
 export default function DockerLogModal({ isOpen, onClose, serverId, containerName, autoStream = false }) {
@@ -59,14 +58,19 @@ export default function DockerLogModal({ isOpen, onClose, serverId, containerNam
     setLogs(`=== LIVE STREAMING STARTED: docker logs -f --tail 100 ${containerName} ===\n`);
 
     const token = localStorage.getItem('vps_monitoring_token') || '';
-    const socket = io(SOCKET_URL);
+    const socket = getSharedSocket();
     socketRef.current = socket;
 
-    socket.on('connect', () => {
+    const startStreamRequest = () => {
       socket.emit('docker:start-stream', { serverId, containerName, token });
       setLoading(false);
       setIsStreaming(true);
-    });
+    };
+
+    if (socket.connected) {
+      startStreamRequest();
+    }
+    socket.on('connect', startStreamRequest);
 
     socket.on('docker:stream-data', (data) => {
       if (data && data.chunk) {
@@ -92,7 +96,9 @@ export default function DockerLogModal({ isOpen, onClose, serverId, containerNam
   const stopStreaming = () => {
     if (socketRef.current) {
       socketRef.current.emit('docker:stop-stream');
-      socketRef.current.disconnect();
+      socketRef.current.off('docker:stream-data');
+      socketRef.current.off('docker:stream-error');
+      socketRef.current.off('docker:stream-ended');
       socketRef.current = null;
     }
     setIsStreaming(false);

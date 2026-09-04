@@ -34,7 +34,13 @@ function parseOccupancy(payload) {
   return null;
 }
 
-export default function PodActivityDetailPage({ pod, heartbeatSnapshot = {}, onBack, onNavigateView = null }) {
+export default function PodActivityDetailPage({
+  pod,
+  heartbeatSnapshot = {},
+  batchedHeartbeat = null,
+  onBack,
+  onNavigateView = null
+}) {
   const [activeTab, setActiveTab] = useState(() => {
     try {
       const saved = localStorage.getItem('vps_pod_detail_active_tab');
@@ -43,6 +49,13 @@ export default function PodActivityDetailPage({ pod, heartbeatSnapshot = {}, onB
     return 'heartbeat';
   });
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [localBatchedHeartbeat, setLocalBatchedHeartbeat] = useState(batchedHeartbeat);
+
+  useEffect(() => {
+    if (batchedHeartbeat) {
+      setLocalBatchedHeartbeat(batchedHeartbeat);
+    }
+  }, [batchedHeartbeat]);
 
   useEffect(() => {
     try {
@@ -88,6 +101,21 @@ export default function PodActivityDetailPage({ pod, heartbeatSnapshot = {}, onB
     const socket = getSharedSocket();
     socketRef.current = socket;
 
+    // High-performance buffered packet accumulator (prevents DOM thrashing)
+    const packetBuffer = [];
+    let flushTimer = null;
+    const scheduleFlush = () => {
+      if (!flushTimer) {
+        flushTimer = setTimeout(() => {
+          flushTimer = null;
+          if (packetBuffer.length > 0) {
+            const items = packetBuffer.splice(0, packetBuffer.length);
+            setMqttActivityFeed((prev) => [...items.reverse(), ...prev].slice(0, 500));
+          }
+        }, 200);
+      }
+    };
+
     const startSniffing = () => {
       // Start sniffing on this POD's MQTT broker
       socket.emit('mqtt:start-sniff', {
@@ -103,11 +131,11 @@ export default function PodActivityDetailPage({ pod, heartbeatSnapshot = {}, onB
     }
     socket.on('connect', startSniffing);
 
-    socket.on('mqtt:status', (status) => {
+    const handleStatus = (status) => {
       setMqttStatus(status);
-    });
+    };
 
-    socket.on('mqtt:packet', (packet) => {
+    const handlePacket = (packet) => {
       if (packet.topic) {
         const match = packet.topic.match(/^(pod\/[^/]+\/(?:2\.0\/)?)/);
         if (match) {
@@ -121,93 +149,90 @@ export default function PodActivityDetailPage({ pod, heartbeatSnapshot = {}, onB
         }
       }
 
-      // Format the packet to match what PodActivityTopicCards expects:
-      // { topic: string, payload: string, timestamp: number, serverId: number, serverName: string }
-      setMqttActivityFeed((prev) => {
-        const newLog = {
-          topic: packet.topic,
-          payload: packet.payload,
-          timestamp: packet.timestamp || Date.now(),
-          serverId: pod.id,
-          serverName: pod.name
-        };
-        return [newLog, ...prev].slice(0, 500); // Keep last 500 logs
+      // Buffer packet for smooth UI rendering
+      packetBuffer.push({
+        topic: packet.topic,
+        payload: packet.payload,
+        timestamp: packet.timestamp || Date.now(),
+        serverId: pod.id,
+        serverName: pod.name
       });
-    });
+      scheduleFlush();
+    };
 
-    // Listen to background pod activity state change events
-    socket.on('pod-activity:state-changed', (eventPayload) => {
+    const handleStateChanged = (eventPayload) => {
       const { pod: updatedPod } = eventPayload || {};
       if (updatedPod && updatedPod.id === pod.id) {
         if (updatedPod.stateValue !== undefined && updatedPod.stateValue !== null) {
           setOccupancyState(updatedPod.stateValue);
         }
         if (updatedPod.lastTopic && updatedPod.lastPayload !== undefined) {
-          setMqttActivityFeed((prev) => {
-            const newLog = {
-              topic: updatedPod.lastTopic,
-              payload: updatedPod.lastPayload,
-              timestamp: Date.now(),
-              serverId: pod.id,
-              serverName: pod.name
-            };
-            return [newLog, ...prev].slice(0, 500);
+          packetBuffer.push({
+            topic: updatedPod.lastTopic,
+            payload: updatedPod.lastPayload,
+            timestamp: Date.now(),
+            serverId: pod.id,
+            serverName: pod.name
           });
+          scheduleFlush();
         }
       }
-    });
+    };
 
-    // Listen to raw background MQTT log events for this pod
-    socket.on('pod-activity:mqtt-log', (logEntry) => {
+    const handleMqttLog = (logEntry) => {
       if (logEntry && logEntry.serverId === pod.id) {
         if (logEntry.topic && logEntry.topic.includes('pob_state')) {
           const occ = parseOccupancy(logEntry.payload);
           if (occ !== null) setOccupancyState(occ);
         }
-        setMqttActivityFeed((prev) => {
-          const newLog = {
-            topic: logEntry.topic,
-            payload: logEntry.payload,
-            timestamp: logEntry.timestamp ? new Date(logEntry.timestamp).getTime() : Date.now(),
-            serverId: pod.id,
-            serverName: pod.name
-          };
-          return [newLog, ...prev].slice(0, 500);
+        packetBuffer.push({
+          topic: logEntry.topic,
+          payload: logEntry.payload,
+          timestamp: logEntry.timestamp ? new Date(logEntry.timestamp).getTime() : Date.now(),
+          serverId: pod.id,
+          serverName: pod.name
         });
+        scheduleFlush();
       }
-    });
+    };
 
-    socket.on('pod-heartbeat:thresholds-updated', (newThresholds) => {
+    const handleThresholds = (newThresholds) => {
       if (newThresholds && typeof newThresholds === 'object') {
         setStoredHbThresholds(newThresholds);
       }
-    });
+    };
 
-    socket.on('pod-heartbeat:modules-updated', (newModules) => {
+    const handleModules = (newModules) => {
       if (Array.isArray(newModules) && newModules.length > 0) {
         setStoredHbModules(newModules);
       }
-    });
+    };
 
-    socket.on('mqtt:inject-success', (res) => {
-      console.log('Successfully injected packet:', res);
-    });
+    const handleBatchHeartbeat = (batch) => {
+      if (batch && typeof batch === 'object') {
+        setLocalBatchedHeartbeat(batch);
+      }
+    };
 
-    socket.on('mqtt:inject-error', (err) => {
-      console.error('Failed to inject packet:', err);
-    });
+    socket.on('mqtt:status', handleStatus);
+    socket.on('mqtt:packet', handlePacket);
+    socket.on('pod-activity:state-changed', handleStateChanged);
+    socket.on('pod-activity:mqtt-log', handleMqttLog);
+    socket.on('pod-heartbeat:thresholds-updated', handleThresholds);
+    socket.on('pod-heartbeat:modules-updated', handleModules);
+    socket.on('pod-heartbeat:batch-update', handleBatchHeartbeat);
 
     return () => {
+      if (flushTimer) clearTimeout(flushTimer);
       socket.emit('mqtt:stop-sniff');
       socket.off('connect', startSniffing);
-      socket.off('mqtt:status');
-      socket.off('mqtt:packet');
-      socket.off('pod-activity:state-changed');
-      socket.off('pod-activity:mqtt-log');
-      socket.off('pod-heartbeat:thresholds-updated');
-      socket.off('pod-heartbeat:modules-updated');
-      socket.off('mqtt:inject-success');
-      socket.off('mqtt:inject-error');
+      socket.off('mqtt:status', handleStatus);
+      socket.off('mqtt:packet', handlePacket);
+      socket.off('pod-activity:state-changed', handleStateChanged);
+      socket.off('pod-activity:mqtt-log', handleMqttLog);
+      socket.off('pod-heartbeat:thresholds-updated', handleThresholds);
+      socket.off('pod-heartbeat:modules-updated', handleModules);
+      socket.off('pod-heartbeat:batch-update', handleBatchHeartbeat);
     };
   }, [pod]);
 
@@ -341,6 +366,7 @@ export default function PodActivityDetailPage({ pod, heartbeatSnapshot = {}, onB
         <PodHeartbeatDetailTab
           pod={pod}
           feed={mqttActivityFeed}
+          batchedHeartbeat={localBatchedHeartbeat || batchedHeartbeat}
           heartbeatSnapshot={heartbeatSnapshot}
           mqttStatus={mqttStatus}
           thresholds={thresholds}

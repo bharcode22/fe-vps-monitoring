@@ -124,6 +124,7 @@ function playAlertChime() {
 export default function PodHeartbeatDetailTab({
   pod,
   feed = [],
+  batchedHeartbeat = null,
   heartbeatSnapshot = {},
   mqttStatus = { connected: false },
   thresholds: propThresholds,
@@ -356,7 +357,92 @@ export default function PodHeartbeatDetailTab({
     return () => clearInterval(timer);
   }, []);
 
-  // Parse incoming MQTT feed specifically for mod_server/<id>/data and hb values
+  // High-performance batched heartbeat ingestion (1x per second)
+  useEffect(() => {
+    if (!pod?.id || !batchedHeartbeat || typeof batchedHeartbeat !== 'object') return;
+    const podBatch = batchedHeartbeat[pod.id] || batchedHeartbeat[String(pod.id)];
+    if (!podBatch || typeof podBatch !== 'object' || Object.keys(podBatch).length === 0) return;
+
+    const nowTime = Date.now();
+    const newFlashing = {};
+
+    setModuleDataMap((prev) => {
+      const updated = { ...prev };
+      let changed = false;
+
+      for (const [modIdStr, tick] of Object.entries(podBatch)) {
+        const modId = Number(modIdStr);
+        const currentMod = updated[modId] || {
+          id: modId,
+          name: `Module ${modId}`,
+          topic: `mod_server/${modId}/data`,
+          port: null,
+          history: [],
+          totalPackets: 0,
+          previousHb: null,
+          lastHbChangeAt: tick.timestamp || nowTime,
+          isFrozen: false
+        };
+
+        const currentHbNum = (currentMod.hb !== null && currentMod.hb !== undefined && !isNaN(Number(currentMod.hb)))
+          ? Number(currentMod.hb)
+          : null;
+        const newHbNum = (tick.hb !== null && tick.hb !== undefined && !isNaN(Number(tick.hb)))
+          ? Number(tick.hb)
+          : null;
+
+        const hasHbChanged = currentHbNum !== null && newHbNum !== null && currentHbNum !== newHbNum;
+        if (hasHbChanged) {
+          newFlashing[modId] = true;
+        }
+
+        const lastHbChangeAt = hasHbChanged ? (tick.timestamp || nowTime) : (currentMod.lastHbChangeAt || nowTime);
+        const isFrozen = !hasHbChanged && ((tick.timestamp || nowTime) - lastHbChangeAt > 3000);
+
+        const newHistory = newHbNum !== null
+          ? [newHbNum, ...(currentMod.history || []).slice(0, 7)]
+          : currentMod.history;
+
+        updated[modId] = {
+          ...currentMod,
+          hb: newHbNum !== null ? newHbNum : currentMod.hb,
+          previousHb: currentMod.hb,
+          lastHbChangeAt,
+          isFrozen,
+          port: tick.port || currentMod.port,
+          date: new Date(tick.timestamp || nowTime).toLocaleTimeString('id-ID', { hour12: false }),
+          lastSeenAt: tick.timestamp || nowTime,
+          isOnline: true,
+          totalPackets: (currentMod.totalPackets || 0) + 1,
+          history: newHistory
+        };
+        changed = true;
+      }
+
+      if (changed) {
+        try {
+          sessionStorage.setItem(`vps_pod_hb_${pod.id}`, JSON.stringify(updated));
+        } catch (_) { }
+        return updated;
+      }
+      return prev;
+    });
+
+    if (Object.keys(newFlashing).length > 0) {
+      setFlashingCards((prev) => ({ ...prev, ...newFlashing }));
+      setTimeout(() => {
+        setFlashingCards((prev) => {
+          const reset = { ...prev };
+          for (const key of Object.keys(newFlashing)) {
+            reset[key] = false;
+          }
+          return reset;
+        });
+      }, 500);
+    }
+  }, [pod?.id, batchedHeartbeat]);
+
+  // Parse incoming MQTT feed specifically for mod_server/<id>/data and hb values (fallback)
   useEffect(() => {
     if (!feed || feed.length === 0) return;
 

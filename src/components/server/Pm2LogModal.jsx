@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { X, Terminal, RefreshCw, Copy, Check, AlertCircle, Radio } from 'lucide-react';
-import { io } from 'socket.io-client';
-import { SOCKET_URL } from '../../config';
+import { getSharedSocket } from '../../utils/socketService';
 import { fetchPm2LogsApi } from '../../api/vpsApi';
 
 export default function Pm2LogModal({ isOpen, onClose, serverId, appName }) {
@@ -54,14 +53,19 @@ export default function Pm2LogModal({ isOpen, onClose, serverId, appName }) {
     setLogs(`=== LIVE STREAMING STARTED: pm2 logs ${appName} ===\n`);
 
     const token = localStorage.getItem('vps_monitoring_token') || '';
-    const socket = io(SOCKET_URL);
+    const socket = getSharedSocket();
     socketRef.current = socket;
 
-    socket.on('connect', () => {
+    const startStreamRequest = () => {
       socket.emit('pm2:start-stream', { serverId, appName, token });
       setLoading(false);
       setIsStreaming(true);
-    });
+    };
+
+    if (socket.connected) {
+      startStreamRequest();
+    }
+    socket.on('connect', startStreamRequest);
 
     socket.on('pm2:stream-data', (data) => {
       if (data && data.chunk) {
@@ -87,7 +91,9 @@ export default function Pm2LogModal({ isOpen, onClose, serverId, appName }) {
   const stopStreaming = () => {
     if (socketRef.current) {
       socketRef.current.emit('pm2:stop-stream');
-      socketRef.current.disconnect();
+      socketRef.current.off('pm2:stream-data');
+      socketRef.current.off('pm2:stream-error');
+      socketRef.current.off('pm2:stream-ended');
       socketRef.current = null;
     }
     setIsStreaming(false);

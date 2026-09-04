@@ -382,6 +382,7 @@ export default function PodActivityPage({ onBack, onNavigateView = null }) {
       <PodActivityDetailPage
         pod={selectedPodForTopicModal}
         heartbeatSnapshot={data.heartbeatSnapshot || {}}
+        batchedHeartbeat={latestBatchedHeartbeat}
         onBack={() => setSelectedPodForTopicModal(null)}
         onNavigateView={onNavigateView}
       />
