@@ -18,6 +18,7 @@ import PodActivityDetailPage from '../components/podActivity/PodActivityDetailPa
 import PodFleetHeartbeatMatrix from '../components/podActivity/PodFleetHeartbeatMatrix';
 import { setStoredHbModules } from '../utils/heartbeatModules';
 import { setStoredHbThresholds } from '../utils/heartbeatThresholds';
+import { setStoredTelegramConfig } from '../utils/telegramAlert';
 
 export default function PodActivityPage({ onBack, onNavigateView = null }) {
 
@@ -141,6 +142,9 @@ export default function PodActivityPage({ onBack, onNavigateView = null }) {
         if (initialData.thresholdsConfig && typeof initialData.thresholdsConfig === 'object') {
           setStoredHbThresholds(initialData.thresholdsConfig);
         }
+        if (initialData.telegramConfig && typeof initialData.telegramConfig === 'object') {
+          setStoredTelegramConfig(initialData.telegramConfig);
+        }
         setIsLoading(false);
       }
     });
@@ -156,6 +160,13 @@ export default function PodActivityPage({ onBack, onNavigateView = null }) {
     socket.on('pod-heartbeat:thresholds-updated', (newThresholds) => {
       if (newThresholds && typeof newThresholds === 'object') {
         setStoredHbThresholds(newThresholds);
+      }
+    });
+
+    // When telegram alert config is toggled or updated
+    socket.on('pod-heartbeat:telegram-config-updated', (newConfig) => {
+      if (newConfig && typeof newConfig === 'object') {
+        setStoredTelegramConfig(newConfig);
       }
     });
 
@@ -229,6 +240,9 @@ export default function PodActivityPage({ onBack, onNavigateView = null }) {
       }
       if (res?.thresholdsConfig && typeof res.thresholdsConfig === 'object') {
         setStoredHbThresholds(res.thresholdsConfig);
+      }
+      if (res?.telegramConfig && typeof res.telegramConfig === 'object') {
+        setStoredTelegramConfig(res.telegramConfig);
       }
     } catch (err) {
       setError(err.message || 'Gagal memuat status aktivitas POD');

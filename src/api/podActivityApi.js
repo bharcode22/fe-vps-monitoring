@@ -265,4 +265,44 @@ export async function fetchPodDaemonStatusApi() {
   return data.data;
 }
 
+/**
+ * Fetch current Telegram alert settings
+ */
+export async function fetchTelegramConfigApi() {
+  const res = await fetch(`${BACKEND_URL}/api/pod-activity/telegram/config`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memuat konfigurasi Telegram');
+  return data.data;
+}
+
+/**
+ * Save / toggle Telegram alert settings
+ */
+export async function saveTelegramConfigApi(config) {
+  const res = await fetch(`${BACKEND_URL}/api/pod-activity/telegram/config`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(config)
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal menyimpan konfigurasi Telegram');
+  return data;
+}
+
+/**
+ * Send test alert notification to Telegram group
+ */
+export async function testTelegramAlertApi(sender = 'Admin Dashboard') {
+  const res = await fetch(`${BACKEND_URL}/api/pod-activity/telegram/test`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ sender })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal mengirim pesan uji Telegram');
+  return data;
+}
+
 

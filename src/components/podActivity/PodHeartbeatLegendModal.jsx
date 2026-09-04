@@ -12,13 +12,16 @@ import {
   Save,
   CheckCircle2,
   AlertCircle,
-  RotateCcw
+  RotateCcw,
+  Send
 } from 'lucide-react';
 import {
   fetchHeartbeatThresholdsApi,
   saveHeartbeatThresholdsApi,
-  resetHeartbeatThresholdsApi
+  resetHeartbeatThresholdsApi,
+  testTelegramAlertApi
 } from '../../api/podActivityApi';
+import PodTelegramAlertToggle from './PodTelegramAlertToggle';
 import {
   DEFAULT_HB_THRESHOLDS,
   getStoredHbThresholds,
@@ -117,6 +120,22 @@ export default function PodHeartbeatLegendModal({
   const [isSaving, setIsSaving] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [feedbackToast, setFeedbackToast] = useState(null);
+  const [isTestingTelegram, setIsTestingTelegram] = useState(false);
+  const [telegramFeedback, setTelegramFeedback] = useState(null);
+
+  const handleTestTelegram = async () => {
+    setIsTestingTelegram(true);
+    setTelegramFeedback(null);
+    try {
+      const res = await testTelegramAlertApi('Admin Dashboard (Panduan Modal)');
+      setTelegramFeedback({ type: 'success', message: 'Pesan tes berhasil dikirim ke grup Telegram!' });
+    } catch (err) {
+      setTelegramFeedback({ type: 'error', message: err.message });
+    } finally {
+      setIsTestingTelegram(false);
+      setTimeout(() => setTelegramFeedback(null), 4000);
+    }
+  };
 
   // Sync state if prop changes or when modal opens
   useEffect(() => {
@@ -376,6 +395,50 @@ export default function PodHeartbeatLegendModal({
               </div>
 
             </div>
+          </div>
+
+          {/* 1b. TELEGRAM ALERT INTEGRATION & TOGGLE */}
+          <div className="p-4.5 rounded-2xl bg-gradient-to-r from-slate-950 via-slate-900 to-sky-950/40 border border-sky-500/30 shadow-lg flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
+              <div className="flex items-center gap-2 text-white font-black text-xs uppercase tracking-wider">
+                <Send size={16} className="text-sky-400" />
+                <span>Notifikasi Telegram Khusus Status DEAD</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleTestTelegram}
+                  disabled={isTestingTelegram}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold text-sky-300 hover:text-white bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  title="Kirim pesan tes ke grup Telegram HB monitor sekarang"
+                >
+                  <Send size={12} className={isTestingTelegram ? 'animate-bounce' : ''} />
+                  <span>{isTestingTelegram ? 'Mengirim...' : 'Tes Kirim Pesan'}</span>
+                </button>
+                <PodTelegramAlertToggle />
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between text-[11px] text-slate-400 gap-2">
+              <div className="flex items-center gap-1.5">
+                <span className="text-slate-500">Grup Target:</span>
+                <span className="font-bold text-sky-300">HB monitor</span>
+                <span className="font-mono text-[10px] text-slate-500 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">ID: -1003076691771</span>
+              </div>
+              <div className="text-slate-400">
+                <span>Aturan: </span>
+                <strong className="text-rose-300">Hanya status DEAD (≥ {editDead}s)</strong> yang dikirim ke grup.
+              </div>
+            </div>
+
+            {telegramFeedback && (
+              <div className={`p-2.5 rounded-xl text-xs font-bold flex items-center gap-2 animate-in fade-in duration-150 ${
+                telegramFeedback.type === 'success' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+              }`}>
+                <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
+                <span>{telegramFeedback.message}</span>
+              </div>
+            )}
           </div>
 
           {/* 2. DYNAMIC VISUAL PROGRESSION TIMELINE BAR */}

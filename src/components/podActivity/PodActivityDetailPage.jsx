@@ -13,6 +13,7 @@ import {
   EVENT_HB_THRESHOLDS_UPDATED,
   evaluateModuleHealth
 } from '../../utils/heartbeatThresholds';
+import { setStoredHbModules } from '../../utils/heartbeatModules';
 
 function parseOccupancy(payload) {
   if (payload === null || payload === undefined) return null;
@@ -171,6 +172,18 @@ export default function PodActivityDetailPage({ pod, heartbeatSnapshot = {}, onB
           };
           return [newLog, ...prev].slice(0, 500);
         });
+      }
+    });
+
+    socket.on('pod-heartbeat:thresholds-updated', (newThresholds) => {
+      if (newThresholds && typeof newThresholds === 'object') {
+        setStoredHbThresholds(newThresholds);
+      }
+    });
+
+    socket.on('pod-heartbeat:modules-updated', (newModules) => {
+      if (Array.isArray(newModules) && newModules.length > 0) {
+        setStoredHbModules(newModules);
       }
     });
 

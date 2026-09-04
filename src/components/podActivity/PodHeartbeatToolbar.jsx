@@ -16,6 +16,7 @@ import {
   ExternalLink,
   HelpCircle
 } from 'lucide-react';
+import PodTelegramAlertToggle from './PodTelegramAlertToggle';
 
 export default function PodHeartbeatToolbar({
   totalReceivedPackets = 0,
@@ -162,6 +163,9 @@ export default function PodHeartbeatToolbar({
             <VolumeX size={14} />
           )}
         </button>
+
+        {/* Telegram DEAD Alert Toggle */}
+        <PodTelegramAlertToggle />
 
         <button
           onClick={onOpenManageModal}
