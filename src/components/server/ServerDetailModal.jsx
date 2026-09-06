@@ -15,6 +15,9 @@ import InstalledVersionsTab from './InstalledVersionsTab';
 import SshTerminalTab from './SshTerminalTab';
 import PodTopicDiagnosticsTab from './PodTopicDiagnosticsTab';
 import RegenesisLogsTab from './RegenesisLogsTab';
+import PodReportTab from './PodReportTab';
+import { FileCheck } from 'lucide-react';
+
 
 export default function ServerDetailModal({ server, onClose, onEdit }) {
   const { isAuthenticated } = useAuth();
@@ -292,6 +295,18 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
                 <FileText size={16} /> Regenesis Logs
               </button>
             )}
+
+            {isPod && (
+              <button
+                onClick={() => setViewMode('reports')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${viewMode === 'reports'
+                  ? 'bg-gradient-to-r from-rose-500 to-pink-600 text-white shadow-md shadow-pink-500/20'
+                  : 'bg-white/5 text-slate-400 hover:text-slate-200'
+                  }`}
+              >
+                <FileCheck size={16} /> Audit & Laporan PDF
+              </button>
+            )}
           </div>
         )}
 
@@ -317,7 +332,10 @@ export default function ServerDetailModal({ server, onClose, onEdit }) {
             <PodTopicDiagnosticsTab serverId={server.id} />
           ) : viewMode === 'regenesis-logs' && isAuthenticated ? (
             <RegenesisLogsTab serverId={server.id} />
+          ) : viewMode === 'reports' && isAuthenticated ? (
+            <PodReportTab server={server} />
           ) : (
+
             <div>
               {/* Real-time Current Metrics Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5 mb-6">

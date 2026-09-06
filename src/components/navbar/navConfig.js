@@ -12,8 +12,10 @@ import {
   Wrench,
   Users,
   UserCheck,
-  ShieldCheck
+  ShieldCheck,
+  FileCheck
 } from 'lucide-react';
+
 
 /**
  * Centralized Navigation Configuration
@@ -188,7 +190,18 @@ export const NAV_DROPDOWN_GROUPS = [
         bgActiveClass: 'bg-blue-500/15 text-blue-300 border-blue-500/30'
       },
       {
+        id: 'pod-reports',
+        aliases: ['fleet-reports', 'reports', 'pdf-reports'],
+        label: 'POD Reports & Audit',
+        desc: 'Generate & Unduh Laporan PDF Diagnostik',
+        icon: FileCheck,
+        badge: 'NEW',
+        colorClass: 'text-rose-400',
+        bgActiveClass: 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+      },
+      {
         id: 'user-activity',
+
         aliases: ['audit-logs', 'activity-logs', 'user-logs'],
         label: 'Audit & User Activity',
         desc: 'Pantau Pengguna Online & Audit Log (Super Admin)',

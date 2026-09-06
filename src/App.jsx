@@ -28,7 +28,9 @@ import PodActivityPage from './pages/PodActivityPage';
 import SettingsPage from './pages/SettingsPage';
 import UserActivityLogsPage from './pages/UserActivityLogsPage';
 import PodHeartbeatRecordsPage from './pages/PodHeartbeatRecordsPage';
+import PodReportsPage from './pages/PodReportsPage';
 import { useServers } from './hooks/useServers';
+
 import { useSocket } from './hooks/useSocket';
 import { fetchSettingsApi, saveSettingApi } from './api/vpsApi';
 import { useAuth } from './context/AuthContext';
@@ -270,7 +272,13 @@ export default function App() {
           initialPodId={heartbeatInitialPodId}
           onNavigateView={handleNavigateView}
         />
+      ) : currentView === 'pod-reports' || currentView === 'fleet-reports' || currentView === 'reports' || currentView === 'pdf-reports' ? (
+        <PodReportsPage
+          onBack={() => handleNavigateView('dashboard')}
+          onNavigateView={handleNavigateView}
+        />
       ) : currentView === 'pod-logs-sync' || currentView === 'pod-logs' ? (
+
         <PodLogsSyncPage onBack={() => handleNavigateView('dashboard')} />
       ) : currentView === 'tnc-sync-manager' ? (
         <TncManagerPage onBack={() => handleNavigateView('dashboard')} />
