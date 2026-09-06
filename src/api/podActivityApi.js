@@ -305,4 +305,34 @@ export async function testTelegramAlertApi(sender = 'Admin Dashboard') {
   return data;
 }
 
+/**
+ * Fetch current stream data frequency in milliseconds
+ */
+export async function fetchStreamFrequencyApi() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/pod-activity/stream-frequency`, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+    const data = await res.json();
+    return data.intervalMs || 1000;
+  } catch (_) {
+    return 1000;
+  }
+}
+
+/**
+ * Set and broadcast new stream data frequency in milliseconds
+ */
+export async function setStreamFrequencyApi(intervalMs) {
+  const res = await fetch(`${BACKEND_URL}/api/pod-activity/stream-frequency`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ intervalMs: Number(intervalMs) })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memperbarui frekuensi stream');
+  return data;
+}
+
 

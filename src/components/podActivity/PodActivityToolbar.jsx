@@ -12,7 +12,9 @@ export default function PodActivityToolbar({
   occupiedCount = 0,
   vacantCount = 0,
   showMqttFeed,
-  onToggleMqttFeed
+  onToggleMqttFeed,
+  streamFrequency = 1000,
+  onStreamFrequencyChange
 }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3.5 bg-slate-900/80 backdrop-blur-md border border-slate-800/90 p-3.5 rounded-2xl shadow-xl">
@@ -97,6 +99,25 @@ export default function PodActivityToolbar({
             <Cpu size={15} className="text-emerald-400" />
             <span className="hidden md:inline">Matriks</span>
           </button>
+        </div>
+
+        {/* Stream Frequency Selector */}
+        <div
+          className="flex items-center gap-1.5 bg-slate-950/80 px-2.5 py-1.5 rounded-xl border border-slate-800/90 shadow-inner"
+          title="Frekuensi stream data heartbeat per batch"
+        >
+          <Activity size={13} className="text-cyan-400 shrink-0" />
+          <select
+            value={streamFrequency || 1000}
+            onChange={(e) => onStreamFrequencyChange && onStreamFrequencyChange(Number(e.target.value))}
+            className="bg-transparent text-xs font-semibold text-cyan-300 focus:outline-none cursor-pointer pr-1"
+          >
+            <option value={250} className="bg-slate-900 text-slate-200">250ms / data</option>
+            <option value={500} className="bg-slate-900 text-slate-200">500ms / data</option>
+            <option value={1000} className="bg-slate-900 text-slate-200">1000ms / data</option>
+            <option value={2000} className="bg-slate-900 text-slate-200">2000ms / data</option>
+            <option value={5000} className="bg-slate-900 text-slate-200">5000ms / data</option>
+          </select>
         </div>
 
         {/* Live MQTT Feed Toggle */}

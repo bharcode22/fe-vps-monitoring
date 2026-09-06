@@ -3,7 +3,9 @@ import { getSharedSocket } from '../utils/socketService';
 import {
   fetchPodActivityStatusApi,
   simulatePodActivityApi,
-  reconnectPodActivityApi
+  reconnectPodActivityApi,
+  fetchStreamFrequencyApi,
+  setStreamFrequencyApi
 } from '../api/podActivityApi';
 
 // Modular Components
@@ -58,6 +60,14 @@ export default function PodActivityPage({ onBack, onNavigateView = null }) {
       return localStorage.getItem('vps_pod_activity_show_mqtt') === 'true';
     } catch (e) {
       return false;
+    }
+  });
+  const [streamFrequency, setStreamFrequency] = useState(() => {
+    try {
+      const saved = localStorage.getItem('vps_pod_stream_frequency');
+      return saved ? Number(saved) : 1000;
+    } catch (_) {
+      return 1000;
     }
   });
   const [recentFlashPodId, setRecentFlashPodId] = useState(null);
@@ -237,6 +247,16 @@ export default function PodActivityPage({ onBack, onNavigateView = null }) {
     socket.on('connect', handleConnect);
     socket.on('disconnect', handleDisconnect);
     socket.on('pod-activity:initial', handleInitial);
+    const handleStreamConfig = ({ intervalMs }) => {
+      if (intervalMs) {
+        setStreamFrequency(intervalMs);
+        try {
+          localStorage.setItem('vps_pod_stream_frequency', String(intervalMs));
+        } catch (_) { }
+      }
+    };
+
+    socket.on('pod-heartbeat:stream-config', handleStreamConfig);
     socket.on('pod-heartbeat:modules-updated', handleModulesUpdated);
     socket.on('pod-heartbeat:thresholds-updated', handleThresholdsUpdated);
     socket.on('pod-heartbeat:telegram-config-updated', handleTelegramUpdated);
@@ -250,6 +270,7 @@ export default function PodActivityPage({ onBack, onNavigateView = null }) {
     }
 
     return () => {
+      socket.off('pod-heartbeat:stream-config', handleStreamConfig);
       socket.off('connect', handleConnect);
       socket.off('disconnect', handleDisconnect);
       socket.off('pod-activity:initial', handleInitial);
@@ -265,6 +286,27 @@ export default function PodActivityPage({ onBack, onNavigateView = null }) {
       }
     };
   }, []);
+
+  // Fetch initial stream frequency
+  useEffect(() => {
+    fetchStreamFrequencyApi().then(freq => {
+      if (freq) setStreamFrequency(freq);
+    }).catch(() => { });
+  }, []);
+
+  const handleStreamFrequencyChange = async (newFreq) => {
+    setStreamFrequency(newFreq);
+    try {
+      localStorage.setItem('vps_pod_stream_frequency', String(newFreq));
+    } catch (_) { }
+    const socket = getSharedSocket();
+    if (socket && socket.connected) {
+      socket.emit('set:stream-frequency', newFreq);
+    }
+    try {
+      await setStreamFrequencyApi(newFreq);
+    } catch (_) { }
+  };
 
   const loadStatus = async () => {
     setIsRefreshing(true);
@@ -432,6 +474,8 @@ export default function PodActivityPage({ onBack, onNavigateView = null }) {
         vacantCount={vacantCount}
         showMqttFeed={showMqttFeed}
         onToggleMqttFeed={() => setShowMqttFeed(!showMqttFeed)}
+        streamFrequency={streamFrequency}
+        onStreamFrequencyChange={handleStreamFrequencyChange}
       />
 
       {/* 5. Main View: Live Cards Grid, Table, or Fleet Heartbeat Matrix */}

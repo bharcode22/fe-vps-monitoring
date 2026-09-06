@@ -195,7 +195,7 @@ export const NAV_DROPDOWN_GROUPS = [
         label: 'POD Reports & Audit',
         desc: 'Generate & Unduh Laporan PDF Diagnostik',
         icon: FileCheck,
-        badge: 'NEW',
+        badge: 'BETA',
         colorClass: 'text-rose-400',
         bgActiveClass: 'bg-rose-500/15 text-rose-300 border-rose-500/30'
       },

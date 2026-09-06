@@ -21,10 +21,10 @@ export default function NavbarUtilities({
 
   const handleToggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
+      document.documentElement.requestFullscreen().catch(() => { });
     } else {
       if (document.exitFullscreen) {
-        document.exitFullscreen().catch(() => {});
+        document.exitFullscreen().catch(() => { });
       }
     }
   };
@@ -34,11 +34,10 @@ export default function NavbarUtilities({
       {/* TV Mode Switch (Full Width UI) */}
       <button
         onClick={onToggleTvMode}
-        className={`px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all duration-200 cursor-pointer ${
-          isTvMode
+        className={`px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all duration-200 cursor-pointer ${isTvMode
             ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
             : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
-        }`}
+          }`}
         title={isTvMode ? 'Keluar dari TV Mode (Kembali ke Tampilan Normal)' : 'Aktifkan TV Mode (Tampilan Full Width Layar Besar / NOC Wall)'}
       >
         <Tv size={14} className={isTvMode ? 'text-cyan-400' : 'text-slate-400'} />
@@ -48,11 +47,10 @@ export default function NavbarUtilities({
       {/* Browser Native Fullscreen (F11) Toggle */}
       <button
         onClick={handleToggleFullscreen}
-        className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-          isFullscreen
+        className={`p-1.5 rounded-lg transition-colors cursor-pointer ${isFullscreen
             ? 'text-cyan-400 bg-cyan-500/10'
             : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
-        }`}
+          }`}
         title={isFullscreen ? 'Keluar dari Fullscreen Browser' : 'Layar Penuh / Fullscreen Browser (F11)'}
       >
         {isFullscreen ? <Minimize size={14} /> : <Maximize size={14} />}
