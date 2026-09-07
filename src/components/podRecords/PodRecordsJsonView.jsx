@@ -5,7 +5,10 @@ import {
   ArrowLeft,
   Download,
   AlignLeft,
-  Braces
+  Braces,
+  Activity,
+  Search,
+  X
 } from 'lucide-react';
 
 export default function PodRecordsJsonView({
@@ -15,7 +18,9 @@ export default function PodRecordsJsonView({
   fileMeta = null,
   isLoading = false,
   onBackToFiles,
-  onDownloadFile
+  onDownloadFile,
+  onViewChart,
+  onJsonFilterChange
 }) {
   const [viewFormat, setViewFormat] = useState('raw'); // 'raw' | 'pretty'
 
@@ -102,11 +107,10 @@ export default function PodRecordsJsonView({
               <div className="flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800">
                 <button
                   onClick={() => setViewFormat('raw')}
-                  className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all cursor-pointer flex items-center gap-1 ${
-                    viewFormat === 'raw'
-                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
+                  className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all cursor-pointer flex items-center gap-1 ${viewFormat === 'raw'
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                    : 'text-slate-400 hover:text-slate-200'
+                    }`}
                   title="Tampilan baris file asli (Raw JSONL)"
                 >
                   <AlignLeft size={11} />
@@ -114,11 +118,10 @@ export default function PodRecordsJsonView({
                 </button>
                 <button
                   onClick={() => setViewFormat('pretty')}
-                  className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all cursor-pointer flex items-center gap-1 ${
-                    viewFormat === 'pretty'
-                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
+                  className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all cursor-pointer flex items-center gap-1 ${viewFormat === 'pretty'
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                    : 'text-slate-400 hover:text-slate-200'
+                    }`}
                   title="Format indentasi JSON terstruktur"
                 >
                   <Braces size={11} />
@@ -135,6 +138,40 @@ export default function PodRecordsJsonView({
                 >
                   <Download size={12} />
                   <span>Unduh</span>
+                </button>
+              )}
+
+              {/* Search Inside JSON */}
+              {onJsonFilterChange && (
+                <div className="relative">
+                  <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <input
+                    type="text"
+                    value={jsonFilterQuery || ''}
+                    onChange={(e) => onJsonFilterChange(e.target.value)}
+                    placeholder="Cari kata/nilai..."
+                    className="bg-slate-950 border border-slate-800 rounded-lg pl-7 pr-7 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 w-36 sm:w-48"
+                  />
+                  {jsonFilterQuery && (
+                    <button
+                      onClick={() => onJsonFilterChange('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white p-0.5"
+                    >
+                      <X size={11} />
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* View Chart Button */}
+              {onViewChart && (
+                <button
+                  onClick={onViewChart}
+                  className="px-2.5 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer shadow-sm"
+                  title="Lihat visualisasi grafik data ini"
+                >
+                  <Activity size={12} />
+                  <span>Grafik Metrik</span>
                 </button>
               )}
             </>
@@ -181,9 +218,8 @@ export default function PodRecordsJsonView({
                 return (
                   <tr
                     key={idx}
-                    className={`hover:bg-slate-900/60 transition-colors ${
-                      matchesSearch ? 'bg-cyan-500/15 text-cyan-200' : ''
-                    }`}
+                    className={`hover:bg-slate-900/60 transition-colors ${matchesSearch ? 'bg-cyan-500/15 text-cyan-200' : ''
+                      }`}
                   >
                     <td className="w-12 text-right pr-4 text-slate-600 select-none text-[11px] font-mono align-top py-0.5">
                       {lineNum}

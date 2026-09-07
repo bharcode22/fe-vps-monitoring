@@ -6,6 +6,7 @@ import {
   fetchPodLogDatesApi,
   fetchPodStorageFilesApi,
   fetchPodFileContentApi,
+  fetchPodFileMetricsApi,
   getPodHeartbeatsDownloadUrl
 } from '../api/podActivityApi';
 
@@ -15,6 +16,7 @@ import PodRecordsSubHeader from '../components/podRecords/PodRecordsSubHeader';
 import PodRecordsFilterToolbar from '../components/podRecords/PodRecordsFilterToolbar';
 import PodRecordsFilesView from '../components/podRecords/PodRecordsFilesView';
 import PodRecordsJsonView from '../components/podRecords/PodRecordsJsonView';
+import PodRecordsMetricChartView from '../components/podRecords/PodRecordsMetricChartView';
 
 export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack }) {
   // 1. Server / POD Selection States
@@ -42,11 +44,17 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
   const [availableDates, setAvailableDates] = useState([]);
   const [selectedDate, setSelectedDate] = useState(getTodayLocalDate);
   const [activeCategory, setActiveCategory] = useState('heartbeats'); // 'heartbeats' | 'events' | 'state'
-  const [viewMode, setViewMode] = useState('files'); // 'files' | 'json'
+  const [viewMode, setViewMode] = useState('files'); // 'files' | 'chart' | 'json'
   const [activeFileName, setActiveFileName] = useState(null);
   const [activeFileMeta, setActiveFileMeta] = useState(null);
   const [storageFilesData, setStorageFilesData] = useState(null);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
+
+  // Chart Metric States
+  const [chartInterval, setChartInterval] = useState('5m'); // '1m' | '5m' | '15m' | '1h'
+  const [metricsData, setMetricsData] = useState(null);
+  const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
+  const [metricsError, setMetricsError] = useState(null);
 
   // 3. Filter States
   const [selectedModuleFilter, setSelectedModuleFilter] = useState('ALL');
@@ -176,7 +184,7 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
             try {
               const parsed = JSON.parse(contentStr);
               contentStr = JSON.stringify(parsed, null, 2);
-            } catch (_) {}
+            } catch (_) { }
           }
           setRawJsonString(contentStr);
           setActiveFileMeta(res);
@@ -200,9 +208,42 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
     [selectedPodId, selectedDate, fetchLimit]
   );
 
-  // 4. Handle clicking a file in the files view
+  // 4. Time-series chart metric loader (downsampled buckets)
+  const loadChartMetrics = useCallback(
+    async (fileName, customInterval = null, isBackground = false) => {
+      if (!selectedPodId || !fileName) return;
+
+      const intervalToUse = customInterval || chartInterval;
+      if (!isBackground) {
+        setIsLoadingMetrics(true);
+        setMetricsError(null);
+      }
+
+      try {
+        const res = await fetchPodFileMetricsApi(selectedPodId, fileName, selectedDate, intervalToUse);
+        if (res && res.success) {
+          setMetricsData(res);
+        } else {
+          if (!isBackground) {
+            setMetricsError(res?.error || 'Gagal memuat metrik grafik');
+            setMetricsData(null);
+          }
+        }
+      } catch (err) {
+        if (!isBackground) {
+          setMetricsError(err.message || 'Gagal memuat metrik grafik');
+          setMetricsData(null);
+        }
+      } finally {
+        if (!isBackground) setIsLoadingMetrics(false);
+      }
+    },
+    [selectedPodId, selectedDate, chartInterval]
+  );
+
+  // 5. Handle clicking a file in the files view
   const handleOpenFile = useCallback(
-    async (file) => {
+    async (file, preferredMode = null) => {
       if (!selectedPodId || !file?.name) return;
 
       setActiveFileName(file.name);
@@ -210,19 +251,29 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
       if (file.moduleId !== undefined && file.moduleId !== null) {
         setSelectedModuleFilter(file.moduleId);
       }
-      setViewMode('json');
-      await loadFileContent(file.name);
+
+      const targetMode = preferredMode || (file.name.endsWith('.jsonl') ? 'chart' : 'json');
+
+      if (targetMode === 'chart' && file.name.endsWith('.jsonl')) {
+        setViewMode('chart');
+        loadChartMetrics(file.name, chartInterval, false);
+        // Pre-fetch raw JSON in background so switching to JSON view is instant
+        loadFileContent(file.name, fetchLimit, true);
+      } else {
+        setViewMode('json');
+        loadFileContent(file.name, fetchLimit, false);
+      }
     },
-    [selectedPodId, loadFileContent]
+    [selectedPodId, chartInterval, fetchLimit, loadChartMetrics, loadFileContent]
   );
-
-
 
   // 6. Live Auto-Polling Effect (every 4 seconds)
   useEffect(() => {
     if (isLivePolling) {
       pollTimerRef.current = setInterval(() => {
-        if (viewMode === 'json' && activeFileName) {
+        if (viewMode === 'chart' && activeFileName) {
+          loadChartMetrics(activeFileName, chartInterval, true);
+        } else if (viewMode === 'json' && activeFileName) {
           loadFileContent(activeFileName, fetchLimit, true);
         } else if (viewMode === 'files') {
           loadStorageFiles(true);
@@ -234,7 +285,7 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
     return () => {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
     };
-  }, [isLivePolling, viewMode, activeFileName, fetchLimit, loadFileContent, loadStorageFiles]);
+  }, [isLivePolling, viewMode, activeFileName, chartInterval, fetchLimit, loadChartMetrics, loadFileContent, loadStorageFiles]);
 
   // Selected server metadata & filtered list
   const currentPod = useMemo(() => {
@@ -271,8 +322,23 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
       setEndTime('');
     } else if (preset === '1h') {
       const now = new Date();
-      const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+      const oneHourAgo = new Date(now.getTime() - 1 * 60 * 60 * 1000);
       setStartTime(oneHourAgo.toTimeString().slice(0, 5));
+      setEndTime(now.toTimeString().slice(0, 5));
+    } else if (preset === '3h') {
+      const now = new Date();
+      const threeHoursAgo = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+      setStartTime(threeHoursAgo.toTimeString().slice(0, 5));
+      setEndTime(now.toTimeString().slice(0, 5));
+    } else if (preset === '6h') {
+      const now = new Date();
+      const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+      setStartTime(sixHoursAgo.toTimeString().slice(0, 5));
+      setEndTime(now.toTimeString().slice(0, 5));
+    } else if (preset === '12h') {
+      const now = new Date();
+      const twelveHoursAgo = new Date(now.getTime() - 12 * 60 * 60 * 1000);
+      setStartTime(twelveHoursAgo.toTimeString().slice(0, 5));
       setEndTime(now.toTimeString().slice(0, 5));
     } else if (preset === 'morning') {
       setStartTime('06:00');
@@ -292,7 +358,9 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      if (viewMode === 'json' && activeFileName) {
+      if (viewMode === 'chart' && activeFileName) {
+        await loadChartMetrics(activeFileName, chartInterval, false);
+      } else if (viewMode === 'json' && activeFileName) {
         await loadFileContent(activeFileName, fetchLimit, false);
       } else {
         await loadStorageFiles(false);
@@ -311,8 +379,8 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
           ? customModuleId
           : undefined
         : selectedModuleFilter !== 'ALL'
-        ? selectedModuleFilter
-        : undefined;
+          ? selectedModuleFilter
+          : undefined;
 
     const downloadUrl = getPodHeartbeatsDownloadUrl(selectedPodId, {
       date: selectedDate,
@@ -337,11 +405,14 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
 
   // Header display records count
   const displayRecordsCount = useMemo(() => {
+    if (viewMode === 'chart' && metricsData?.totalLines) {
+      return metricsData.totalLines;
+    }
     if (viewMode === 'json' && rawJsonString) {
       return rawJsonString.split('\n').filter(Boolean).length;
     }
     return storageFilesData?.filteredFilesCount || storageFilesData?.files?.length || 0;
-  }, [viewMode, rawJsonString, storageFilesData]);
+  }, [viewMode, metricsData, rawJsonString, storageFilesData]);
 
   return (
     <div className="h-[calc(100vh-5.4rem)] max-h-[calc(100vh-5.4rem)] w-full flex flex-col bg-slate-950 text-slate-100 overflow-hidden select-text">
@@ -367,6 +438,7 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
             setSelectedPodId(id);
             setActiveFileName(null);
             setRawJsonString('');
+            setMetricsData(null);
             setViewMode('files');
           }}
           serverSearch={serverSearch}
@@ -396,6 +468,7 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
             onSelectDate={(d) => {
               setActiveFileName(null);
               setRawJsonString('');
+              setMetricsData(null);
               setSelectedDate(d);
               setViewMode('files');
             }}
@@ -418,14 +491,6 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
                 loadFileContent(activeFileName, newLimit, false);
               }
             }}
-            viewMode={viewMode}
-            onViewModeChange={(m) => {
-              if (m === 'files') setActiveFileName(null);
-              setViewMode(m);
-            }}
-            totalFilesCount={storageFilesData?.filteredFilesCount || storageFilesData?.files?.length || 0}
-            jsonFilterQuery={jsonFilterQuery}
-            onJsonFilterChange={setJsonFilterQuery}
           />
 
           {/* Main Content Area - Independently Scrollable */}
@@ -467,11 +532,45 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
               />
             )}
 
-            {/* MODE 1: PENAMPIL KODE JSON (HANYA DITAMPILKAN KETIKA BERKAS DIKLIK) */}
+            {/* MODE 1: VISUALISASI GRAFIK METRIK TIME-SERIES */}
+            {viewMode === 'chart' && (
+              <PodRecordsMetricChartView
+                metricsData={metricsData}
+                isLoading={isLoadingMetrics}
+                error={metricsError}
+                fileName={activeFileName}
+                selectedDate={selectedDate}
+                interval={chartInterval}
+                onChangeInterval={(newInterval) => {
+                  setChartInterval(newInterval);
+                  if (activeFileName) {
+                    loadChartMetrics(activeFileName, newInterval, false);
+                  }
+                }}
+                onBackToFiles={() => {
+                  setActiveFileName(null);
+                  setViewMode('files');
+                }}
+                onViewRawJson={() => {
+                  if (activeFileName && !rawJsonString) {
+                    loadFileContent(activeFileName, fetchLimit, false);
+                  }
+                  setViewMode('json');
+                }}
+                onRefresh={() => {
+                  if (activeFileName) {
+                    loadChartMetrics(activeFileName, chartInterval, false);
+                  }
+                }}
+              />
+            )}
+
+            {/* MODE 2: PENAMPIL KODE RAW JSON */}
             {viewMode === 'json' && (
               <PodRecordsJsonView
                 rawJsonString={rawJsonString}
                 jsonFilterQuery={jsonFilterQuery}
+                onJsonFilterChange={setJsonFilterQuery}
                 fileName={activeFileName}
                 fileMeta={activeFileMeta}
                 isLoading={isLoadingFile}
@@ -480,6 +579,16 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
                   setViewMode('files');
                 }}
                 onDownloadFile={() => handleTriggerDownload('json')}
+                onViewChart={
+                  activeFileName && activeFileName.endsWith('.jsonl')
+                    ? () => {
+                      setViewMode('chart');
+                      if (!metricsData && activeFileName) {
+                        loadChartMetrics(activeFileName, chartInterval, false);
+                      }
+                    }
+                    : undefined
+                }
               />
             )}
           </div>

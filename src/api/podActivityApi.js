@@ -353,5 +353,20 @@ export async function fetchPodFileContentApi(podId, fileName, date = null, limit
   return data;
 }
 
+/**
+ * Fetch downsampled time-series metrics from a physical file for charting
+ */
+export async function fetchPodFileMetricsApi(podId, fileName, date = null, interval = '5m') {
+  const params = new URLSearchParams({ file: fileName, interval });
+  if (date && date !== 'ALL') params.append('date', date);
+
+  const res = await fetch(`${BACKEND_URL}/api/pod-activity/pods/${podId}/file-metrics?${params.toString()}`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memuat data metrik grafik');
+  return data;
+}
+
 
 

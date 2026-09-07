@@ -11,7 +11,8 @@ import {
   Search,
   CheckCircle2,
   AlertTriangle,
-  FileJson
+  FileJson,
+  Activity
 } from 'lucide-react';
 import { MODULE_CONFIG, getTodayLocalDate, getModuleFullName } from './podRecordsConfig';
 
@@ -67,16 +68,16 @@ export default function PodRecordsFilesView({
     };
   }, [dateFolders, selectedDate, storageFilesData]);
 
-  const handleFileClick = (file) => {
+  const handleFileClick = (file, preferredMode = null) => {
     if (onOpenFile) {
-      onOpenFile(file);
+      onOpenFile(file, preferredMode);
     } else {
       if (onSelectCategory) onSelectCategory(file.type);
       if (file.date && onSelectDate) onSelectDate(file.date);
       if (onSelectModule) {
         onSelectModule(file.moduleId !== undefined && file.moduleId !== null ? file.moduleId : 'ALL');
       }
-      if (onViewModeChange) onViewModeChange('json', file.name);
+      if (onViewModeChange) onViewModeChange(preferredMode || 'json', file.name);
     }
   };
 
@@ -232,16 +233,31 @@ export default function PodRecordsFilesView({
                         {/* Quick Actions */}
                         <td className="py-3 px-4 text-center whitespace-nowrap">
                           <div className="flex items-center justify-center gap-2">
-                            {/* Primary Action: Buka JSON */}
+                            {/* Action 1: Grafik Metrik (for timeseries .jsonl files) */}
+                            {file.name?.endsWith('.jsonl') && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleFileClick(file, 'chart');
+                                }}
+                                className="px-2.5 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 hover:text-cyan-200 border border-cyan-500/40 font-sans text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm hover:shadow-cyan-500/10"
+                                title="Buka visualisasi grafik metrik waktu berkas ini"
+                              >
+                                <Activity size={13} className="text-cyan-400" />
+                                <span>Grafik Metrik</span>
+                              </button>
+                            )}
+
+                            {/* Action 2: Buka JSON */}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleFileClick(file);
+                                handleFileClick(file, 'json');
                               }}
-                              className="px-3 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/40 font-sans text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                              className="px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 font-sans text-[11px] font-medium transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
                               title="Buka dan baca isi data JSON berkas ini"
                             >
-                              <FileCode size={13} className="text-cyan-400" />
+                              <FileCode size={13} className="text-slate-400 group-hover:text-cyan-400" />
                               <span>Buka JSON</span>
                             </button>
 
