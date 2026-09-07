@@ -8,13 +8,9 @@ import {
   Radio,
   ListFilter,
   HardDrive,
-  Terminal,
   FileCode,
-  BarChart3,
   Search,
-  X,
-  Copy,
-  Check
+  X
 } from 'lucide-react';
 import { MODULE_CONFIG, getTodayLocalDate } from './podRecordsConfig';
 
@@ -40,9 +36,7 @@ export default function PodRecordsFilterToolbar({
   onViewModeChange,
   totalFilesCount = 0,
   jsonFilterQuery,
-  onJsonFilterChange,
-  onCopyJson,
-  copySuccess
+  onJsonFilterChange
 }) {
   const todayStr = getTodayLocalDate();
 
@@ -50,84 +44,44 @@ export default function PodRecordsFilterToolbar({
     <>
       {/* 1. DATE SELECTOR & FILTER TOOLBAR */}
       <div className="px-4 sm:px-6 py-2.5 bg-slate-900/20 border-b border-slate-800/80 flex flex-col gap-2.5 shrink-0">
-        {/* Row 1: Date Folders Pills Selector */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
-          <span className="text-xs font-bold text-slate-400 shrink-0 flex items-center gap-1.5 mr-1">
-            <FolderOpen size={14} className="text-cyan-400" />
-            <span>Folder Tanggal:</span>
-          </span>
+        {/* Row 1: Folder Tanggal Dropdown */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-bold text-slate-300 shrink-0 flex items-center gap-1.5">
+              <FolderOpen size={15} className="text-cyan-400" />
+              <span>Folder Tanggal:</span>
+            </span>
 
-          {availableDates.length === 0 ? (
-            <span className="text-xs text-slate-500 italic">Tidak ada berkas log terdeteksi</span>
-          ) : (
-            <>
-              {availableDates.map((d) => {
-                const isSelected = selectedDate === d;
-                const isToday = d === todayStr;
-                const folderMeta = dateFolders.find((df) => df.date === d);
-                const fileCount = folderMeta?.count;
-
-                return (
-                  <button
-                    key={d}
-                    onClick={() => onSelectDate(d)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all shrink-0 cursor-pointer border flex items-center gap-1.5 ${
-                      isSelected
-                        ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 shadow-md shadow-cyan-950/40 ring-1 ring-cyan-500/30'
-                        : 'bg-slate-950 text-slate-400 hover:text-slate-200 border-slate-800 hover:border-slate-700'
-                    }`}
-                  >
-                    {isSelected ? (
-                      <FolderOpen size={13} className="text-cyan-400 shrink-0" />
-                    ) : (
-                      <Folder size={13} className="text-slate-500 shrink-0" />
-                    )}
-                    <span>{d}</span>
-                    {fileCount !== undefined && fileCount !== null && (
-                      <span
-                        className={`text-[10px] px-1.5 py-0.2 rounded-full font-sans ${
-                          isSelected
-                            ? 'bg-cyan-500/30 text-cyan-200'
-                            : 'bg-slate-800 text-slate-400'
-                        }`}
-                      >
-                        {fileCount}
-                      </span>
-                    )}
-                    {isToday && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" title="Hari ini" />
-                    )}
-                  </button>
-                );
-              })}
-
-              {/* Show 'Semua Tanggal' pill if more than 1 date available */}
-              {availableDates.length > 1 && (
-                <button
-                  onClick={() => onSelectDate('ALL')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer border flex items-center gap-1.5 ${
-                    selectedDate === 'ALL'
-                      ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 shadow-sm'
-                      : 'bg-slate-950 text-slate-400 hover:text-white border-slate-800'
-                  }`}
+            {availableDates.length === 0 ? (
+              <span className="text-xs text-slate-500 italic">Tidak ada folder log terdeteksi</span>
+            ) : (
+              <div className="relative min-w-[240px] sm:min-w-[320px]">
+                <select
+                  value={selectedDate}
+                  onChange={(e) => onSelectDate(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-cyan-300 font-mono font-bold focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/40 transition-all cursor-pointer shadow-inner pr-8"
                 >
-                  <Folder size={13} className="text-slate-400" />
-                  <span>Semua Folder</span>
-                </button>
-              )}
-            </>
-          )}
+                  {availableDates.map((d) => {
+                    const isToday = d === todayStr;
+                    const folderMeta = dateFolders.find((df) => df.date === d);
+                    const countStr = folderMeta ? `${folderMeta.count} berkas • ${folderMeta.sizeFormatted}` : '';
+                    const todayBadge = isToday ? ' (Hari Ini)' : '';
 
-          {/* Native Date Input Picker */}
-          <div className="flex items-center gap-1 shrink-0 ml-1">
-            <span className="text-[10px] text-slate-500">Pilih:</span>
-            <input
-              type="date"
-              value={selectedDate === 'ALL' ? '' : selectedDate}
-              onChange={(e) => e.target.value && onSelectDate(e.target.value)}
-              className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-0.5 text-xs text-cyan-300 font-mono focus:outline-none focus:border-cyan-500 cursor-pointer"
-              title="Pilih tanggal arsip lain"
-            />
+                    return (
+                      <option key={d} value={d} className="bg-slate-900 text-slate-200 py-1 font-mono">
+                        📁 {d} {countStr ? `— ${countStr}` : ''}{todayBadge}
+                      </option>
+                    );
+                  })}
+
+                  {availableDates.length > 1 && (
+                    <option value="ALL" className="bg-slate-900 text-cyan-300 py-1 font-sans font-bold">
+                      📂 Semua Folder (Semua Berkas Fisik)
+                    </option>
+                  )}
+                </select>
+              </div>
+            )}
           </div>
         </div>
 
@@ -251,17 +205,6 @@ export default function PodRecordsFilterToolbar({
             <span>Berkas Fisik ({totalFilesCount})</span>
           </button>
           <button
-            onClick={() => onViewModeChange('table')}
-            className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              viewMode === 'table'
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-            }`}
-          >
-            <Terminal size={13} className={viewMode === 'table' ? 'text-cyan-400' : 'text-slate-500'} />
-            <span>Tabel Interaktif</span>
-          </button>
-          <button
             onClick={() => onViewModeChange('json')}
             className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
               viewMode === 'json'
@@ -272,19 +215,6 @@ export default function PodRecordsFilterToolbar({
             <FileCode size={13} className={viewMode === 'json' ? 'text-cyan-400' : 'text-slate-500'} />
             <span>Penampil Kode JSON</span>
           </button>
-          {activeCategory === 'heartbeats' && (
-            <button
-              onClick={() => onViewModeChange('analytics')}
-              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                viewMode === 'analytics'
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                  : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-              }`}
-            >
-              <BarChart3 size={13} className={viewMode === 'analytics' ? 'text-cyan-400' : 'text-slate-500'} />
-              <span>Analisis &amp; Statistik</span>
-            </button>
-          )}
         </div>
 
         {/* JSON Quick Filter Search & Copy */}
@@ -309,19 +239,6 @@ export default function PodRecordsFilterToolbar({
               )}
             </div>
           )}
-
-          <button
-            onClick={onCopyJson}
-            className={`px-3 py-1 rounded-xl border text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
-              copySuccess
-                ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
-                : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-300 hover:text-white'
-            }`}
-            title="Salin isi data JSON saat ini ke clipboard"
-          >
-            {copySuccess ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
-            <span>{copySuccess ? 'Tersalin!' : 'Salin JSON'}</span>
-          </button>
         </div>
       </div>
     </>

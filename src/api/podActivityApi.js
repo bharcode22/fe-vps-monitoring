@@ -338,4 +338,20 @@ export async function setStreamFrequencyApi(intervalMs) {
   return data;
 }
 
+/**
+ * Fetch raw content of a specific physical file in pod_storage on-demand
+ */
+export async function fetchPodFileContentApi(podId, fileName, date = null, limit = 500) {
+  const params = new URLSearchParams({ file: fileName, limit: String(limit) });
+  if (date && date !== 'ALL') params.append('date', date);
+
+  const res = await fetch(`${BACKEND_URL}/api/pod-activity/pods/${podId}/file-content?${params.toString()}`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal membaca isi berkas');
+  return data;
+}
+
+
 

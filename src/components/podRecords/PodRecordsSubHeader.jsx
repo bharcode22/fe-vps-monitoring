@@ -42,8 +42,17 @@ export default function PodRecordsSubHeader({
           </span>
         </div>
         <p className="text-xs text-slate-400 mt-1">
-          Menampilkan rekaman tanggal <span className="text-cyan-300 font-bold font-mono">{selectedDate}</span> &bull; Total data:{' '}
-          <span className="text-white font-bold font-mono">{recordsCount} baris</span>
+          {activeFileName ? (
+            <>
+              Berkas aktif: <span className="text-cyan-300 font-bold font-mono">{activeFileName}</span> &bull; Data dimuat:{' '}
+              <span className="text-white font-bold font-mono">{recordsCount} baris</span>
+            </>
+          ) : (
+            <>
+              Folder: <span className="text-cyan-300 font-bold font-mono">{selectedDate}</span> &bull; Total berkas di folder:{' '}
+              <span className="text-white font-bold font-mono">{recordsCount} berkas</span>
+            </>
+          )}
         </p>
       </div>
 

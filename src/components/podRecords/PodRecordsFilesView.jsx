@@ -5,7 +5,6 @@ import {
   Folder,
   FolderOpen,
   FileCode,
-  Eye,
   Download,
   Calendar,
   Layers,
@@ -25,7 +24,8 @@ export default function PodRecordsFilesView({
   onSelectDate,
   onSelectModule,
   onViewModeChange,
-  onTriggerDownload
+  onTriggerDownload,
+  onOpenFile
 }) {
   const [fileSearch, setFileSearch] = useState('');
   const todayStr = getTodayLocalDate();
@@ -67,111 +67,22 @@ export default function PodRecordsFilesView({
     };
   }, [dateFolders, selectedDate, storageFilesData]);
 
+  const handleFileClick = (file) => {
+    if (onOpenFile) {
+      onOpenFile(file);
+    } else {
+      if (onSelectCategory) onSelectCategory(file.type);
+      if (file.date && onSelectDate) onSelectDate(file.date);
+      if (onSelectModule) {
+        onSelectModule(file.moduleId !== undefined && file.moduleId !== null ? file.moduleId : 'ALL');
+      }
+      if (onViewModeChange) onViewModeChange('json', file.name);
+    }
+  };
+
   return (
     <div className="space-y-4">
-      {/* 1. FOLDER SELECTION BAR (LANGKAH 2: PILIH FOLDER TANGGAL) */}
-      <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl space-y-3">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-              <FolderOpen size={18} />
-            </div>
-            <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-                <span>Pilih Folder Berdasarkan Tanggal</span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-cyan-300 border border-slate-700 font-normal">
-                  {dateFolders.length} Folder Tersimpan
-                </span>
-              </h3>
-              <p className="text-[11px] text-slate-400">
-                Pilih folder tanggal untuk menjelajahi berkas JSONL rekaman detak sensor dan snapshot status.
-              </p>
-            </div>
-          </div>
-
-          <div className="text-right">
-            <span className="text-[10px] text-slate-400 block">Direktori Server:</span>
-            <code className="text-xs font-mono font-bold text-slate-200">
-              {storageFilesData?.storagePath || 'pods/'}/
-            </code>
-          </div>
-        </div>
-
-        {/* Date Folder Pills / Cards */}
-        <div className="flex items-center gap-2.5 overflow-x-auto pb-1.5 custom-scrollbar pt-1">
-          {dateFolders.length === 0 ? (
-            <div className="text-xs text-slate-500 italic py-2">
-              Belum ada folder rekaman tanggal yang ditemukan di server ini.
-            </div>
-          ) : (
-            <>
-              {dateFolders.map((df) => {
-                const isSelected = selectedDate === df.date;
-                const isToday = df.date === todayStr;
-
-                return (
-                  <button
-                    key={df.date}
-                    onClick={() => onSelectDate(df.date)}
-                    className={`p-3 rounded-xl border transition-all text-left shrink-0 cursor-pointer min-w-[140px] flex flex-col gap-1.5 ${
-                      isSelected
-                        ? 'bg-gradient-to-b from-cyan-950/60 to-slate-900 border-cyan-500/60 shadow-lg shadow-cyan-950/50 ring-1 ring-cyan-500/40'
-                        : 'bg-slate-950/80 hover:bg-slate-900/90 border-slate-800 hover:border-slate-700 text-slate-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
-                        {isSelected ? (
-                          <FolderOpen size={16} className="text-cyan-400 shrink-0" />
-                        ) : (
-                          <Folder size={16} className="text-slate-500 shrink-0" />
-                        )}
-                        <span className={`font-mono text-xs font-bold ${isSelected ? 'text-cyan-200' : 'text-slate-200'}`}>
-                          {df.date}
-                        </span>
-                      </div>
-                      {isToday && (
-                        <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                          Hari Ini
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between text-[11px] text-slate-400 font-sans mt-0.5">
-                      <span className="font-semibold text-slate-300">{df.count} berkas</span>
-                      <span className="font-mono text-[10px] text-slate-400">{df.sizeFormatted}</span>
-                    </div>
-                  </button>
-                );
-              })}
-
-              {/* All Dates option */}
-              {dateFolders.length > 1 && (
-                <button
-                  onClick={() => onSelectDate('ALL')}
-                  className={`p-3 rounded-xl border transition-all text-left shrink-0 cursor-pointer min-w-[130px] flex flex-col gap-1.5 ${
-                    selectedDate === 'ALL'
-                      ? 'bg-gradient-to-b from-cyan-950/60 to-slate-900 border-cyan-500/60 shadow-lg ring-1 ring-cyan-500/40'
-                      : 'bg-slate-950/80 hover:bg-slate-900/90 border-slate-800 hover:border-slate-700 text-slate-300'
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <Folder size={16} className={selectedDate === 'ALL' ? 'text-cyan-400' : 'text-slate-500'} />
-                    <span className={`text-xs font-bold ${selectedDate === 'ALL' ? 'text-cyan-200' : 'text-slate-200'}`}>
-                      Semua Folder
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] text-slate-400 font-sans mt-0.5">
-                    <span className="font-semibold text-slate-300">{storageFilesData?.totalFiles || 0} berkas</span>
-                    <span className="font-mono text-[10px] text-slate-400">{storageFilesData?.totalSizeFormatted}</span>
-                  </div>
-                </button>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* 2. DIRECTORY BREADCRUMB & ACTIVE FOLDER BAR */}
+      {/* 1. DIRECTORY BREADCRUMB & SEARCH BAR */}
       <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
         <div className="flex items-center gap-2 flex-wrap text-xs font-mono">
           <span className="text-slate-500">Lokasi:</span>
@@ -211,7 +122,7 @@ export default function PodRecordsFilesView({
         </div>
       </div>
 
-      {/* 3. FILES LIST TABLE (LANGKAH 3: AKSES BERKAS JSON DI DALAM FOLDER) */}
+      {/* 2. FILES LIST TABLE */}
       <div className="bg-slate-900/60 rounded-2xl border border-slate-800/80 overflow-hidden shadow-2xl">
         {isLoadingFiles ? (
           <div className="p-12 text-center text-xs text-slate-500 flex flex-col items-center gap-2">
@@ -247,7 +158,11 @@ export default function PodRecordsFilesView({
                     const modFullName = file.moduleId ? getModuleFullName(file.moduleId) : null;
 
                     return (
-                      <tr key={idx} className="hover:bg-slate-800/40 transition-colors">
+                      <tr
+                        key={idx}
+                        onClick={() => handleFileClick(file)}
+                        className="hover:bg-slate-800/40 transition-colors cursor-pointer group"
+                      >
                         {/* File Name & Format */}
                         <td className="py-3 px-4 font-bold text-white whitespace-nowrap">
                           <div className="flex items-center gap-2">
@@ -261,7 +176,7 @@ export default function PodRecordsFilesView({
                                   : 'text-emerald-400 shrink-0'
                               }
                             />
-                            <span className="text-cyan-100">{file.name}</span>
+                            <span className="text-cyan-100 group-hover:text-cyan-300 transition-colors">{file.name}</span>
                           </div>
                         </td>
 
@@ -319,48 +234,26 @@ export default function PodRecordsFilesView({
                           <div className="flex items-center justify-center gap-2">
                             {/* Primary Action: Buka JSON */}
                             <button
-                              onClick={() => {
-                                onSelectCategory(file.type);
-                                if (file.date) onSelectDate(file.date);
-                                if (onSelectModule) {
-                                  onSelectModule(file.moduleId !== undefined && file.moduleId !== null ? file.moduleId : 'ALL');
-                                }
-                                onViewModeChange('json', file.name);
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleFileClick(file);
                               }}
-                              className="px-2.5 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/40 font-sans text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                              className="px-3 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/40 font-sans text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
                               title="Buka dan baca isi data JSON berkas ini"
                             >
                               <FileCode size={13} className="text-cyan-400" />
                               <span>Buka JSON</span>
                             </button>
 
-                            {/* Secondary Action: Buka Tabel (for heartbeats & events) */}
-                            {file.type !== 'state' && (
-                              <button
-                                onClick={() => {
-                                  onSelectCategory(file.type);
-                                  if (file.date) onSelectDate(file.date);
-                                  if (onSelectModule) {
-                                    onSelectModule(file.moduleId !== undefined && file.moduleId !== null ? file.moduleId : 'ALL');
-                                  }
-                                  onViewModeChange('table', file.name);
-                                }}
-                                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 font-sans text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer"
-                                title="Buka data di tabel interaktif"
-                              >
-                                <Eye size={12} className="text-slate-400" />
-                                <span>Tabel</span>
-                              </button>
-                            )}
-
                             {/* Download Action */}
                             {file.type === 'heartbeats' && (
                               <button
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   if (file.date) onSelectDate(file.date);
                                   onTriggerDownload('json', file.moduleId !== undefined && file.moduleId !== null ? file.moduleId : undefined);
                                 }}
-                                className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 transition-all cursor-pointer"
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 transition-all cursor-pointer"
                                 title="Unduh .json berkas ini"
                               >
                                 <Download size={13} />

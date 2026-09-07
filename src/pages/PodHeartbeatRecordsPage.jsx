@@ -3,23 +3,18 @@ import { AlertCircle, RefreshCw } from 'lucide-react';
 
 import { fetchServersApi } from '../api/vpsApi';
 import {
-  fetchPodHeartbeatsApi,
-  fetchPodEventsApi,
   fetchPodLogDatesApi,
-  fetchPodStateApi,
   fetchPodStorageFilesApi,
+  fetchPodFileContentApi,
   getPodHeartbeatsDownloadUrl
 } from '../api/podActivityApi';
 
-import { computeHeartbeatDeltas } from '../components/podRecords/podRecordsConfig';
 import PodRecordsTopHeader from '../components/podRecords/PodRecordsTopHeader';
 import PodRecordsSidebar from '../components/podRecords/PodRecordsSidebar';
 import PodRecordsSubHeader from '../components/podRecords/PodRecordsSubHeader';
 import PodRecordsFilterToolbar from '../components/podRecords/PodRecordsFilterToolbar';
 import PodRecordsFilesView from '../components/podRecords/PodRecordsFilesView';
-import PodRecordsTableView from '../components/podRecords/PodRecordsTableView';
 import PodRecordsJsonView from '../components/podRecords/PodRecordsJsonView';
-import PodRecordsAnalyticsView from '../components/podRecords/PodRecordsAnalyticsView';
 
 export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack }) {
   // 1. Server / POD Selection States
@@ -27,6 +22,7 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
   const [selectedPodId, setSelectedPodId] = useState(initialPodId ? Number(initialPodId) : null);
   const [serverSearch, setServerSearch] = useState('');
   const [isServerLoading, setIsServerLoading] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Helper for current local calendar date YYYY-MM-DD
   const getTodayLocalDate = () => {
@@ -46,8 +42,9 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
   const [availableDates, setAvailableDates] = useState([]);
   const [selectedDate, setSelectedDate] = useState(getTodayLocalDate);
   const [activeCategory, setActiveCategory] = useState('heartbeats'); // 'heartbeats' | 'events' | 'state'
-  const [viewMode, setViewMode] = useState('files'); // 'files' | 'table' | 'json' | 'analytics'
+  const [viewMode, setViewMode] = useState('files'); // 'files' | 'json'
   const [activeFileName, setActiveFileName] = useState(null);
+  const [activeFileMeta, setActiveFileMeta] = useState(null);
   const [storageFilesData, setStorageFilesData] = useState(null);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
 
@@ -60,16 +57,14 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
   const [fetchLimit, setFetchLimit] = useState(500);
 
   // 4. Data States
-  const [records, setRecords] = useState([]);
   const [rawJsonString, setRawJsonString] = useState('');
   const [jsonFilterQuery, setJsonFilterQuery] = useState('');
-  const [podStateData, setPodStateData] = useState(null);
 
   // 5. Status & Loading States
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingFile, setIsLoadingFile] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLivePolling, setIsLivePolling] = useState(false);
-  const [copySuccess, setCopySuccess] = useState(false);
   const [error, setError] = useState(null);
 
   const pollTimerRef = useRef(null);
@@ -131,18 +126,19 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
   }, [selectedPodId]);
 
   // 2. Fetch physical storage files list filtered by date whenever selectedPodId or selectedDate changes
-  useEffect(() => {
-    if (!selectedPodId) return;
+  const loadStorageFiles = useCallback(
+    async (isBackground = false) => {
+      if (!selectedPodId) return;
 
-    let isMounted = true;
-    async function loadFiles() {
-      setIsLoadingFiles(true);
+      if (!isBackground) setIsLoadingFiles(true);
       try {
         const filesRes = await fetchPodStorageFilesApi(selectedPodId, selectedDate);
-        if (isMounted && filesRes && filesRes.success) {
+        if (filesRes && filesRes.success) {
           setStorageFilesData(filesRes);
           if (Array.isArray(filesRes.dateFolders) && filesRes.dateFolders.length > 0) {
-            const validDates = filesRes.dateFolders.map((df) => df.date).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d));
+            const validDates = filesRes.dateFolders
+              .map((df) => df.date)
+              .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d));
             if (validDates.length > 0) {
               setAvailableDates((prev) => (prev.length > 0 ? prev : validDates));
             }
@@ -151,86 +147,86 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
       } catch (err) {
         console.warn('Failed to load storage files:', err.message);
       } finally {
-        if (isMounted) setIsLoadingFiles(false);
+        if (!isBackground) setIsLoadingFiles(false);
       }
-    }
+    },
+    [selectedPodId, selectedDate]
+  );
 
-    loadFiles();
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedPodId, selectedDate]);
+  useEffect(() => {
+    loadStorageFiles(false);
+  }, [loadStorageFiles]);
 
-  // Primary data loader based on activeCategory, selectedDate, and filters
-  const loadData = useCallback(
-    async (isBackground = false) => {
-      if (!selectedPodId) return;
+  // 3. On-Demand file content loader: ONLY loads when a file is clicked or refreshed
+  const loadFileContent = useCallback(
+    async (fileName, customLimit = null, isBackground = false) => {
+      if (!selectedPodId || !fileName) return;
 
       if (!isBackground) {
-        setIsLoading(true);
+        setIsLoadingFile(true);
         setError(null);
-      } else {
-        setIsRefreshing(true);
       }
 
       try {
-        if (activeCategory === 'heartbeats') {
-          const filterParams = {
-            date: selectedDate,
-            moduleId: selectedModuleFilter !== 'ALL' ? selectedModuleFilter : undefined,
-            startTime: startTime || undefined,
-            endTime: endTime || undefined,
-            source: sourceMode,
-            limit: fetchLimit
-          };
-
-          const data = await fetchPodHeartbeatsApi(selectedPodId, filterParams);
-          const hbList = Array.isArray(data) ? data : [];
-          setRecords(hbList);
-          setRawJsonString(JSON.stringify(hbList, null, 2));
-        } else if (activeCategory === 'events') {
-          const data = await fetchPodEventsApi(selectedPodId, { date: selectedDate, limit: fetchLimit });
-          const evtList = Array.isArray(data) ? data : [];
-          setRecords(evtList);
-          setRawJsonString(JSON.stringify(evtList, null, 2));
-        } else if (activeCategory === 'state') {
-          const stateData = await fetchPodStateApi(selectedPodId);
-          setPodStateData(stateData);
-          setRecords(stateData ? [stateData] : []);
-          setRawJsonString(JSON.stringify(stateData || {}, null, 2));
+        const limitToUse = customLimit || fetchLimit;
+        const res = await fetchPodFileContentApi(selectedPodId, fileName, selectedDate, limitToUse);
+        if (res && res.success) {
+          let contentStr = res.content || '';
+          if (fileName.endsWith('.json')) {
+            try {
+              const parsed = JSON.parse(contentStr);
+              contentStr = JSON.stringify(parsed, null, 2);
+            } catch (_) {}
+          }
+          setRawJsonString(contentStr);
+          setActiveFileMeta(res);
+        } else {
+          if (!isBackground) {
+            setError(res?.error || `Gagal membaca berkas ${fileName}`);
+            setRawJsonString('');
+            setActiveFileMeta(null);
+          }
         }
       } catch (err) {
-        console.error('Error fetching POD log data:', err.message);
         if (!isBackground) {
-          setError(err.message || 'Gagal memuat berkas log POD');
+          setError(err.message || `Gagal membaca berkas ${fileName}`);
+          setRawJsonString('');
+          setActiveFileMeta(null);
         }
       } finally {
-        if (!isBackground) setIsLoading(false);
-        setIsRefreshing(false);
+        if (!isBackground) setIsLoadingFile(false);
       }
     },
-    [
-      selectedPodId,
-      activeCategory,
-      selectedDate,
-      selectedModuleFilter,
-      startTime,
-      endTime,
-      sourceMode,
-      fetchLimit
-    ]
+    [selectedPodId, selectedDate, fetchLimit]
   );
 
-  // Trigger data load on filter change
-  useEffect(() => {
-    loadData(false);
-  }, [loadData]);
+  // 4. Handle clicking a file in the files view
+  const handleOpenFile = useCallback(
+    async (file) => {
+      if (!selectedPodId || !file?.name) return;
 
-  // Live Auto-Polling Effect (every 4 seconds)
+      setActiveFileName(file.name);
+      if (file.type) setActiveCategory(file.type);
+      if (file.moduleId !== undefined && file.moduleId !== null) {
+        setSelectedModuleFilter(file.moduleId);
+      }
+      setViewMode('json');
+      await loadFileContent(file.name);
+    },
+    [selectedPodId, loadFileContent]
+  );
+
+
+
+  // 6. Live Auto-Polling Effect (every 4 seconds)
   useEffect(() => {
     if (isLivePolling) {
       pollTimerRef.current = setInterval(() => {
-        loadData(true);
+        if (viewMode === 'json' && activeFileName) {
+          loadFileContent(activeFileName, fetchLimit, true);
+        } else if (viewMode === 'files') {
+          loadStorageFiles(true);
+        }
       }, 4000);
     } else if (pollTimerRef.current) {
       clearInterval(pollTimerRef.current);
@@ -238,7 +234,7 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
     return () => {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
     };
-  }, [isLivePolling, loadData]);
+  }, [isLivePolling, viewMode, activeFileName, fetchLimit, loadFileContent, loadStorageFiles]);
 
   // Selected server metadata & filtered list
   const currentPod = useMemo(() => {
@@ -265,11 +261,7 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
     });
   }, [podServers, serverSearch]);
 
-  // Compute delta intervals for heartbeats
-  const recordsWithDelta = useMemo(() => {
-    if (activeCategory !== 'heartbeats') return records;
-    return computeHeartbeatDeltas(records);
-  }, [records, activeCategory]);
+
 
   // Quick Preset Helper
   const handleApplyPreset = (preset) => {
@@ -294,20 +286,33 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
     }
   };
 
-  // Copy JSON to clipboard
-  const handleCopyJson = () => {
-    if (!rawJsonString) return;
-    navigator.clipboard.writeText(rawJsonString);
-    setCopySuccess(true);
-    setTimeout(() => setCopySuccess(false), 2000);
+
+
+  // Refresh handler for toolbar / header button
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      if (viewMode === 'json' && activeFileName) {
+        await loadFileContent(activeFileName, fetchLimit, false);
+      } else {
+        await loadStorageFiles(false);
+      }
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   // Trigger file download
   const handleTriggerDownload = (format = 'json', customModuleId = undefined) => {
     if (!selectedPodId) return;
-    const effectiveModuleId = customModuleId !== undefined
-      ? (customModuleId !== 'ALL' ? customModuleId : undefined)
-      : (selectedModuleFilter !== 'ALL' ? selectedModuleFilter : undefined);
+    const effectiveModuleId =
+      customModuleId !== undefined
+        ? customModuleId !== 'ALL'
+          ? customModuleId
+          : undefined
+        : selectedModuleFilter !== 'ALL'
+        ? selectedModuleFilter
+        : undefined;
 
     const downloadUrl = getPodHeartbeatsDownloadUrl(selectedPodId, {
       date: selectedDate,
@@ -319,6 +324,25 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
     window.open(downloadUrl, '_blank');
   };
 
+  // Handle Category click from SubHeader
+  const handleSelectCategory = (cat) => {
+    setActiveCategory(cat);
+    if (cat === 'state') {
+      handleOpenFile({ name: 'state.json', type: 'state' });
+    } else if (viewMode === 'json') {
+      setActiveFileName(null);
+      setViewMode('files');
+    }
+  };
+
+  // Header display records count
+  const displayRecordsCount = useMemo(() => {
+    if (viewMode === 'json' && rawJsonString) {
+      return rawJsonString.split('\n').filter(Boolean).length;
+    }
+    return storageFilesData?.filteredFilesCount || storageFilesData?.files?.length || 0;
+  }, [viewMode, rawJsonString, storageFilesData]);
+
   return (
     <div className="h-[calc(100vh-5.4rem)] max-h-[calc(100vh-5.4rem)] w-full flex flex-col bg-slate-950 text-slate-100 overflow-hidden select-text">
       {/* 1. TOP HEADER & GLOBAL ACTIONS */}
@@ -327,8 +351,8 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
         serverDisplayName={serverDisplayName}
         isLivePolling={isLivePolling}
         onToggleLivePolling={() => setIsLivePolling(!isLivePolling)}
-        onRefresh={() => loadData(false)}
-        isLoading={isLoading}
+        onRefresh={handleRefresh}
+        isLoading={isLoading || isLoadingFiles || isLoadingFile}
         isRefreshing={isRefreshing}
         onTriggerDownload={handleTriggerDownload}
       />
@@ -339,10 +363,17 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
         <PodRecordsSidebar
           podServers={filteredPods}
           selectedPodId={selectedPodId}
-          onSelectPod={setSelectedPodId}
+          onSelectPod={(id) => {
+            setSelectedPodId(id);
+            setActiveFileName(null);
+            setRawJsonString('');
+            setViewMode('files');
+          }}
           serverSearch={serverSearch}
           onSearchChange={setServerSearch}
           isServerLoading={isServerLoading}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={setIsSidebarCollapsed}
         />
 
         {/* B. MAIN VIEWER: INDEPENDENT SCROLLING PANE */}
@@ -352,9 +383,9 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
             serverDisplayName={serverDisplayName}
             safeFolderName={safeFolderName}
             activeCategory={activeCategory}
-            onSelectCategory={setActiveCategory}
+            onSelectCategory={handleSelectCategory}
             selectedDate={selectedDate}
-            recordsCount={records.length}
+            recordsCount={displayRecordsCount}
             activeFileName={activeFileName}
           />
 
@@ -364,7 +395,9 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
             selectedDate={selectedDate}
             onSelectDate={(d) => {
               setActiveFileName(null);
+              setRawJsonString('');
               setSelectedDate(d);
+              setViewMode('files');
             }}
             dateFolders={storageFilesData?.dateFolders || []}
             activeCategory={activeCategory}
@@ -379,83 +412,75 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
             sourceMode={sourceMode}
             onSourceModeChange={setSourceMode}
             fetchLimit={fetchLimit}
-            onFetchLimitChange={setFetchLimit}
+            onFetchLimitChange={(newLimit) => {
+              setFetchLimit(newLimit);
+              if (viewMode === 'json' && activeFileName) {
+                loadFileContent(activeFileName, newLimit, false);
+              }
+            }}
             viewMode={viewMode}
             onViewModeChange={(m) => {
               if (m === 'files') setActiveFileName(null);
               setViewMode(m);
             }}
-            totalFilesCount={storageFilesData?.totalFiles || 0}
+            totalFilesCount={storageFilesData?.filteredFilesCount || storageFilesData?.files?.length || 0}
             jsonFilterQuery={jsonFilterQuery}
             onJsonFilterChange={setJsonFilterQuery}
-            onCopyJson={handleCopyJson}
-            copySuccess={copySuccess}
           />
 
           {/* Main Content Area - Independently Scrollable */}
           <div className="flex-1 overflow-y-auto overflow-x-auto p-4 sm:p-6 space-y-4 custom-scrollbar min-h-0 overscroll-contain">
-            {error ? (
-              <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 flex items-center gap-3">
-                <AlertCircle size={18} className="shrink-0" />
-                <div className="text-xs">{error}</div>
+            {error && (
+              <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <AlertCircle size={18} className="shrink-0 text-rose-400" />
+                  <span className="text-xs">{error}</span>
+                </div>
+                <button
+                  onClick={() => setError(null)}
+                  className="text-xs text-slate-400 hover:text-white px-2 py-0.5 rounded bg-slate-900 border border-slate-800"
+                >
+                  Tutup
+                </button>
               </div>
-            ) : isLoading ? (
-              <div className="h-64 flex flex-col items-center justify-center gap-3 text-slate-500">
-                <RefreshCw size={24} className="animate-spin text-cyan-400" />
-                <span className="text-xs font-semibold">Membaca berkas rekaman log...</span>
-              </div>
-            ) : (
-              <>
-                {/* MODE 0: BERKAS FISIK (POD_STORAGE FILE EXPLORER) */}
-                {viewMode === 'files' && (
-                  <PodRecordsFilesView
-                    storageFilesData={storageFilesData}
-                    isLoadingFiles={isLoadingFiles}
-                    selectedDate={selectedDate}
-                    availableDates={availableDates}
-                    onSelectCategory={setActiveCategory}
-                    onSelectDate={(d) => {
-                      setActiveFileName(null);
-                      setSelectedDate(d);
-                    }}
-                    onSelectModule={setSelectedModuleFilter}
-                    onViewModeChange={(mode, fileName = null) => {
-                      if (fileName) setActiveFileName(fileName);
-                      setViewMode(mode);
-                    }}
-                    onTriggerDownload={handleTriggerDownload}
-                  />
-                )}
+            )}
 
-                {/* MODE 1: TABEL INTERAKTIF */}
-                {viewMode === 'table' && (
-                  <PodRecordsTableView
-                    activeCategory={activeCategory}
-                    recordsWithDelta={recordsWithDelta}
-                    podStateData={podStateData}
-                  />
-                )}
+            {/* MODE 0: BERKAS FISIK (DEFAULT: HANYA MENAMPILKAN DAFTAR BERKAS DALAM FOLDER) */}
+            {viewMode === 'files' && (
+              <PodRecordsFilesView
+                storageFilesData={storageFilesData}
+                isLoadingFiles={isLoadingFiles}
+                selectedDate={selectedDate}
+                availableDates={availableDates}
+                onSelectCategory={setActiveCategory}
+                onSelectDate={(d) => {
+                  setActiveFileName(null);
+                  setSelectedDate(d);
+                }}
+                onSelectModule={setSelectedModuleFilter}
+                onViewModeChange={(mode, fileName = null) => {
+                  if (fileName) setActiveFileName(fileName);
+                  setViewMode(mode);
+                }}
+                onTriggerDownload={handleTriggerDownload}
+                onOpenFile={handleOpenFile}
+              />
+            )}
 
-                {/* MODE 2: PENAMPIL KODE JSON */}
-                {viewMode === 'json' && (
-                  <PodRecordsJsonView
-                    rawJsonString={rawJsonString}
-                    jsonFilterQuery={jsonFilterQuery}
-                    onCopyJson={handleCopyJson}
-                    copySuccess={copySuccess}
-                    fileName={activeFileName}
-                    onBackToFiles={() => {
-                      setActiveFileName(null);
-                      setViewMode('files');
-                    }}
-                  />
-                )}
-
-                {/* MODE 3: ANALISIS & STATISTIK */}
-                {viewMode === 'analytics' && activeCategory === 'heartbeats' && (
-                  <PodRecordsAnalyticsView recordsWithDelta={recordsWithDelta} />
-                )}
-              </>
+            {/* MODE 1: PENAMPIL KODE JSON (HANYA DITAMPILKAN KETIKA BERKAS DIKLIK) */}
+            {viewMode === 'json' && (
+              <PodRecordsJsonView
+                rawJsonString={rawJsonString}
+                jsonFilterQuery={jsonFilterQuery}
+                fileName={activeFileName}
+                fileMeta={activeFileMeta}
+                isLoading={isLoadingFile}
+                onBackToFiles={() => {
+                  setActiveFileName(null);
+                  setViewMode('files');
+                }}
+                onDownloadFile={() => handleTriggerDownload('json')}
+              />
             )}
           </div>
         </main>
@@ -463,3 +488,4 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
     </div>
   );
 }
+
