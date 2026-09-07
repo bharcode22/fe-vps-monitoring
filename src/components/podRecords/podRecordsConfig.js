@@ -3,15 +3,15 @@
  */
 
 export const MODULE_CONFIG = [
-  { id: 501, name: 'Manual', fullName: 'Manual Control', defaultPort: 'ttyUSB0', color: 'cyan' },
-  { id: 502, name: 'RFID', fullName: 'RFID Reader', defaultPort: 'ttyUSB1', color: 'blue' },
-  { id: 503, name: 'Motion', fullName: 'Motion Sensor (PIR)', defaultPort: 'ttyUSB2', color: 'purple' },
-  { id: 504, name: 'Relay', fullName: 'Relay Actuator', defaultPort: 'ttyUSB3', color: 'emerald' },
-  { id: 505, name: 'Power', fullName: 'Power Meter', defaultPort: 'ttyUSB4', color: 'amber' },
-  { id: 506, name: 'Temp', fullName: 'Temperature & Hum', defaultPort: 'ttyUSB5', color: 'rose' },
-  { id: 507, name: 'Door', fullName: 'Door Lock Contact', defaultPort: 'ttyUSB6', color: 'teal' },
-  { id: 508, name: 'Dispenser', fullName: 'Scent Dispenser', defaultPort: 'ttyUSB7', color: 'indigo' },
-  { id: 509, name: 'Audio', fullName: 'Audio Amp Controller', defaultPort: 'ttyUSB8', color: 'sky' }
+  { id: 508, name: 'PDU / Power', fullName: 'PDU Power Distribution (6 Kanal Arus)', defaultPort: 'ttyUSB7', color: 'indigo', hasTelemetry: true },
+  { id: 504, name: 'Relay / Olfa', fullName: 'Relay & Olfa Actuator (Arus & Daya)', defaultPort: 'ttyUSB3', color: 'emerald', hasTelemetry: true },
+  { id: 503, name: 'Strobe', fullName: 'Strobe & PIR Sensor (Tegangan & Daya)', defaultPort: 'ttyUSB2', color: 'purple', hasTelemetry: true },
+  { id: 502, name: 'Chair / Magnet', fullName: 'Kursi & Magnet (Arus PEMF & HM)', defaultPort: 'ttyUSB1', color: 'blue', hasTelemetry: true },
+  { id: 501, name: 'Manual', fullName: 'Manual Control Button', defaultPort: 'ttyUSB0', color: 'cyan' },
+  { id: 505, name: 'Power Meter', fullName: 'Power Meter / Aux Relay', defaultPort: 'ttyUSB4', color: 'amber' },
+  { id: 506, name: 'Temp / Hum', fullName: 'Temperature & Humidity', defaultPort: 'ttyUSB5', color: 'rose' },
+  { id: 507, name: 'Door Lock', fullName: 'Door Lock Contact Sensor', defaultPort: 'ttyUSB6', color: 'teal' },
+  { id: 509, name: 'Audio Amp', fullName: 'Audio Amp Controller', defaultPort: 'ttyUSB8', color: 'sky' }
 ];
 
 export function getTodayLocalDate() {

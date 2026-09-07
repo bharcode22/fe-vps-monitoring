@@ -12,7 +12,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   FileJson,
-  Activity
+  Activity,
+  Zap
 } from 'lucide-react';
 import { MODULE_CONFIG, getTodayLocalDate, getModuleFullName } from './podRecordsConfig';
 
@@ -21,6 +22,7 @@ export default function PodRecordsFilesView({
   isLoadingFiles,
   selectedDate,
   availableDates = [],
+  activeCategory = 'all',
   onSelectCategory,
   onSelectDate,
   onSelectModule,
@@ -36,9 +38,22 @@ export default function PodRecordsFilesView({
     return storageFilesData?.dateFolders || [];
   }, [storageFilesData]);
 
-  // Filter files by search query
+  // Filter files by category & search query
   const filteredFiles = useMemo(() => {
-    const list = storageFilesData?.files || [];
+    let list = storageFilesData?.files || [];
+
+    if (activeCategory && activeCategory !== 'all') {
+      if (activeCategory === 'current') {
+        list = list.filter((f) => f.type === 'current');
+      } else if (activeCategory === 'heartbeats') {
+        list = list.filter((f) => f.type === 'heartbeats');
+      } else if (activeCategory === 'events') {
+        list = list.filter((f) => f.type === 'events');
+      } else if (activeCategory === 'state') {
+        list = list.filter((f) => f.type === 'state');
+      }
+    }
+
     if (!fileSearch.trim()) return list;
     const q = fileSearch.toLowerCase().trim();
     return list.filter((f) => {
@@ -48,7 +63,7 @@ export default function PodRecordsFilesView({
       const modMatch = String(f.moduleId || '').includes(q);
       return nameMatch || (modName && modName.includes(q)) || catMatch || modMatch;
     });
-  }, [storageFilesData?.files, fileSearch]);
+  }, [storageFilesData?.files, fileSearch, activeCategory]);
 
   // Current folder stats
   const activeFolderMeta = useMemo(() => {
@@ -170,14 +185,16 @@ export default function PodRecordsFilesView({
                             <FileCode
                               size={16}
                               className={
-                                file.type === 'heartbeats'
+                                file.type === 'current'
+                                  ? 'text-amber-400 shrink-0'
+                                  : file.type === 'heartbeats'
                                   ? 'text-cyan-400 shrink-0'
                                   : file.type === 'events'
-                                  ? 'text-amber-400 shrink-0'
+                                  ? 'text-rose-400 shrink-0'
                                   : 'text-emerald-400 shrink-0'
                               }
                             />
-                            <span className="text-cyan-100 group-hover:text-cyan-300 transition-colors">{file.name}</span>
+                            <span className="text-cyan-100 group-hover:text-cyan-300 transition-colors font-mono">{file.name}</span>
                           </div>
                         </td>
 
@@ -185,7 +202,11 @@ export default function PodRecordsFilesView({
                         <td className="py-3 px-4 whitespace-nowrap font-sans">
                           {file.moduleId ? (
                             <div className="flex items-center gap-1.5">
-                              <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono text-[10px] font-bold border border-cyan-500/40">
+                              <span className={`px-1.5 py-0.5 rounded font-mono text-[10px] font-bold border ${
+                                file.type === 'current'
+                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                  : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                              }`}>
                                 Mod {file.moduleId}
                               </span>
                               {modFullName && (
@@ -195,7 +216,7 @@ export default function PodRecordsFilesView({
                               )}
                             </div>
                           ) : file.type === 'events' ? (
-                            <span className="text-amber-300 text-[11px] font-medium">
+                            <span className="text-rose-300 text-[11px] font-medium">
                               Log Peristiwa &amp; Alert
                             </span>
                           ) : (
@@ -208,15 +229,18 @@ export default function PodRecordsFilesView({
                         {/* Category Badge */}
                         <td className="py-3 px-4 whitespace-nowrap font-sans">
                           <span
-                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                              file.type === 'heartbeats'
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-1 w-fit ${
+                              file.type === 'current'
+                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm'
+                                : file.type === 'heartbeats'
                                 ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
                                 : file.type === 'events'
-                                ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                                ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
                                 : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
                             }`}
                           >
-                            {file.category}
+                            {file.type === 'current' && <Zap size={10} className="fill-amber-400" />}
+                            <span>{file.category}</span>
                           </span>
                         </td>
 
@@ -262,7 +286,7 @@ export default function PodRecordsFilesView({
                             </button>
 
                             {/* Download Action */}
-                            {file.type === 'heartbeats' && (
+                            {(file.type === 'heartbeats' || file.type === 'current') && (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();

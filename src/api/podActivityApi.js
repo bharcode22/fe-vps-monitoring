@@ -368,5 +368,21 @@ export async function fetchPodFileMetricsApi(podId, fileName, date = null, inter
   return data;
 }
 
+/**
+ * Fetch pre-formatted continuous time-series history for live telemetry streaming
+ */
+export async function fetchPodLiveBackfillApi(podId, { moduleId, windowSeconds = 300, type = 'current', date = null } = {}) {
+  const params = new URLSearchParams({
+    moduleId: String(moduleId),
+    windowSeconds: String(windowSeconds),
+    type
+  });
+  if (date && date !== 'ALL') params.append('date', date);
 
-
+  const res = await fetch(`${BACKEND_URL}/api/pod-activity/pods/${podId}/live-backfill?${params.toString()}`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memuat riwayat live telemetri');
+  return data;
+}

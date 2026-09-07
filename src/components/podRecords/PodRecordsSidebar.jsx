@@ -5,7 +5,8 @@ import {
   RefreshCw,
   ChevronRight,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  Zap
 } from 'lucide-react';
 
 function getShortPodLabel(pod) {
@@ -162,11 +163,16 @@ export default function PodRecordsSidebar({
                     />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-xs font-bold text-white truncate flex items-center gap-1.5">
+                    <div className="text-xs font-bold text-white truncate flex items-center gap-1.5 flex-wrap">
                       <span>{fullName}</span>
                       {pod.code && (
                         <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 font-mono">
                           #{pod.code}
+                        </span>
+                      )}
+                      {(pod.code === '31' || pod.code === '35' || pod.code === '30' || Number(pod.id) === 9 || Number(pod.id) === 11 || Number(pod.id) === 8) && (
+                        <span className="text-[9px] px-1 py-0.2 rounded bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30 flex items-center gap-0.5" title="POD ini dilengkapi telemetri daya & 6 kanal arus">
+                          <Zap size={9} className="text-amber-400 fill-amber-400" /> Daya
                         </span>
                       )}
                     </div>
