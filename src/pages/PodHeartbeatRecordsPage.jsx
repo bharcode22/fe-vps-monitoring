@@ -28,11 +28,26 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
   const [serverSearch, setServerSearch] = useState('');
   const [isServerLoading, setIsServerLoading] = useState(true);
 
+  // Helper for current local calendar date YYYY-MM-DD
+  const getTodayLocalDate = () => {
+    try {
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Makassar',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).format(new Date());
+    } catch (_) {
+      return new Date().toLocaleDateString('sv-SE');
+    }
+  };
+
   // 2. Dates & Categories States
   const [availableDates, setAvailableDates] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(getTodayLocalDate);
   const [activeCategory, setActiveCategory] = useState('heartbeats'); // 'heartbeats' | 'events' | 'state'
   const [viewMode, setViewMode] = useState('files'); // 'files' | 'table' | 'json' | 'analytics'
+  const [activeFileName, setActiveFileName] = useState(null);
   const [storageFilesData, setStorageFilesData] = useState(null);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
 
@@ -91,40 +106,60 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
     loadPods();
   }, [initialPodId]);
 
-  // Load available dates and physical storage files when selectedPodId changes
+  // 1. Fetch available log dates when selectedPodId changes
   useEffect(() => {
     if (!selectedPodId) return;
 
     let isMounted = true;
-    async function loadDatesAndFiles() {
-      setIsLoadingFiles(true);
+    async function loadDates() {
       try {
-        // Fetch recorded log dates
         const dates = await fetchPodLogDatesApi(selectedPodId);
         if (isMounted && Array.isArray(dates) && dates.length > 0) {
           setAvailableDates(dates);
-          if (!dates.includes(selectedDate)) {
-            setSelectedDate(dates[0]);
-          }
-        }
-
-        // Fetch physical files list in pod_storage
-        const filesRes = await fetchPodStorageFilesApi(selectedPodId);
-        if (isMounted && filesRes && filesRes.success) {
-          setStorageFilesData(filesRes);
+          // If current selectedDate is not among the available dates, pick the latest recorded date
+          setSelectedDate((prevDate) => (dates.includes(prevDate) ? prevDate : dates[0]));
         }
       } catch (err) {
-        console.warn('Failed to load storage files/dates:', err.message);
+        console.warn('Failed to load log dates:', err.message);
+      }
+    }
+
+    loadDates();
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedPodId]);
+
+  // 2. Fetch physical storage files list filtered by date whenever selectedPodId or selectedDate changes
+  useEffect(() => {
+    if (!selectedPodId) return;
+
+    let isMounted = true;
+    async function loadFiles() {
+      setIsLoadingFiles(true);
+      try {
+        const filesRes = await fetchPodStorageFilesApi(selectedPodId, selectedDate);
+        if (isMounted && filesRes && filesRes.success) {
+          setStorageFilesData(filesRes);
+          if (Array.isArray(filesRes.dateFolders) && filesRes.dateFolders.length > 0) {
+            const validDates = filesRes.dateFolders.map((df) => df.date).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d));
+            if (validDates.length > 0) {
+              setAvailableDates((prev) => (prev.length > 0 ? prev : validDates));
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load storage files:', err.message);
       } finally {
         if (isMounted) setIsLoadingFiles(false);
       }
     }
 
-    loadDatesAndFiles();
+    loadFiles();
     return () => {
       isMounted = false;
     };
-  }, [selectedPodId]);
+  }, [selectedPodId, selectedDate]);
 
   // Primary data loader based on activeCategory, selectedDate, and filters
   const loadData = useCallback(
@@ -320,13 +355,18 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
             onSelectCategory={setActiveCategory}
             selectedDate={selectedDate}
             recordsCount={records.length}
+            activeFileName={activeFileName}
           />
 
           {/* Filter Toolbar & View Mode Switcher */}
           <PodRecordsFilterToolbar
             availableDates={availableDates}
             selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
+            onSelectDate={(d) => {
+              setActiveFileName(null);
+              setSelectedDate(d);
+            }}
+            dateFolders={storageFilesData?.dateFolders || []}
             activeCategory={activeCategory}
             selectedModuleFilter={selectedModuleFilter}
             onSelectModuleFilter={setSelectedModuleFilter}
@@ -341,7 +381,10 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
             fetchLimit={fetchLimit}
             onFetchLimitChange={setFetchLimit}
             viewMode={viewMode}
-            onViewModeChange={setViewMode}
+            onViewModeChange={(m) => {
+              if (m === 'files') setActiveFileName(null);
+              setViewMode(m);
+            }}
             totalFilesCount={storageFilesData?.totalFiles || 0}
             jsonFilterQuery={jsonFilterQuery}
             onJsonFilterChange={setJsonFilterQuery}
@@ -368,10 +411,18 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
                   <PodRecordsFilesView
                     storageFilesData={storageFilesData}
                     isLoadingFiles={isLoadingFiles}
+                    selectedDate={selectedDate}
+                    availableDates={availableDates}
                     onSelectCategory={setActiveCategory}
-                    onSelectDate={setSelectedDate}
+                    onSelectDate={(d) => {
+                      setActiveFileName(null);
+                      setSelectedDate(d);
+                    }}
                     onSelectModule={setSelectedModuleFilter}
-                    onViewModeChange={setViewMode}
+                    onViewModeChange={(mode, fileName = null) => {
+                      if (fileName) setActiveFileName(fileName);
+                      setViewMode(mode);
+                    }}
                     onTriggerDownload={handleTriggerDownload}
                   />
                 )}
@@ -392,6 +443,11 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
                     jsonFilterQuery={jsonFilterQuery}
                     onCopyJson={handleCopyJson}
                     copySuccess={copySuccess}
+                    fileName={activeFileName}
+                    onBackToFiles={() => {
+                      setActiveFileName(null);
+                      setViewMode('files');
+                    }}
                   />
                 )}
 

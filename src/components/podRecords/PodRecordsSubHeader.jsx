@@ -12,8 +12,18 @@ export default function PodRecordsSubHeader({
   activeCategory,
   onSelectCategory,
   selectedDate,
-  recordsCount
+  recordsCount,
+  activeFileName = null
 }) {
+  const displayFolder = selectedDate === 'ALL' ? 'semua_folder' : (selectedDate || 'today');
+  const pathSuffix = activeFileName
+    ? activeFileName
+    : activeCategory === 'state'
+    ? 'state.json'
+    : activeCategory === 'events'
+    ? `events_${displayFolder}.jsonl`
+    : `hb_*_${displayFolder}.jsonl`;
+
   return (
     <div className="p-3 sm:p-4 bg-slate-900/40 border-b border-slate-800/80 flex flex-col md:flex-row md:items-center justify-between gap-3 shrink-0">
       <div>
@@ -24,7 +34,7 @@ export default function PodRecordsSubHeader({
           <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-md bg-slate-800 text-cyan-300 border border-slate-700 flex items-center gap-1">
             <HardDrive size={12} className="text-cyan-400" />
             <span>
-              pods/{safeFolderName}/{activeCategory === 'heartbeats' ? 'heartbeats' : activeCategory === 'events' ? 'events' : 'state'}/{selectedDate}.jsonl
+              pods/{safeFolderName}/{displayFolder}/{pathSuffix}
             </span>
           </span>
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">

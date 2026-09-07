@@ -2,7 +2,6 @@
  * Configuration & Helper Utilities for POD Heartbeat Records Explorer
  */
 
-// Hardware modules definition with friendly names, ports, and colors
 export const MODULE_CONFIG = [
   { id: 501, name: 'Manual', fullName: 'Manual Control', defaultPort: 'ttyUSB0', color: 'cyan' },
   { id: 502, name: 'RFID', fullName: 'RFID Reader', defaultPort: 'ttyUSB1', color: 'blue' },
@@ -14,6 +13,31 @@ export const MODULE_CONFIG = [
   { id: 508, name: 'Dispenser', fullName: 'Scent Dispenser', defaultPort: 'ttyUSB7', color: 'indigo' },
   { id: 509, name: 'Audio', fullName: 'Audio Amp Controller', defaultPort: 'ttyUSB8', color: 'sky' }
 ];
+
+export function getTodayLocalDate() {
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Makassar',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(new Date());
+  } catch (_) {
+    return new Date().toLocaleDateString('sv-SE');
+  }
+}
+
+export function getModuleName(modId) {
+  if (!modId) return null;
+  const found = MODULE_CONFIG.find((m) => Number(m.id) === Number(modId));
+  return found ? found.name : null;
+}
+
+export function getModuleFullName(modId) {
+  if (!modId) return null;
+  const found = MODULE_CONFIG.find((m) => Number(m.id) === Number(modId));
+  return found ? found.fullName : `Modul ${modId}`;
+}
 
 /**
  * Format bytes into human-readable string (B, KB, MB, GB)

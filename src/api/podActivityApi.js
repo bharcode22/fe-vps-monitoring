@@ -229,8 +229,11 @@ export async function fetchPodLogDatesApi(podId) {
 /**
  * Fetch physical storage files list for a pod
  */
-export async function fetchPodStorageFilesApi(podId) {
-  const res = await fetch(`${BACKEND_URL}/api/pod-activity/pods/${podId}/storage-files`, {
+export async function fetchPodStorageFilesApi(podId, date = null) {
+  const url = date && date !== 'ALL'
+    ? `${BACKEND_URL}/api/pod-activity/pods/${podId}/storage-files?date=${encodeURIComponent(date)}`
+    : `${BACKEND_URL}/api/pod-activity/pods/${podId}/storage-files`;
+  const res = await fetch(url, {
     method: 'GET',
     headers: getAuthHeaders()
   });

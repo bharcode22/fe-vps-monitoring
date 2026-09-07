@@ -1,6 +1,8 @@
 import React from 'react';
 import {
   Calendar,
+  Folder,
+  FolderOpen,
   Cpu,
   Clock,
   Radio,
@@ -14,12 +16,13 @@ import {
   Copy,
   Check
 } from 'lucide-react';
-import { MODULE_CONFIG } from './podRecordsConfig';
+import { MODULE_CONFIG, getTodayLocalDate } from './podRecordsConfig';
 
 export default function PodRecordsFilterToolbar({
   availableDates = [],
   selectedDate,
   onSelectDate,
+  dateFolders = [],
   activeCategory,
   selectedModuleFilter,
   onSelectModuleFilter,
@@ -41,43 +44,91 @@ export default function PodRecordsFilterToolbar({
   onCopyJson,
   copySuccess
 }) {
+  const todayStr = getTodayLocalDate();
+
   return (
     <>
       {/* 1. DATE SELECTOR & FILTER TOOLBAR */}
       <div className="px-4 sm:px-6 py-2.5 bg-slate-900/20 border-b border-slate-800/80 flex flex-col gap-2.5 shrink-0">
-        {/* Row 1: Date Pills Selector */}
+        {/* Row 1: Date Folders Pills Selector */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
-          <span className="text-xs font-bold text-slate-400 shrink-0 flex items-center gap-1">
-            <Calendar size={13} className="text-cyan-400" />
-            Tanggal Berkas:
+          <span className="text-xs font-bold text-slate-400 shrink-0 flex items-center gap-1.5 mr-1">
+            <FolderOpen size={14} className="text-cyan-400" />
+            <span>Folder Tanggal:</span>
           </span>
 
           {availableDates.length === 0 ? (
             <span className="text-xs text-slate-500 italic">Tidak ada berkas log terdeteksi</span>
           ) : (
-            availableDates.map((d) => (
-              <button
-                key={d}
-                onClick={() => onSelectDate(d)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all shrink-0 cursor-pointer border ${
-                  selectedDate === d
-                    ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 shadow-sm'
-                    : 'bg-slate-950 text-slate-400 hover:text-white border-slate-800'
-                }`}
-              >
-                {d}
-              </button>
-            ))
+            <>
+              {availableDates.map((d) => {
+                const isSelected = selectedDate === d;
+                const isToday = d === todayStr;
+                const folderMeta = dateFolders.find((df) => df.date === d);
+                const fileCount = folderMeta?.count;
+
+                return (
+                  <button
+                    key={d}
+                    onClick={() => onSelectDate(d)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all shrink-0 cursor-pointer border flex items-center gap-1.5 ${
+                      isSelected
+                        ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 shadow-md shadow-cyan-950/40 ring-1 ring-cyan-500/30'
+                        : 'bg-slate-950 text-slate-400 hover:text-slate-200 border-slate-800 hover:border-slate-700'
+                    }`}
+                  >
+                    {isSelected ? (
+                      <FolderOpen size={13} className="text-cyan-400 shrink-0" />
+                    ) : (
+                      <Folder size={13} className="text-slate-500 shrink-0" />
+                    )}
+                    <span>{d}</span>
+                    {fileCount !== undefined && fileCount !== null && (
+                      <span
+                        className={`text-[10px] px-1.5 py-0.2 rounded-full font-sans ${
+                          isSelected
+                            ? 'bg-cyan-500/30 text-cyan-200'
+                            : 'bg-slate-800 text-slate-400'
+                        }`}
+                      >
+                        {fileCount}
+                      </span>
+                    )}
+                    {isToday && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" title="Hari ini" />
+                    )}
+                  </button>
+                );
+              })}
+
+              {/* Show 'Semua Tanggal' pill if more than 1 date available */}
+              {availableDates.length > 1 && (
+                <button
+                  onClick={() => onSelectDate('ALL')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer border flex items-center gap-1.5 ${
+                    selectedDate === 'ALL'
+                      ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 shadow-sm'
+                      : 'bg-slate-950 text-slate-400 hover:text-white border-slate-800'
+                  }`}
+                >
+                  <Folder size={13} className="text-slate-400" />
+                  <span>Semua Folder</span>
+                </button>
+              )}
+            </>
           )}
 
           {/* Native Date Input Picker */}
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => onSelectDate(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-0.5 text-xs text-cyan-300 font-mono focus:outline-none focus:border-cyan-500 shrink-0 cursor-pointer"
-            title="Pilih tanggal arsip"
-          />
+          <div className="flex items-center gap-1 shrink-0 ml-1">
+            <span className="text-[10px] text-slate-500">Pilih:</span>
+            <input
+              type="date"
+              value={selectedDate === 'ALL' ? '' : selectedDate}
+              onChange={(e) => e.target.value && onSelectDate(e.target.value)}
+              className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-0.5 text-xs text-cyan-300 font-mono focus:outline-none focus:border-cyan-500 cursor-pointer"
+              title="Pilih tanggal arsip lain"
+            />
+          </div>
         </div>
 
         {/* Row 2: Heartbeat Specific Filters (Modules, Hours, Source, Limit) */}
