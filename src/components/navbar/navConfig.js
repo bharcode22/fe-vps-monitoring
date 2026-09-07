@@ -76,6 +76,7 @@ export const NAV_DROPDOWN_GROUPS = [
       },
       {
         id: 'tnc-sync-manager',
+        aliases: ['tnc-sync'],
         label: 'T&C Sync Manager',
         desc: 'Konsolidasi & Distribusi 13 Tabel T&C (Batch)',
         icon: Database,

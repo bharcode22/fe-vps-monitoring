@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Network, Database, Activity, AlertTriangle, DownloadCloud, UploadCloud } from 'lucide-react';
+import { ArrowLeft, Network, Database, Activity, AlertTriangle, DownloadCloud, UploadCloud } from 'lucide-react';
 import {
   fetchMasterDatabasesApi,
   syncSingleMasterRowApi
@@ -35,7 +35,7 @@ const WORKSPACE_PARTS = {
   }
 };
 
-export default function TncManagerPage() {
+export default function TncManagerPage({ onBack }) {
   const [masterDatabases, setMasterDatabases] = useState([]);
   const [selectedMasterId, setSelectedMasterId] = useState('');
   const [error, setError] = useState('');
@@ -101,37 +101,50 @@ export default function TncManagerPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto min-h-screen text-slate-300 font-sans">
+    <div className="flex flex-col gap-6 text-slate-100 w-full animate-in fade-in duration-200">
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-500 flex items-center gap-3">
-            <Network className="text-emerald-400" size={32} />
-            Sinkronisasi Terms & Conditions
-          </h1>
-          <p className="text-slate-400 text-sm">
-            Modul khusus untuk mengorkestrasi sinkronisasi definisi T&C dan Matrix Pod secara berurutan dan terstruktur di seluruh ekosistem Master-POD.
-          </p>
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-cyan-500/20">
+        <div className="flex items-center gap-3">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="p-2 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 transition-colors cursor-pointer"
+              title="Kembali ke Dashboard"
+            >
+              <ArrowLeft size={18} />
+            </button>
+          )}
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-500 flex items-center gap-2.5">
+                <Network className="text-emerald-400" size={26} />
+                Sinkronisasi Terms &amp; Conditions
+              </h1>
+            </div>
+            <p className="text-slate-400 text-xs sm:text-sm mt-1">
+              Modul khusus untuk mengorkestrasi sinkronisasi definisi T&amp;C dan Matrix Pod secara berurutan dan terstruktur di seluruh ekosistem Master-POD.
+            </p>
+          </div>
         </div>
       </div>
 
       {error && (
-        <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center gap-3 text-red-400">
+        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center gap-3 text-red-400">
           <AlertTriangle size={20} />
           <span className="text-sm font-medium">{error}</span>
         </div>
       )}
 
       {/* Master DB Selector */}
-      <div className="glass-card p-6 rounded-3xl border border-slate-700/50 bg-slate-900/50 backdrop-blur-xl mb-8 flex items-center justify-between shadow-lg">
+      <div className="glass-card p-6 rounded-3xl border border-slate-700/50 bg-slate-900/50 backdrop-blur-xl flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/40 rounded-2xl text-indigo-400">
             <Database size={24} />
           </div>
           <div>
             <h3 className="text-sm font-bold text-white mb-1">Pilih Master Database</h3>
-            <p className="text-xs text-slate-400">Pusat konfigurasi definisi T&C dan tujuan agregasi data.</p>
+            <p className="text-xs text-slate-400">Pusat konfigurasi definisi T&amp;C dan tujuan agregasi data.</p>
           </div>
         </div>
 
@@ -150,7 +163,7 @@ export default function TncManagerPage() {
       </div>
 
       {/* Workspace Area */}
-      <div className="mt-8 mb-8">
+      <div>
         <div className="flex flex-col gap-6">
           {/* Top Horizontal Tabs (Parts) */}
           <div className="flex flex-wrap bg-slate-900 border border-slate-800 rounded-2xl p-1.5 gap-1 shadow-md">

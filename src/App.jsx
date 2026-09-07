@@ -209,6 +209,8 @@ export default function App() {
     'pod-topics',
     'master-pod-sync',
     'master-sync',
+    'tnc-sync-manager',
+    'tnc-sync',
     'database-users',
     'db-users',
     'user-manager',
@@ -280,7 +282,7 @@ export default function App() {
       ) : currentView === 'pod-logs-sync' || currentView === 'pod-logs' ? (
 
         <PodLogsSyncPage onBack={() => handleNavigateView('dashboard')} />
-      ) : currentView === 'tnc-sync-manager' ? (
+      ) : currentView === 'tnc-sync-manager' || currentView === 'tnc-sync' ? (
         <TncManagerPage onBack={() => handleNavigateView('dashboard')} />
       ) : currentView === 'master-pod-sync' || currentView === 'master-sync' ? (
         <MasterPodSyncMatrixPage onBack={() => handleNavigateView('dashboard')} />
