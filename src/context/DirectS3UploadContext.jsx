@@ -64,9 +64,13 @@ export function DirectS3UploadProvider({ children }) {
   });
 
   const activeXhrsRef = useRef({});
+  const onSuccessCallbackRef = useRef(null);
 
   // Open full modal dialog
-  const openDirectS3Modal = useCallback(() => {
+  const openDirectS3Modal = useCallback((onSuccess) => {
+    if (typeof onSuccess === 'function') {
+      onSuccessCallbackRef.current = onSuccess;
+    }
     setIsOpen(true);
     setIsMinimized(false);
     // If opening afresh and not uploading/completed, generate new code
@@ -326,9 +330,13 @@ export function DirectS3UploadProvider({ children }) {
       setIsUploading(false);
       setSuccessToast(`Upload #${soundScape} berhasil disimpan ke AWS S3 & Master DB!`);
 
-      if (onSuccessCallback) {
-        onSuccessCallback(soundScape);
+      const cb = typeof onSuccessCallback === 'function' ? onSuccessCallback : onSuccessCallbackRef.current;
+      if (typeof cb === 'function') {
+        try { cb(soundScape); } catch (e) { console.warn('onSuccess callback error:', e); }
       }
+      try {
+        window.dispatchEvent(new CustomEvent('multimedia_master_updated', { detail: { soundScape } }));
+      } catch (_) { }
     } catch (err) {
       console.error('Direct S3 Upload error:', err);
       setErrorMessage(err.message || 'Terjadi kesalahan saat upload langsung ke S3');
