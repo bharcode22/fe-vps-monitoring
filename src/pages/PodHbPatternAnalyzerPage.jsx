@@ -23,7 +23,9 @@ import {
   Check,
   RotateCcw,
   PlayCircle,
-  ArrowRight
+  ArrowRight,
+  Code2,
+  Table
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -512,6 +514,9 @@ export default function PodHbPatternAnalyzerPage({
   const [tableSearch, setTableSearch] = useState('');
   const deferredSearch = useDeferredValue(tableSearch);
   const [tableFilter, setTableFilter] = useState('all'); // 'all' | 'gaps' | 'lag'
+  const [tableTab, setTableTab] = useState('table'); // 'table' | 'json'
+  const [jsonScope, setJsonScope] = useState('ticks'); // 'ticks' | 'full'
+  const [copiedJsonTab, setCopiedJsonTab] = useState(false);
   const [isTransitionPending, startTransition] = useTransition();
   const [copiedSuccess, setCopiedSuccess] = useState(false);
   const [displayLimit, setDisplayLimit] = useState(250);
@@ -735,6 +740,36 @@ export default function PodHbPatternAnalyzerPage({
       return true;
     });
   }, [analysisData, tableFilter, deferredSearch]);
+
+  // JSON view content memoized for performance
+  const jsonFormattedTicks = useMemo(() => {
+    if (!analysisData) return '{\n  "data": []\n}';
+    if (jsonScope === 'full') {
+      return JSON.stringify(analysisData, null, 2);
+    }
+    return JSON.stringify(filteredTicks, null, 2);
+  }, [analysisData, filteredTicks, jsonScope]);
+
+  // Copy JSON from tab
+  const handleCopyJsonTab = () => {
+    navigator.clipboard.writeText(jsonFormattedTicks);
+    setCopiedJsonTab(true);
+    setTimeout(() => setCopiedJsonTab(false), 2000);
+  };
+
+  // Download JSON file
+  const handleDownloadJson = () => {
+    if (!analysisData) return;
+    const blob = new Blob([jsonFormattedTicks], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `hb_analysis_pod${selectedPodId || 'all'}_mod${selectedModuleId}_${selectedDate}_${jsonScope}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   // Diagnosis Card Color & Theme Mapping
   const diagnosisTheme = useMemo(() => {
@@ -1049,127 +1084,6 @@ export default function PodHbPatternAnalyzerPage({
         </div>
       )}
 
-      {/* Automated Heuristic Diagnosis Card */}
-      {analysisData?.diagnosis && (
-        <div className={`p-5 sm:p-6 rounded-3xl border shadow-2xl relative overflow-hidden backdrop-blur-xl bg-gradient-to-b ${diagnosisTheme.bg}`}>
-          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-4 border-b border-white/10">
-            <div className="flex items-center gap-3.5">
-              <div className={`p-3 rounded-2xl ${diagnosisTheme.badgeBg} border`}>
-                <DiagnosisIcon size={28} className={diagnosisTheme.iconColor} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full border ${diagnosisTheme.badgeBg}`}>
-                    {analysisData.diagnosis.patternType}
-                  </span>
-
-                  {/* Status Pasca-Mati: RESET vs BERLANJUT vs LONCAT */}
-                  {analysisData.diagnosis.postDeadType === 'RESET' && (
-                    <span className="text-xs font-black px-3 py-1 rounded-full bg-rose-500/25 text-rose-200 border border-rose-500/40 flex items-center gap-1.5 shadow-sm">
-                      <RotateCcw size={13} className="text-rose-400" />
-                      PASCA-DEAD: RESET (Mulai Dari 0)
-                    </span>
-                  )}
-                  {analysisData.diagnosis.postDeadType === 'BERLANJUT' && (
-                    <span className="text-xs font-black px-3 py-1 rounded-full bg-emerald-500/25 text-emerald-200 border border-emerald-500/40 flex items-center gap-1.5 shadow-sm">
-                      <PlayCircle size={13} className="text-emerald-400" />
-                      PASCA-DEAD: BERLANJUT (Kontinu)
-                    </span>
-                  )}
-                  {analysisData.diagnosis.postDeadType === 'LONCAT' && (
-                    <span className="text-xs font-black px-3 py-1 rounded-full bg-blue-500/25 text-blue-200 border border-blue-500/40 flex items-center gap-1.5 shadow-sm">
-                      <Radio size={13} className="text-blue-400" />
-                      PASCA-DEAD: LONCAT
-                    </span>
-                  )}
-
-                  <span className="text-xs text-slate-400">
-                    Target: <strong className="text-white">{analysisData.meta.serverName}</strong> | Modul: <strong className="text-white">{analysisData.meta.moduleName} (ID {analysisData.meta.moduleId})</strong>
-                  </span>
-                  {analysisData.meta.port && (
-                    <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-slate-900/80 border border-slate-700 text-cyan-300">
-                      {analysisData.meta.port}
-                    </span>
-                  )}
-                </div>
-                <h2 className="text-lg sm:text-xl font-black text-white mt-1">
-                  {analysisData.diagnosis.patternTitle}
-                </h2>
-              </div>
-            </div>
-
-            {/* Quick KPI Badges */}
-            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-              <div className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800 text-center">
-                <span className="block text-[10px] uppercase font-bold text-slate-400">Total Detak</span>
-                <span className="text-base font-black font-mono text-white">{analysisData.statistics.totalTicks}</span>
-              </div>
-              <div className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800 text-center">
-                <span className="block text-[10px] uppercase font-bold text-slate-400">Jeda Terbesar</span>
-                <span className={`text-base font-black font-mono ${analysisData.statistics.maxDeltaSec >= 15 ? 'text-rose-400' : 'text-amber-400'}`}>
-                  {analysisData.statistics.maxDeltaSec}s
-                </span>
-              </div>
-              <div className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800 text-center">
-                <span className="block text-[10px] uppercase font-bold text-slate-400">Avg Interval</span>
-                <span className="text-base font-black font-mono text-cyan-300">{analysisData.statistics.avgDeltaSec}s</span>
-              </div>
-              <div className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800 text-center">
-                <span className="block text-[10px] uppercase font-bold text-slate-400">Dead Gaps</span>
-                <span className={`text-base font-black font-mono ${analysisData.statistics.totalGapsExceedingDead > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
-                  {analysisData.statistics.totalGapsExceedingDead}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Narrative Diagnostic Body */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 text-xs">
-            {/* Left: Summary & Root Cause */}
-            <div className="p-4 rounded-2xl bg-black/30 border border-white/5 space-y-2">
-              <div className="flex items-center gap-2 font-bold text-white uppercase text-[11px] tracking-wider">
-                <Sparkles size={14} className="text-cyan-400" />
-                Ringkasan Analisa Sistem
-              </div>
-              <p className="text-slate-200 leading-relaxed">
-                {analysisData.diagnosis.summary}
-              </p>
-              <div className="pt-2 border-t border-white/10 mt-2">
-                <span className="block font-semibold text-slate-300 mb-1">Akar Masalah Teknis:</span>
-                <p className="text-slate-400 leading-relaxed">
-                  {analysisData.diagnosis.rootCauseDetails}
-                </p>
-              </div>
-            </div>
-
-            {/* Right: Recommended Action & Gap Details */}
-            <div className="p-4 rounded-2xl bg-black/30 border border-white/5 space-y-2">
-              <div className="flex items-center gap-2 font-bold text-emerald-400 uppercase text-[11px] tracking-wider">
-                <CheckCircle2 size={14} />
-                Langkah Rekomendasi Teknisi
-              </div>
-              <p className="text-slate-300 whitespace-pre-line leading-relaxed font-sans">
-                {analysisData.diagnosis.recommendedAction}
-              </p>
-
-              {analysisData.gaps.length > 0 && (
-                <div className="pt-2 border-t border-white/10 mt-2 flex items-center justify-between">
-                  <span className="text-[11px] text-slate-400">
-                    Ditemukan <strong>{analysisData.gaps.length}</strong> jeda waktu hening.
-                  </span>
-                  <button
-                    onClick={handleJumpToMaxGap}
-                    className="text-[11px] font-bold text-cyan-400 hover:text-cyan-300 underline"
-                  >
-                    Lihat Baris Kejadian di Tabel ↓
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Data Gaps Breakdown Section */}
       <DataGapsBreakdownSection
         analysisData={analysisData}
@@ -1179,103 +1093,204 @@ export default function PodHbPatternAnalyzerPage({
       {/* Visual Charts Grid (Isolated Memoized Component) */}
       <VisualChartsSection analysisData={analysisData} />
 
-      {/* Raw Tick High-Precision Timeline Table */}
+      {/* Raw Tick High-Precision Timeline Table & JSON Viewer */}
       <div className="p-5 rounded-3xl bg-slate-900/60 border border-slate-800 shadow-2xl space-y-4" style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 400px' }}>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
-          <div className="flex items-center gap-2">
-            <FileCode size={18} className="text-cyan-400" />
+          <div className="flex items-center gap-3">
+            {/* View Mode Tabs: Tabel vs JSON */}
+            <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-semibold">
+              <button
+                onClick={() => setTableTab('table')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
+                  tableTab === 'table'
+                    ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30 font-bold'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Table size={14} />
+                <span>Tabel Log</span>
+              </button>
+              <button
+                onClick={() => setTableTab('json')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
+                  tableTab === 'json'
+                    ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30 font-bold'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Code2 size={14} />
+                <span>JSON</span>
+              </button>
+            </div>
+
             <div>
-              <h3 className="text-sm font-bold text-white">Log Detak Presisi Milidetik (High-Precision Tick Stream)</h3>
-              <p className="text-[11px] text-slate-400">Daftar paket data berurutan kronologis di sekitar insiden</p>
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                {tableTab === 'table' ? 'Log Detak Presisi Milidetik' : 'Viewer Data JSON'}
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-normal">
+                  {filteredTicks.length} Records
+                </span>
+              </h3>
+              <p className="text-[11px] text-slate-400">
+                {tableTab === 'table'
+                  ? 'Daftar paket data berurutan kronologis di sekitar insiden'
+                  : 'Struktur data JSON murni untuk inspeksi mendalam / salin ke sistem lain'}
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
-            {/* Filter Buttons */}
-            <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+          {/* Right Controls: Filters for Table vs Export Controls for JSON */}
+          {tableTab === 'table' ? (
+            <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+              {/* Filter Buttons */}
+              <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+                <button
+                  onClick={() => startTransition(() => setTableFilter('all'))}
+                  className={`px-2.5 py-1 rounded-lg font-semibold transition ${tableFilter === 'all' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white'}`}
+                >
+                  Semua ({analysisData?.ticks?.length || 0})
+                </button>
+                <button
+                  onClick={() => startTransition(() => setTableFilter('gaps'))}
+                  className={`px-2.5 py-1 rounded-lg font-semibold transition ${tableFilter === 'gaps' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'text-slate-400 hover:text-white'}`}
+                >
+                  Dead Gaps ({analysisData?.gaps?.length || 0})
+                </button>
+                <button
+                  onClick={() => startTransition(() => setTableFilter('lag'))}
+                  className={`px-2.5 py-1 rounded-lg font-semibold transition ${tableFilter === 'lag' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'text-slate-400 hover:text-white'}`}
+                >
+                  Lag Spike (&gt;3s)
+                </button>
+              </div>
+
+              {/* Search input */}
+              <div className="relative">
+                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  type="text"
+                  placeholder="Cari waktu / #hb..."
+                  value={tableSearch}
+                  onChange={(e) => setTableSearch(e.target.value)}
+                  className="pl-8 pr-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 w-36 sm:w-48"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+              {/* Scope Switch: Ticks Array vs Full Analysis */}
+              <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+                <button
+                  onClick={() => setJsonScope('ticks')}
+                  className={`px-2.5 py-1 rounded-lg font-semibold transition ${
+                    jsonScope === 'ticks' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Ticks Stream ({filteredTicks.length})
+                </button>
+                <button
+                  onClick={() => setJsonScope('full')}
+                  className={`px-2.5 py-1 rounded-lg font-semibold transition ${
+                    jsonScope === 'full' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Full Analysis Respon
+                </button>
+              </div>
+
+              {/* Copy Button */}
               <button
-                onClick={() => startTransition(() => setTableFilter('all'))}
-                className={`px-2.5 py-1 rounded-lg font-semibold transition ${tableFilter === 'all' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white'}`}
+                onClick={handleCopyJsonTab}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-semibold transition"
               >
-                Semua ({analysisData?.ticks?.length || 0})
+                {copiedJsonTab ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+                <span>{copiedJsonTab ? 'Tersalin' : 'Salin JSON'}</span>
               </button>
+
+              {/* Download Button */}
               <button
-                onClick={() => startTransition(() => setTableFilter('gaps'))}
-                className={`px-2.5 py-1 rounded-lg font-semibold transition ${tableFilter === 'gaps' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'text-slate-400 hover:text-white'}`}
+                onClick={handleDownloadJson}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-cyan-300 border border-slate-800 text-xs font-semibold transition"
+                title="Unduh file JSON"
               >
-                Dead Gaps ({analysisData?.gaps?.length || 0})
-              </button>
-              <button
-                onClick={() => startTransition(() => setTableFilter('lag'))}
-                className={`px-2.5 py-1 rounded-lg font-semibold transition ${tableFilter === 'lag' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'text-slate-400 hover:text-white'}`}
-              >
-                Lag Spike (&gt;3s)
+                <Download size={13} />
+                <span>Unduh .json</span>
               </button>
             </div>
+          )}
+        </div>
 
-            {/* Search input */}
-            <div className="relative">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-              <input
-                type="text"
-                placeholder="Cari waktu / #hb..."
-                value={tableSearch}
-                onChange={(e) => setTableSearch(e.target.value)}
-                className="pl-8 pr-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 w-36 sm:w-48"
-              />
+        {/* Content Body: Table or JSON */}
+        {tableTab === 'table' ? (
+          <>
+            {/* Table View Container */}
+            <div ref={tableRef} className="overflow-x-auto max-h-96 overflow-y-auto custom-scrollbar rounded-2xl border border-slate-800/80">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-950/90 text-slate-400 font-semibold sticky top-0 z-10 backdrop-blur-md border-b border-slate-800">
+                  <tr>
+                    <th className="py-2.5 px-3 w-12">#</th>
+                    <th className="py-2.5 px-3">Waktu Tiba (Local)</th>
+                    <th className="py-2.5 px-3">Counter (#hb)</th>
+                    <th className="py-2.5 px-3">Δ Counter</th>
+                    <th className="py-2.5 px-3">Jeda Waktu (Δt)</th>
+                    <th className="py-2.5 px-3">Status Diagnosa</th>
+                    <th className="py-2.5 px-3">Port</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/50 font-mono text-[11px]">
+                  {filteredTicks.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-slate-500 font-sans">
+                        Tidak ada paket yang sesuai dengan filter.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredTicks.slice(0, displayLimit).map((tick) => (
+                      <TickTableRow key={tick.ts + '_' + tick.index} tick={tick} />
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
-          </div>
-        </div>
 
-        {/* Table View Container */}
-        <div ref={tableRef} className="overflow-x-auto max-h-96 overflow-y-auto custom-scrollbar rounded-2xl border border-slate-800/80">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-950/90 text-slate-400 font-semibold sticky top-0 z-10 backdrop-blur-md border-b border-slate-800">
-              <tr>
-                <th className="py-2.5 px-3 w-12">#</th>
-                <th className="py-2.5 px-3">Waktu Tiba (Local)</th>
-                <th className="py-2.5 px-3">Counter (#hb)</th>
-                <th className="py-2.5 px-3">Δ Counter</th>
-                <th className="py-2.5 px-3">Jeda Waktu (Δt)</th>
-                <th className="py-2.5 px-3">Status Diagnosa</th>
-                <th className="py-2.5 px-3">Port</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/50 font-mono text-[11px]">
-              {filteredTicks.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-500 font-sans">
-                    Tidak ada paket yang sesuai dengan filter.
-                  </td>
-                </tr>
-              ) : (
-                filteredTicks.slice(0, displayLimit).map((tick) => (
-                  <TickTableRow key={tick.ts + '_' + tick.index} tick={tick} />
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+            {/* Safe Pagination Footer if ticks exceed displayLimit */}
+            {filteredTicks.length > displayLimit && (
+              <div className="p-3 bg-slate-950/80 rounded-2xl border border-slate-800 flex items-center justify-between text-xs flex-wrap gap-2">
+                <span className="text-slate-400">
+                  Menampilkan <strong className="text-white">{displayLimit}</strong> dari <strong className="text-white">{filteredTicks.length}</strong> detak log
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setDisplayLimit((prev) => prev + 250)}
+                    className="px-3 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 font-semibold transition"
+                  >
+                    +250 Baris Lagi
+                  </button>
+                  <button
+                    onClick={() => setDisplayLimit(filteredTicks.length)}
+                    className="px-3 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold transition"
+                  >
+                    Tampilkan Semua ({filteredTicks.length})
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-[11px] text-slate-400 px-1">
+              <span>
+                Cakupan: <strong className="text-slate-200">{jsonScope === 'full' ? 'Full Analysis Payload (Meta, Stats, Gaps, Ticks)' : 'Ticks Stream Array (Detak Log)'}</strong>
+                {' '}• <span className="font-mono text-cyan-300">{jsonFormattedTicks.length.toLocaleString()} karakter</span>
+              </span>
+              <span className="font-mono text-[10px] text-slate-500">
+                JSON • Read Only
+              </span>
+            </div>
 
-        {/* Safe Pagination Footer if ticks exceed displayLimit */}
-        {filteredTicks.length > displayLimit && (
-          <div className="p-3 bg-slate-950/80 rounded-2xl border border-slate-800 flex items-center justify-between text-xs flex-wrap gap-2">
-            <span className="text-slate-400">
-              Menampilkan <strong className="text-white">{displayLimit}</strong> dari <strong className="text-white">{filteredTicks.length}</strong> detak log
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setDisplayLimit((prev) => prev + 250)}
-                className="px-3 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 font-semibold transition"
-              >
-                +250 Baris Lagi
-              </button>
-              <button
-                onClick={() => setDisplayLimit(filteredTicks.length)}
-                className="px-3 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold transition"
-              >
-                Tampilkan Semua ({filteredTicks.length})
-              </button>
+            <div className="relative rounded-2xl border border-slate-800/80 overflow-hidden bg-slate-950/90 shadow-inner">
+              <pre className="p-4 max-h-[500px] overflow-auto custom-scrollbar font-mono text-[11px] text-emerald-400 leading-relaxed select-all">
+                {jsonFormattedTicks}
+              </pre>
             </div>
           </div>
         )}
