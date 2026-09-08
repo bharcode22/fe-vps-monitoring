@@ -24,6 +24,7 @@ import {
   RotateCcw,
   PlayCircle,
   ArrowRight,
+  ArrowDown,
   Code2,
   Table
 } from 'lucide-react';
@@ -305,22 +306,37 @@ const VisualChartsSection = memo(function VisualChartsSection({ analysisData }) 
 });
 
 // Memoized Data Gaps Breakdown Section (Displays visual cards for every detected heartbeat dead gap)
-const DataGapsBreakdownSection = memo(function DataGapsBreakdownSection({ analysisData, onJumpToGap }) {
+const DataGapsBreakdownSection = memo(function DataGapsBreakdownSection({ analysisData, onJumpToGap, onJumpToMaxGap }) {
   const gaps = analysisData?.gaps || [];
   const deadSec = analysisData?.meta?.thresholds?.deadSec || 15;
+  const maxDelta = analysisData?.statistics?.maxDeltaSec || 0;
 
   if (!analysisData || gaps.length === 0) {
     return (
-      <div className="p-4 sm:p-5 rounded-3xl bg-slate-900/40 border border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+      <div className="p-4 sm:p-5 rounded-3xl bg-slate-900/40 border border-slate-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-slate-400">
         <div className="flex items-center gap-2.5">
           <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             <CheckCircle2 size={16} />
           </div>
           <div>
             <span className="font-bold text-white block">Tidak Ada Jeda Mati Terdeteksi (Gaps = 0)</span>
-            <span className="text-[11px] text-slate-400">Semua paket detak modul tiba dalam rentang waktu toleransi (&lt; {deadSec}s). Aliran sinyal normal.</span>
+            <span className="text-[11px] text-slate-400">
+              Semua paket detak tiba dalam rentang toleransi (&lt; {deadSec}s). Jeda maksimum terdeteksi: <strong className="text-cyan-300 font-mono">{maxDelta}s</strong>.
+            </span>
           </div>
         </div>
+
+        {onJumpToMaxGap && analysisData?.ticks?.length > 0 && (
+          <button
+            onClick={onJumpToMaxGap}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold transition shadow-sm hover:scale-105 active:scale-95 ml-auto sm:ml-0"
+            title="Lompat ke baris jeda terbesar di tabel"
+          >
+            <Search size={13} className="text-cyan-400" />
+            <span>Fokus Baris di Tabel</span>
+            <ArrowDown size={13} className="text-cyan-400" />
+          </button>
+        )}
       </div>
     );
   }
@@ -447,9 +463,12 @@ const DataGapsBreakdownSection = memo(function DataGapsBreakdownSection({ analys
                 {onJumpToGap && (
                   <button
                     onClick={() => onJumpToGap(gap)}
-                    className="flex items-center gap-1 text-[11px] font-bold text-cyan-400 hover:text-cyan-300 underline whitespace-nowrap ml-auto"
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold transition shadow-sm hover:scale-105 active:scale-95 ml-auto cursor-pointer"
+                    title={`Lompat ke baris detak waktu ${gap.endTime} di tabel`}
                   >
-                    Fokus di Tabel ↓
+                    <Search size={13} className="text-cyan-400" />
+                    <span>Fokus di Tabel</span>
+                    <ArrowDown size={13} className="text-cyan-400" />
                   </button>
                 )}
               </div>
@@ -687,33 +706,78 @@ export default function PodHbPatternAnalyzerPage({
     setTargetTimeStr(`${h}:${m}:${s}`);
   };
 
+  // Helper: jump to specific row index in table and ensure visibility
+  const jumpToRowIndex = (targetIdx) => {
+    if (targetIdx < 0 || !analysisData?.ticks?.length) return;
+
+    // 1. Ensure table tab is active (if in JSON view)
+    setTableTab('table');
+
+    // 2. Clear search filter if it might hide the row
+    if (tableSearch) {
+      setTableSearch('');
+    }
+
+    // 3. Reset table filter if the target tick would be excluded
+    const targetTick = analysisData.ticks[targetIdx];
+    if (tableFilter === 'gaps' && targetTick?.status !== 'GAP_DEAD') {
+      setTableFilter('all');
+    }
+
+    // 4. Expand displayLimit so target row is rendered by React
+    if (targetIdx >= displayLimit) {
+      setDisplayLimit(targetIdx + 100);
+    }
+
+    // 5. Scroll outer page smoothly down to the table card container
+    const tableCard = document.getElementById('tick-table-card');
+    if (tableCard) {
+      tableCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // 6. Scroll inner table to target row with retry loop to allow React DOM paint
+    const attemptScrollToRow = (retries = 6) => {
+      const el = document.getElementById(`tick-row-${targetIdx}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('ring-4', 'ring-cyan-400', 'bg-cyan-500/30');
+        setTimeout(() => {
+          el.classList.remove('ring-4', 'ring-cyan-400', 'bg-cyan-500/30');
+        }, 3500);
+      } else if (retries > 0) {
+        setTimeout(() => attemptScrollToRow(retries - 1), 70);
+      }
+    };
+
+    setTimeout(() => attemptScrollToRow(6), 80);
+  };
+
   // Jump to specific gap in table
   const handleJumpToGap = (gap) => {
     if (!gap || !analysisData?.ticks?.length) return;
     const targetIdx = analysisData.ticks.findIndex(t => t.ts === gap.endTs);
     if (targetIdx !== -1) {
-      if (targetIdx >= displayLimit) {
-        setDisplayLimit(targetIdx + 50);
-      }
-      setTimeout(() => {
-        if (tableRef.current) {
-          const el = document.getElementById(`tick-row-${targetIdx}`);
-          if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            el.classList.add('ring-2', 'ring-rose-500', 'bg-rose-500/30');
-            setTimeout(() => {
-              el.classList.remove('ring-2', 'ring-rose-500', 'bg-rose-500/30');
-            }, 3000);
-          }
-        }
-      }, 50);
+      jumpToRowIndex(targetIdx);
     }
   };
 
-  // Jump to biggest gap in table
+  // Jump to biggest gap or maximum delay spike in table
   const handleJumpToMaxGap = () => {
-    if (!analysisData?.gaps?.length) return;
-    handleJumpToGap(analysisData.gaps[0]);
+    if (!analysisData?.ticks?.length) return;
+    if (analysisData.gaps?.length > 0) {
+      handleJumpToGap(analysisData.gaps[0]);
+    } else {
+      let maxIdx = 0;
+      let maxVal = -1;
+      for (let i = 0; i < analysisData.ticks.length; i++) {
+        const d = analysisData.ticks[i].deltaSec;
+        if (d !== null && d > maxVal) {
+          maxVal = d;
+          maxIdx = i;
+        }
+      }
+      jumpToRowIndex(maxIdx);
+    }
   };
 
   // Copy raw JSON segment
@@ -1088,35 +1152,34 @@ export default function PodHbPatternAnalyzerPage({
       <DataGapsBreakdownSection
         analysisData={analysisData}
         onJumpToGap={handleJumpToGap}
+        onJumpToMaxGap={handleJumpToMaxGap}
       />
 
       {/* Visual Charts Grid (Isolated Memoized Component) */}
       <VisualChartsSection analysisData={analysisData} />
 
       {/* Raw Tick High-Precision Timeline Table & JSON Viewer */}
-      <div className="p-5 rounded-3xl bg-slate-900/60 border border-slate-800 shadow-2xl space-y-4" style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 400px' }}>
+      <div id="tick-table-card" className="p-5 rounded-3xl bg-slate-900/60 border border-slate-800 shadow-2xl space-y-4" style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 400px' }}>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
           <div className="flex items-center gap-3">
             {/* View Mode Tabs: Tabel vs JSON */}
             <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-semibold">
               <button
                 onClick={() => setTableTab('table')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
-                  tableTab === 'table'
-                    ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30 font-bold'
-                    : 'text-slate-400 hover:text-white'
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${tableTab === 'table'
+                  ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30 font-bold'
+                  : 'text-slate-400 hover:text-white'
+                  }`}
               >
                 <Table size={14} />
                 <span>Tabel Log</span>
               </button>
               <button
                 onClick={() => setTableTab('json')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${
-                  tableTab === 'json'
-                    ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30 font-bold'
-                    : 'text-slate-400 hover:text-white'
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition ${tableTab === 'json'
+                  ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30 font-bold'
+                  : 'text-slate-400 hover:text-white'
+                  }`}
               >
                 <Code2 size={14} />
                 <span>JSON</span>
@@ -1141,6 +1204,17 @@ export default function PodHbPatternAnalyzerPage({
           {/* Right Controls: Filters for Table vs Export Controls for JSON */}
           {tableTab === 'table' ? (
             <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+              {/* Jump to max gap / incident button */}
+              <button
+                onClick={handleJumpToMaxGap}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold transition shadow-sm hover:scale-105 active:scale-95"
+                title="Lompat dan sorot titik jeda terbesar / insiden di tabel"
+              >
+                <Search size={12} className="text-cyan-400" />
+                <span>Fokus Baris Insiden</span>
+                <ArrowDown size={12} className="text-cyan-400" />
+              </button>
+
               {/* Filter Buttons */}
               <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
                 <button
@@ -1171,7 +1245,7 @@ export default function PodHbPatternAnalyzerPage({
                   placeholder="Cari waktu / #hb..."
                   value={tableSearch}
                   onChange={(e) => setTableSearch(e.target.value)}
-                  className="pl-8 pr-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 w-36 sm:w-48"
+                  className="pl-8 pr-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 w-36 sm:w-44"
                 />
               </div>
             </div>
@@ -1181,17 +1255,15 @@ export default function PodHbPatternAnalyzerPage({
               <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
                 <button
                   onClick={() => setJsonScope('ticks')}
-                  className={`px-2.5 py-1 rounded-lg font-semibold transition ${
-                    jsonScope === 'ticks' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white'
-                  }`}
+                  className={`px-2.5 py-1 rounded-lg font-semibold transition ${jsonScope === 'ticks' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white'
+                    }`}
                 >
                   Ticks Stream ({filteredTicks.length})
                 </button>
                 <button
                   onClick={() => setJsonScope('full')}
-                  className={`px-2.5 py-1 rounded-lg font-semibold transition ${
-                    jsonScope === 'full' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white'
-                  }`}
+                  className={`px-2.5 py-1 rounded-lg font-semibold transition ${jsonScope === 'full' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white'
+                    }`}
                 >
                   Full Analysis Respon
                 </button>
