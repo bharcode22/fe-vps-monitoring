@@ -77,8 +77,10 @@ const TickTableRow = memo(function TickTableRow({ tick }) {
         }`}
     >
       <td className="py-2 px-3 text-slate-500">{tick.index}</td>
-      <td className="py-2 px-3 text-slate-300">
-        <span className="font-sans text-slate-200 font-medium">{tick.date}</span>
+      <td className="py-2 px-3 text-slate-300 font-mono whitespace-nowrap">
+        <span className="font-mono text-slate-200 font-semibold text-[11px]">
+          {tick.date || (tick.ts ? new Date(tick.ts).toISOString().replace('T', ' ').slice(0, 19) : '—')}
+        </span>
       </td>
       <td className="py-2 px-3 font-bold text-white">
         {tick.hb !== null ? `#${tick.hb}` : '—'}
@@ -796,10 +798,11 @@ export default function PodHbPatternAnalyzerPage({
       if (tableFilter === 'gaps' && t.status !== 'GAP_DEAD') return false;
       if (tableFilter === 'lag' && t.status !== 'GAP_DEAD' && t.status !== 'GAP_LAG') return false;
       if (query) {
+        const dateMatch = t.date?.toLowerCase().includes(query);
         const timeMatch = t.time?.toLowerCase().includes(query);
         const hbMatch = String(t.hb || '').includes(query);
         const portMatch = t.port?.toLowerCase().includes(query);
-        return timeMatch || hbMatch || portMatch;
+        return dateMatch || timeMatch || hbMatch || portMatch;
       }
       return true;
     });
@@ -1300,7 +1303,7 @@ export default function PodHbPatternAnalyzerPage({
                 <thead className="bg-slate-950/90 text-slate-400 font-semibold sticky top-0 z-10 backdrop-blur-md border-b border-slate-800">
                   <tr>
                     <th className="py-2.5 px-3 w-12">#</th>
-                    <th className="py-2.5 px-3">Waktu Tiba (Local)</th>
+                    <th className="py-2.5 px-3">Date</th>
                     <th className="py-2.5 px-3">Counter (#hb)</th>
                     <th className="py-2.5 px-3">Δ Counter</th>
                     <th className="py-2.5 px-3">Jeda Waktu (Δt)</th>

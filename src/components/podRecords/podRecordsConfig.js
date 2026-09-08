@@ -1,17 +1,19 @@
+import { getStoredHbModules } from '../../utils/heartbeatModules';
+
 /**
  * Configuration & Helper Utilities for POD Heartbeat Records Explorer
  */
 
 export const MODULE_CONFIG = [
-  { id: 508, name: 'PDU / Power', fullName: 'PDU Power Distribution (6 Kanal Arus)', defaultPort: 'ttyUSB7', color: 'indigo', hasTelemetry: true },
-  { id: 504, name: 'Relay / Olfa', fullName: 'Relay & Olfa Actuator (Arus & Daya)', defaultPort: 'ttyUSB3', color: 'emerald', hasTelemetry: true },
-  { id: 503, name: 'Strobe', fullName: 'Strobe & PIR Sensor (Tegangan & Daya)', defaultPort: 'ttyUSB2', color: 'purple', hasTelemetry: true },
-  { id: 502, name: 'Chair / Magnet', fullName: 'Kursi & Magnet (Arus PEMF & HM)', defaultPort: 'ttyUSB1', color: 'blue', hasTelemetry: true },
-  { id: 501, name: 'Manual', fullName: 'Manual Control Button', defaultPort: 'ttyUSB0', color: 'cyan' },
-  { id: 505, name: 'Power Meter', fullName: 'Power Meter / Aux Relay', defaultPort: 'ttyUSB4', color: 'amber' },
-  { id: 506, name: 'Temp / Hum', fullName: 'Temperature & Humidity', defaultPort: 'ttyUSB5', color: 'rose' },
-  { id: 507, name: 'Door Lock', fullName: 'Door Lock Contact Sensor', defaultPort: 'ttyUSB6', color: 'teal' },
-  { id: 509, name: 'Audio Amp', fullName: 'Audio Amp Controller', defaultPort: 'ttyUSB8', color: 'sky' }
+  { id: 501, name: 'Manual Control', fullName: 'Manual Control Button', defaultPort: 'ttyUSB0', color: 'cyan' },
+  { id: 502, name: 'Chair Module', fullName: 'Kursi & Magnet (Sensor POB, PEMF, HM)', defaultPort: 'ttyUSB1', color: 'blue', hasTelemetry: true },
+  { id: 503, name: 'Lighting Module', fullName: 'Lighting & Strobo (RGB, UVC/UVB/UVA, PIR)', defaultPort: 'ttyUSB4', color: 'purple', hasTelemetry: true },
+  { id: 504, name: 'Olfactory Module', fullName: 'Modul Aroma Wewangian & Difusi (Olfa Relay)', defaultPort: 'ttyUSB5', color: 'emerald', hasTelemetry: true },
+  { id: 505, name: 'Door Module', fullName: 'Sensor Status Pintu & Magnetic Lock', defaultPort: null, color: 'teal' },
+  { id: 506, name: 'AirCon Module', fullName: 'Kontrol Suhu, AC, & Ventilasi Udara', defaultPort: null, color: 'rose' },
+  { id: 507, name: 'Audio Module', fullName: 'Soundscape, Voice Guide, & Haptic Amplifier', defaultPort: 'ttyUSB2', color: 'sky' },
+  { id: 508, name: 'Power Module', fullName: 'PDU Power Distribution (Distribusi Daya & Proteksi)', defaultPort: 'ttyUSB3', color: 'indigo', hasTelemetry: true },
+  { id: 509, name: 'Biofeedback Module', fullName: 'Sensor GSR, Detak Jantung, & Biometrik', defaultPort: null, color: 'amber' }
 ];
 
 export function getTodayLocalDate() {
@@ -29,13 +31,28 @@ export function getTodayLocalDate() {
 
 export function getModuleName(modId) {
   if (!modId) return null;
-  const found = MODULE_CONFIG.find((m) => Number(m.id) === Number(modId));
-  return found ? found.name : null;
+  const num = Number(modId);
+  try {
+    const stored = getStoredHbModules();
+    const foundStored = stored.find((m) => Number(m.id) === num);
+    if (foundStored && foundStored.name) return foundStored.name;
+  } catch (_) { }
+  const found = MODULE_CONFIG.find((m) => Number(m.id) === num);
+  return found ? found.name : `Modul ${modId}`;
 }
 
 export function getModuleFullName(modId) {
   if (!modId) return null;
-  const found = MODULE_CONFIG.find((m) => Number(m.id) === Number(modId));
+  const num = Number(modId);
+  try {
+    const stored = getStoredHbModules();
+    const foundStored = stored.find((m) => Number(m.id) === num);
+    if (foundStored) {
+      if (foundStored.description) return `${foundStored.name} (${foundStored.description})`;
+      if (foundStored.name) return foundStored.name;
+    }
+  } catch (_) { }
+  const found = MODULE_CONFIG.find((m) => Number(m.id) === num);
   return found ? found.fullName : `Modul ${modId}`;
 }
 
