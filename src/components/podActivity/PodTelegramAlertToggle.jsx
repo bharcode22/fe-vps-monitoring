@@ -94,7 +94,7 @@ export default function PodTelegramAlertToggle({ compact = false, className = ''
     <button
       onClick={handleToggle}
       disabled={isUpdating}
-      className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 text-xs font-bold transition cursor-pointer select-none active:scale-95 ${
+      className={`px-2.5 py-1.5 rounded-xl border flex items-center gap-1.5 text-xs font-bold transition cursor-pointer select-none active:scale-95 ${
         isEnabled
           ? 'bg-sky-500/20 text-sky-200 border-sky-500/40 hover:bg-sky-500/30 shadow-sm shadow-sky-500/10'
           : 'bg-slate-800/80 text-slate-400 border-slate-700 hover:text-slate-200 hover:bg-slate-800'

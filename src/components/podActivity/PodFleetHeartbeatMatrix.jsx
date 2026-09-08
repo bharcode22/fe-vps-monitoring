@@ -14,14 +14,12 @@ import {
   Volume2,
   VolumeX,
   Server,
-  Filter,
-  Clock,
-  Layers,
-  Sparkles,
-  ArrowRight,
-  HelpCircle
+  HelpCircle,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
-import { fetchHeartbeatModulesApi, fetchHeartbeatThresholdsApi } from '../../api/podActivityApi';
+import { fetchHeartbeatModulesApi, fetchHeartbeatThresholdsApi, fetchFleetLatencyApi, fetchAutoPingStatusApi, toggleAutoPingApi } from '../../api/podActivityApi';
+import { getSharedSocket } from '../../utils/socketService';
 import PodHeartbeatLegendModal, { InlineStatusLegendStrip } from './PodHeartbeatLegendModal';
 import PodHeartbeatModuleConfigModal from './PodHeartbeatModuleConfigModal';
 import PodTelegramAlertToggle from './PodTelegramAlertToggle';
@@ -142,6 +140,85 @@ export default function PodFleetHeartbeatMatrix({
     const timer = setInterval(() => setNowTimestamp(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Realtime POD v3 Network Latency State & Auto Ping Toggle
+  const [fleetLatency, setFleetLatency] = useState({});
+  const [autoPingEnabled, setAutoPingEnabled] = useState(true);
+  const [isTogglingAutoPing, setIsTogglingAutoPing] = useState(false);
+
+  useEffect(() => {
+    let isSubscribed = true;
+
+    // 1. Initial fetch of fleet latency
+    fetchFleetLatencyApi()
+      .then((res) => {
+        if (isSubscribed && Array.isArray(res?.fleetLatency)) {
+          const map = {};
+          res.fleetLatency.forEach((item) => {
+            if (item.podId) map[item.podId] = item;
+            if (item.podCode) map[item.podCode] = item;
+          });
+          setFleetLatency(map);
+        }
+      })
+      .catch(() => { });
+
+    // 2. Initial fetch of auto-ping worker status
+    fetchAutoPingStatusApi()
+      .then((res) => {
+        if (isSubscribed && res?.autoPingEnabled !== undefined) {
+          setAutoPingEnabled(Boolean(res.autoPingEnabled));
+        }
+      })
+      .catch(() => { });
+
+    const socket = getSharedSocket();
+
+    const handleLatencyUpdate = (payload) => {
+      if (!isSubscribed) return;
+      if (payload?.autoPingEnabled !== undefined) {
+        setAutoPingEnabled(Boolean(payload.autoPingEnabled));
+      }
+      if (Array.isArray(payload?.fleetLatency)) {
+        const map = {};
+        payload.fleetLatency.forEach((item) => {
+          if (item.podId) map[item.podId] = item;
+          if (item.podCode) map[item.podCode] = item;
+        });
+        setFleetLatency(map);
+      }
+    };
+
+    const handleAutoPingStatus = (payload) => {
+      if (!isSubscribed || payload?.autoPingEnabled === undefined) return;
+      setAutoPingEnabled(Boolean(payload.autoPingEnabled));
+    };
+
+    socket.on('pod_latency_update', handleLatencyUpdate);
+    socket.on('pod_latency_auto_ping_status', handleAutoPingStatus);
+
+    return () => {
+      isSubscribed = false;
+      socket.off('pod_latency_update', handleLatencyUpdate);
+      socket.off('pod_latency_auto_ping_status', handleAutoPingStatus);
+    };
+  }, []);
+
+  const handleToggleAutoPing = async () => {
+    if (isTogglingAutoPing) return;
+    setIsTogglingAutoPing(true);
+    const nextState = !autoPingEnabled;
+    try {
+      const res = await toggleAutoPingApi(nextState);
+      if (res && res.success) {
+        setAutoPingEnabled(Boolean(res.autoPingEnabled));
+      }
+    } catch (err) {
+      console.warn('Gagal mengubah status auto ping:', err.message);
+    } finally {
+      setIsTogglingAutoPing(false);
+    }
+  };
 
   // Fleet Heartbeat State Registry: { [podId]: { [moduleId]: { hb, lastSeenAt, port, isFrozen, lastHbChangeAt, totalPackets } } }
   const [fleetModuleMap, setFleetModuleMap] = useState(() => {
@@ -510,8 +587,8 @@ export default function PodFleetHeartbeatMatrix({
     };
   }, [pods, serverModules, fleetModuleMap, nowTimestamp]);
 
-  // Group dead modules by pod for concise overview in incident banner
-  const affectedPodsSummary = useMemo(() => {
+  // Group dead modules by pod and categorize root cause (Improvement 1)
+  const { affectedPodsSummary, hardwareFaultPods, networkOfflinePods } = useMemo(() => {
     const map = new Map();
     fleetAnalysis.deadModulesGlobalList.forEach(({ pod, mod, elapsedSec, reason }) => {
       if (!map.has(pod.id)) {
@@ -522,8 +599,27 @@ export default function PodFleetHeartbeatMatrix({
       }
       map.get(pod.id).modules.push({ mod, elapsedSec, reason });
     });
-    return Array.from(map.values());
-  }, [fleetAnalysis.deadModulesGlobalList]);
+    const summary = Array.from(map.values());
+
+    const hw = [];
+    const net = [];
+    summary.forEach((item) => {
+      const { pod } = item;
+      const lat = fleetLatency[pod.id] || fleetLatency[pod.code];
+      const isHostOnline = lat ? (lat.isOnline && lat.currentPingMs !== null) : true;
+      if (isHostOnline) {
+        hw.push({ ...item, isHostOnline: true, pingMs: lat?.currentPingMs ?? null });
+      } else {
+        net.push({ ...item, isHostOnline: false, pingMs: null });
+      }
+    });
+
+    return {
+      affectedPodsSummary: summary,
+      hardwareFaultPods: hw,
+      networkOfflinePods: net
+    };
+  }, [fleetAnalysis.deadModulesGlobalList, fleetLatency]);
 
   // Trigger sound alarm ONLY if new DEAD modules are detected anywhere across the fleet (Hanya status DEAD)
   useEffect(() => {
@@ -575,25 +671,35 @@ export default function PodFleetHeartbeatMatrix({
 
   return (
     <div className="flex flex-col gap-6 w-full animate-in fade-in duration-200">
-      {/* 1. CRITICAL INCIDENT BANNER (FLEET-WIDE) */}
+      {/* 1. CRITICAL INCIDENT BANNER (FLEET-WIDE WITH ROOT CAUSE DIFFERENTIATION) */}
       {fleetAnalysis.hasCriticalFleetIssue && (
         <div className="p-4 sm:p-5 2xl:p-5 min-[1920px]:p-6 bg-gradient-to-r from-rose-950/90 via-slate-900/95 to-rose-950/90 border border-rose-500/60 rounded-2xl 2xl:rounded-3xl backdrop-blur-md shadow-xl shadow-rose-500/15 flex flex-col gap-3.5 ring-1 ring-rose-500/30 animate-in fade-in duration-200 w-full">
-          {/* Top Row: Title, Impact Summary, and Ping Action Button */}
+          {/* Top Row: Title, Root Cause Diagnosis Badges, and Ping Action Button */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-rose-500/20 pb-3">
             <div className="flex items-center gap-3 shrink-0">
               <div className="p-2.5 bg-rose-500/25 border border-rose-500/40 text-rose-400 rounded-xl shrink-0 animate-pulse">
                 <ShieldAlert className="w-5 h-5 2xl:w-6 2xl:h-6" />
               </div>
               <div>
-                <h3 className="text-xs sm:text-sm md:text-base 2xl:text-lg font-black text-rose-300 uppercase tracking-wider flex items-center gap-2 flex-wrap">
-                  <span className="w-2 h-2 2xl:w-2.5 2xl:h-2.5 rounded-full bg-rose-400 animate-ping shrink-0" />
-                  PERINGATAN DINI: {fleetAnalysis.deadModulesGlobalList.length} MODUL MATI PADA FLEET
-                  <span className="text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full bg-rose-500/25 text-rose-200 border border-rose-500/40 normal-case">
-                    {affectedPodsSummary.length} Pod Terdampak
-                  </span>
-                </h3>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-xs sm:text-sm md:text-base 2xl:text-lg font-black text-rose-300 uppercase tracking-wider flex items-center gap-2">
+                    <span className="w-2 h-2 2xl:w-2.5 2xl:h-2.5 rounded-full bg-rose-400 animate-ping shrink-0" />
+                    PERINGATAN DINI: {fleetAnalysis.deadModulesGlobalList.length} MODUL MATI PADA FLEET
+                  </h3>
+                  {/* Root Cause Badges */}
+                  {hardwareFaultPods.length > 0 && (
+                    <span className="text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full bg-rose-500/25 text-rose-200 border border-rose-500/40">
+                      🛠️ {hardwareFaultPods.length} Pod Gangguan Hardware USB
+                    </span>
+                  )}
+                  {networkOfflinePods.length > 0 && (
+                    <span className="text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full bg-amber-500/25 text-amber-200 border border-amber-500/40">
+                      🌐 {networkOfflinePods.length} Pod Jaringan Offline
+                    </span>
+                  )}
+                </div>
                 <p className="text-[11px] sm:text-xs 2xl:text-sm text-rose-200/80 font-medium hidden sm:block mt-0.5">
-                  Kehilangan detak heartbeat (&gt;12s). Periksa koneksi kabel USB & daya hardware unit:
+                  Diagnosa otomatis akar masalah: Bedakan antara gangguan koneksi jaringan vs kerusakan kabel USB modul fisik:
                 </p>
               </div>
             </div>
@@ -612,18 +718,24 @@ export default function PodFleetHeartbeatMatrix({
 
           {/* Bottom Row: Full-width Horizontal Scroll Ribbon for Affected Pods and Module Details */}
           <div className="w-full flex items-center gap-2.5 overflow-x-auto flex-nowrap py-1 scrollbar-thin scrollbar-thumb-rose-500/30 scrollbar-track-transparent">
-            {/* 1. Pod Summary Badges (clickable to open that Pod) */}
-            {affectedPodsSummary.map(({ pod, modules }) => (
+            {/* 1. Pod Summary Badges (categorized with Root Cause indicator) */}
+            {affectedPodsSummary.map(({ pod, modules, isHostOnline, pingMs }) => (
               <button
                 key={`pod-${pod.id}`}
                 onClick={() => onSelectPod && onSelectPod(pod)}
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs 2xl:text-sm font-mono font-bold bg-rose-950/80 text-rose-200 border border-rose-500/60 hover:bg-rose-900 hover:border-rose-400 cursor-pointer shadow-sm transition shrink-0 whitespace-nowrap select-none"
-                title={`Klik untuk buka detail ${pod.name} (${modules.length} modul bermasalah)`}
+                className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs 2xl:text-sm font-mono font-bold border cursor-pointer shadow-sm transition shrink-0 whitespace-nowrap select-none ${isHostOnline
+                  ? 'bg-rose-950/80 text-rose-200 border-rose-500/60 hover:bg-rose-900'
+                  : 'bg-amber-950/80 text-amber-200 border-amber-500/60 hover:bg-amber-900'
+                  }`}
+                title={`Klik untuk buka detail ${pod.name}\nDiagnosa: ${isHostOnline ? `Host Online (Ping ${pingMs ? pingMs + 'ms' : 'OK'}) - Terindikasi kabel USB/modul macet` : 'Host Offline - Terindikasi Wi-Fi/VPN terputus'}`}
               >
-                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                <span className={`w-2 h-2 rounded-full animate-pulse ${isHostOnline ? 'bg-rose-500' : 'bg-amber-500'}`} />
                 <span className="font-extrabold text-white">{pod.name}</span>
-                <span className="px-1.5 py-0.5 rounded bg-rose-500/30 text-rose-300 text-[11px]">
+                <span className={`px-1.5 py-0.5 rounded text-[11px] ${isHostOnline ? 'bg-rose-500/30 text-rose-300' : 'bg-amber-500/30 text-amber-300'}`}>
                   {modules.length} Modul Macet
+                </span>
+                <span className="text-[10px] text-slate-300">
+                  {isHostOnline ? '🛠️ USB Fault' : '🌐 Net Offline'}
                 </span>
               </button>
             ))}
@@ -717,116 +829,145 @@ export default function PodFleetHeartbeatMatrix({
       </div>
 
       {/* 3. TOOLBAR: SEARCH, HEALTH FILTER PILLS, ACTIONS & ALARM TOGGLES */}
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3.5 bg-slate-900/80 p-3.5 sm:p-4 rounded-2xl border border-slate-800 backdrop-blur-md shadow-xl">
-        {/* Left Side: Search Box & Filter Pills Segment */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1 min-w-0">
+      <div className="bg-slate-900/80 p-2.5 sm:px-3 sm:py-2 rounded-2xl border border-slate-800 backdrop-blur-md shadow-xl flex items-center justify-between gap-2.5 flex-wrap">
+        {/* Left Segment: Search Box & Health Filter Pills */}
+        <div className="flex items-center gap-2 flex-wrap min-w-0">
           {/* Search Box */}
-          <div className="relative w-full sm:w-60 md:w-68 lg:w-72 shrink-0">
-            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+          <div className="relative w-40 sm:w-48 lg:w-56 shrink-0">
+            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari nama Pod, IP LAN, kode..."
-              className="w-full pl-9 pr-4 py-2 bg-slate-950/90 border border-slate-800 focus:border-cyan-400 rounded-xl text-white text-xs outline-none transition-all placeholder:text-slate-500 shadow-inner"
+              placeholder="Cari Pod, IP, kode..."
+              className="w-full pl-8 pr-7 py-1.5 bg-slate-950/90 border border-slate-800 focus:border-cyan-400 rounded-xl text-white text-xs outline-none transition-all placeholder:text-slate-500 shadow-inner"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white text-xs p-0.5 cursor-pointer"
+                title="Hapus pencarian"
+              >
+                ✕
+              </button>
+            )}
           </div>
 
           {/* Filter Pills Segment */}
-          <div className="flex items-center gap-1 bg-slate-950/90 p-1 rounded-xl border border-slate-800 shadow-inner overflow-x-auto scrollbar-none shrink-0">
+          <div className="flex items-center gap-0.5 bg-slate-950/90 p-0.5 rounded-xl border border-slate-800 shadow-inner overflow-x-auto scrollbar-none">
             <button
               onClick={() => setFleetFilter('ALL')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${fleetFilter === 'ALL'
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${fleetFilter === 'ALL'
                 ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200'
                 }`}
+              title="Tampilkan Semua Pod"
             >
-              Semua Pod ({pods.length})
+              Semua ({pods.length})
             </button>
             <button
               onClick={() => setFleetFilter('ONLINE_ONLY')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${fleetFilter === 'ONLINE_ONLY'
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${fleetFilter === 'ONLINE_ONLY'
                 ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200'
                 }`}
+              title="Tampilkan Pod Online Saja"
             >
-              Pod Online ({fleetAnalysis.podsHealthList.filter((p) => !p.isEntirePodOffline).length})
+              Online ({fleetAnalysis.podsHealthList.filter((p) => !p.isEntirePodOffline).length})
             </button>
             <button
               onClick={() => setFleetFilter('ISSUES_ONLY')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${fleetFilter === 'ISSUES_ONLY'
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${fleetFilter === 'ISSUES_ONLY'
                 ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200'
                 }`}
+              title="Tampilkan Pod dengan Modul Bermasalah"
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
-              <span>Ada Modul Mati ({fleetAnalysis.podsHealthList.filter((p) => p.hasCriticalIssue).length})</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse shrink-0" />
+              <span>Modul Mati ({fleetAnalysis.podsHealthList.filter((p) => p.hasCriticalIssue).length})</span>
             </button>
             <button
               onClick={() => setFleetFilter('HEALTHY_ONLY')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${fleetFilter === 'HEALTHY_ONLY'
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${fleetFilter === 'HEALTHY_ONLY'
                 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200'
                 }`}
+              title="Tampilkan Pod 100% Sehat Saja"
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
               <span>100% Sehat ({fleetAnalysis.podsHealthList.filter((p) => p.is100PercentHealthy).length})</span>
             </button>
           </div>
         </div>
 
-        {/* Right Side: Tools & Notification Toggles */}
-        <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap justify-start xl:justify-end">
+        {/* Right Segment: Tools, Alert & Telemetry Controls */}
+        <div className="flex items-center gap-1.5 flex-wrap justify-end">
           {/* Action Modals */}
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setIsManageModalOpen(true)}
-              className="px-3 py-1.5 bg-slate-800/90 hover:bg-slate-700 text-cyan-300 hover:text-white rounded-xl border border-slate-700/60 transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer shadow-sm whitespace-nowrap active:scale-95"
-              title="Kelola Daftar Modul (Edit / Tambah / Hapus file JSON)"
-            >
-              <Sliders size={13} className="text-cyan-400 shrink-0" />
-              <span>Kelola Modul (JSON)</span>
-            </button>
+          <button
+            onClick={() => setIsManageModalOpen(true)}
+            className="px-2.5 py-1.5 bg-slate-800/90 hover:bg-slate-700 text-cyan-300 hover:text-white rounded-xl border border-slate-700/60 transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer shadow-sm whitespace-nowrap active:scale-95"
+            title="Kelola Daftar Modul (Edit / Tambah / Hapus file JSON)"
+          >
+            <Sliders size={13} className="text-cyan-400 shrink-0" />
+            <span>Modul (JSON)</span>
+          </button>
 
-            <button
-              onClick={() => setIsLegendModalOpen(true)}
-              className="px-3 py-1.5 bg-slate-800/90 hover:bg-slate-700 text-cyan-300 hover:text-white rounded-xl border border-slate-700/60 transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer shadow-sm whitespace-nowrap active:scale-95"
-              title="Buka Panduan Arti Warna & Keterangan Status Modul"
-            >
-              <HelpCircle size={13} className="text-cyan-400 shrink-0" />
-              <span>Panduan Status</span>
-            </button>
-          </div>
+          <button
+            onClick={() => setIsLegendModalOpen(true)}
+            className="px-2.5 py-1.5 bg-slate-800/90 hover:bg-slate-700 text-cyan-300 hover:text-white rounded-xl border border-slate-700/60 transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer shadow-sm whitespace-nowrap active:scale-95"
+            title="Buka Panduan Arti Warna & Keterangan Status Modul"
+          >
+            <HelpCircle size={13} className="text-cyan-400 shrink-0" />
+            <span>Panduan</span>
+          </button>
 
-          <div className="h-5 w-px bg-slate-800 hidden sm:block mx-0.5" />
+          <div className="h-4 w-px bg-slate-800 hidden sm:block mx-0.5 shrink-0" />
 
-          {/* Alert Toggles (Alarm Suara & Telegram) */}
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={toggleSoundAlarm}
-              className={`px-3 py-1.5 rounded-xl border transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer whitespace-nowrap active:scale-95 ${soundAlarmEnabled
-                ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25 shadow-sm shadow-emerald-500/10'
-                : 'bg-slate-800/90 text-slate-400 border-slate-700/60 hover:text-slate-200'
-                }`}
-              title={soundAlarmEnabled ? 'Alarm Suara Aktif (Klik untuk Mute)' : 'Alarm Suara Mati (Klik untuk Aktifkan)'}
-            >
-              {soundAlarmEnabled ? <Volume2 size={13} className="text-emerald-400 animate-pulse shrink-0" /> : <VolumeX size={13} className="shrink-0" />}
-              <span>{soundAlarmEnabled ? 'Alarm ON' : 'Alarm OFF'}</span>
-            </button>
+          {/* Alarm Suara */}
+          <button
+            onClick={toggleSoundAlarm}
+            className={`px-2.5 py-1.5 rounded-xl border transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer whitespace-nowrap active:scale-95 ${soundAlarmEnabled
+              ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25 shadow-sm shadow-emerald-500/10'
+              : 'bg-slate-800/90 text-slate-400 border-slate-700/60 hover:text-slate-200'
+              }`}
+            title={soundAlarmEnabled ? 'Alarm Suara Aktif (Klik untuk Mute)' : 'Alarm Suara Mati (Klik untuk Aktifkan)'}
+          >
+            {soundAlarmEnabled ? <Volume2 size={13} className="text-emerald-400 animate-pulse shrink-0" /> : <VolumeX size={13} className="shrink-0" />}
+            <span>{soundAlarmEnabled ? 'Alarm ON' : 'Alarm OFF'}</span>
+          </button>
 
-            <PodTelegramAlertToggle />
+          {/* Telegram Alert Toggle */}
+          <PodTelegramAlertToggle />
 
-            {onNavigateView && (
-              <button
-                onClick={() => onNavigateView('pod-hb-analyzer')}
-                className="px-3 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 shadow-sm shadow-amber-500/10"
-                title="Buka Halaman Analisa Pola Heartbeat (Incident Diagnostic)"
-              >
-                <Activity size={13} className="text-amber-400" />
-                <span>Analisa Pola HB</span>
-              </button>
+          {/* Auto Ping POD v3 Toggle Button */}
+          <button
+            onClick={handleToggleAutoPing}
+            disabled={isTogglingAutoPing}
+            className={`px-2.5 py-1.5 rounded-xl border transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer whitespace-nowrap active:scale-95 disabled:opacity-50 ${autoPingEnabled
+              ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30 hover:bg-cyan-500/25 shadow-sm shadow-cyan-500/10'
+              : 'bg-slate-800/90 text-slate-400 border-slate-700/60 hover:text-slate-200'
+              }`}
+            title={autoPingEnabled ? 'Auto Ping POD v3 Aktif (Tiap 5 Detik) - Klik untuk Matikan' : 'Auto Ping POD v3 Mati - Klik untuk Aktifkan'}
+          >
+            {autoPingEnabled ? (
+              <Wifi size={13} className="text-cyan-400 animate-pulse shrink-0" />
+            ) : (
+              <WifiOff size={13} className="text-slate-500 shrink-0" />
             )}
-          </div>
+            <span>{autoPingEnabled ? 'Auto Ping ON' : 'Auto Ping OFF'}</span>
+          </button>
+
+          {/* Analisa Pola Heartbeat Shortcut */}
+          {onNavigateView && (
+            <button
+              onClick={() => onNavigateView('pod-hb-analyzer')}
+              className="px-2.5 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 shadow-sm shadow-amber-500/10"
+              title="Buka Halaman Analisa Pola Heartbeat (Incident Diagnostic)"
+            >
+              <Activity size={13} className="text-amber-400 shrink-0" />
+              <span>Analisa HB</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -947,6 +1088,59 @@ export default function PodFleetHeartbeatMatrix({
                             <span className="text-[9px] font-mono text-slate-400 bg-slate-950/60 px-1.5 py-0.5 rounded-lg border border-slate-800 shrink-0">
                               #{pod.code}
                             </span>
+
+                            {/* Latency Badge for POD v3 */}
+                            {(() => {
+                              const lat = fleetLatency[pod.id] || fleetLatency[pod.code];
+                              if (!lat || (lat.currentPingMs === null && lat.isOnline === false && lat.quality === 'UNKNOWN')) return null;
+                              return (
+                                <span
+                                  title={`Latensi Ping (Backend ➔ POD):\nRTT: ${lat.currentPingMs !== null ? lat.currentPingMs + ' ms' : 'Offline'}\nAvg: ${lat.avgPingMs ?? '-'} ms\nJitter: ±${lat.jitterMs ?? 0} ms\nLoss: ${lat.packetLossPct ?? 0}%\nQuality: ${lat.quality || 'N/A'}`}
+                                  className={`inline-flex items-center gap-1 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-md border shrink-0 transition-colors ${lat.quality === 'EXCELLENT'
+                                    ? 'bg-emerald-950/70 text-emerald-300 border-emerald-800/80 shadow-[0_0_8px_rgba(16,185,129,0.2)]'
+                                    : lat.quality === 'GOOD'
+                                      ? 'bg-cyan-950/70 text-cyan-300 border-cyan-800/80'
+                                      : lat.quality === 'FAIR'
+                                        ? 'bg-amber-950/70 text-amber-300 border-amber-800/80'
+                                        : lat.quality === 'POOR'
+                                          ? 'bg-orange-950/70 text-orange-300 border-orange-800/80'
+                                          : 'bg-rose-950/70 text-rose-300 border-rose-800/80'
+                                    }`}
+                                >
+                                  <Wifi size={9} className={lat.isOnline ? 'text-cyan-400' : 'text-rose-400'} />
+                                  <span>{lat.currentPingMs !== null ? `${lat.currentPingMs}ms` : 'offline'}</span>
+                                </span>
+                              );
+                            })()}
+
+                            {/* Root Cause Diagnosis Indicator for Pod with Issue */}
+                            {hasCriticalIssue && (
+                              <span
+                                title={
+                                  (() => {
+                                    const lat = fleetLatency[pod.id] || fleetLatency[pod.code];
+                                    const isHostOnline = lat ? (lat.isOnline && lat.currentPingMs !== null) : !isEntirePodOffline;
+                                    return isHostOnline
+                                      ? 'Akar Masalah: Host POD Online tapi ada modul macet. Periksa kabel USB fisik / hub USB.'
+                                      : 'Akar Masalah: Host POD Unreachable. Periksa koneksi Wi-Fi / VPN / listrik POD.';
+                                  })()
+                                }
+                                className={`text-[8.5px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${(() => {
+                                  const lat = fleetLatency[pod.id] || fleetLatency[pod.code];
+                                  const isHostOnline = lat ? (lat.isOnline && lat.currentPingMs !== null) : !isEntirePodOffline;
+                                  return isHostOnline
+                                    ? 'bg-rose-950/70 text-rose-300 border-rose-800/80'
+                                    : 'bg-amber-950/70 text-amber-300 border-amber-800/80';
+                                })()
+                                  }`}
+                              >
+                                {(() => {
+                                  const lat = fleetLatency[pod.id] || fleetLatency[pod.code];
+                                  const isHostOnline = lat ? (lat.isOnline && lat.currentPingMs !== null) : !isEntirePodOffline;
+                                  return isHostOnline ? 'Modul USB' : 'Net Offline';
+                                })()}
+                              </span>
+                            )}
                           </div>
 
                           {/* Quick Jump to Detail Button */}

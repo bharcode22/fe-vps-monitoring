@@ -417,3 +417,67 @@ export async function fetchRecentFleetIncidentsApi(limit = 40) {
   if (!data.success) throw new Error(data.error || 'Gagal memuat daftar insiden terbaru');
   return data.data || [];
 }
+
+/**
+ * Fetch real-time latency statistics and history for a specific POD v3
+ */
+export async function fetchPodLatencyApi(podId) {
+  const res = await fetch(`${BACKEND_URL}/api/pod-activity/pods/${podId}/latency`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memuat data latensi POD');
+  return data.data;
+}
+
+/**
+ * Trigger an immediate on-demand TCP ping probe for a POD v3
+ */
+export async function pingPodNowApi(podId) {
+  const res = await fetch(`${BACKEND_URL}/api/pod-activity/pods/${podId}/ping-now`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal melakukan ping ke POD');
+  return data.data;
+}
+
+/**
+ * Fetch latency summary across all POD v3 units
+ */
+export async function fetchFleetLatencyApi() {
+  const res = await fetch(`${BACKEND_URL}/api/pod-activity/fleet/latency`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memuat latensi armada POD');
+  return data.data || [];
+}
+
+/**
+ * Fetch auto-ping worker status
+ */
+export async function fetchAutoPingStatusApi() {
+  const res = await fetch(`${BACKEND_URL}/api/pod-activity/fleet/latency/auto-ping`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memuat status auto ping');
+  return data;
+}
+
+/**
+ * Toggle auto-ping worker on/off
+ */
+export async function toggleAutoPingApi(enabled) {
+  const res = await fetch(`${BACKEND_URL}/api/pod-activity/fleet/latency/auto-ping`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ enabled })
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal mengubah status auto ping');
+  return data;
+}
+

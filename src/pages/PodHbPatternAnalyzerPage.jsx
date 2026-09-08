@@ -33,6 +33,8 @@ import {
   Printer,
   FileSpreadsheet,
   Share2,
+  Wifi,
+  WifiOff,
   X
 } from 'lucide-react';
 import {
@@ -50,8 +52,13 @@ import { fetchServersApi } from '../api/vpsApi';
 import {
   fetchPodHeartbeatAnalysisApi,
   fetchRecentFleetIncidentsApi,
-  fetchHeartbeatModulesApi
+  fetchHeartbeatModulesApi,
+  fetchPodLatencyApi,
+  pingPodNowApi,
+  fetchAutoPingStatusApi,
+  toggleAutoPingApi
 } from '../api/podActivityApi';
+import { getSharedSocket } from '../utils/socketService';
 
 // Fallback module definitions if API is loading
 const DEFAULT_MODULES = [
@@ -1099,6 +1106,132 @@ export default function PodHbPatternAnalyzerPage({
   const [displayLimit, setDisplayLimit] = useState(250);
   const tableRef = useRef(null);
 
+  // 6. Realtime Pod v3 Latency & Ping States
+  const [latencyStats, setLatencyStats] = useState(null);
+  const [isPingingNow, setIsPingingNow] = useState(false);
+  const [autoPingEnabled, setAutoPingEnabled] = useState(true);
+  const [isTogglingAutoPing, setIsTogglingAutoPing] = useState(false);
+
+  // Load & Listen to Realtime Latency for Selected POD v3
+  useEffect(() => {
+    let isSubscribed = true;
+
+    fetchAutoPingStatusApi()
+      .then((res) => {
+        if (isSubscribed && res?.autoPingEnabled !== undefined) {
+          setAutoPingEnabled(Boolean(res.autoPingEnabled));
+        }
+      })
+      .catch(() => {});
+
+    if (!selectedPodId) return;
+
+    async function loadLatency() {
+      try {
+        const data = await fetchPodLatencyApi(selectedPodId);
+        if (isSubscribed && data?.stats) {
+          setLatencyStats({
+            ...data.stats,
+            host: data.host,
+            podName: data.podName,
+            podCode: data.podCode
+          });
+        }
+      } catch (_) { }
+    }
+
+    loadLatency();
+
+    const socket = getSharedSocket();
+    const handleLatencyUpdate = (payload) => {
+      if (!isSubscribed) return;
+      if (payload?.autoPingEnabled !== undefined) {
+        setAutoPingEnabled(Boolean(payload.autoPingEnabled));
+      }
+      if (payload?.fleetLatency) {
+        const match = payload.fleetLatency.find(
+          (p) => Number(p.podId) === Number(selectedPodId) || String(p.podCode) === String(selectedPodId)
+        );
+        if (match) {
+          setLatencyStats((prev) => ({
+            ...prev,
+            ...match
+          }));
+        }
+      }
+    };
+
+    const handleSingleLatency = (payload) => {
+      if (!isSubscribed || !payload) return;
+      if (Number(payload.podId) === Number(selectedPodId) || String(payload.podCode) === String(selectedPodId)) {
+        setLatencyStats((prev) => ({
+          ...prev,
+          ...payload
+        }));
+      }
+    };
+
+    const handleAutoPingStatus = (payload) => {
+      if (!isSubscribed || payload?.autoPingEnabled === undefined) return;
+      setAutoPingEnabled(Boolean(payload.autoPingEnabled));
+    };
+
+    socket.on('pod_latency_update', handleLatencyUpdate);
+    socket.on('pod_latency_single', handleSingleLatency);
+    socket.on('pod_latency_auto_ping_status', handleAutoPingStatus);
+
+    return () => {
+      isSubscribed = false;
+      socket.off('pod_latency_update', handleLatencyUpdate);
+      socket.off('pod_latency_single', handleSingleLatency);
+      socket.off('pod_latency_auto_ping_status', handleAutoPingStatus);
+    };
+  }, [selectedPodId]);
+
+  const handleToggleAutoPing = async () => {
+    if (isTogglingAutoPing) return;
+    setIsTogglingAutoPing(true);
+    const nextState = !autoPingEnabled;
+    try {
+      const res = await toggleAutoPingApi(nextState);
+      if (res && res.success) {
+        setAutoPingEnabled(Boolean(res.autoPingEnabled));
+      }
+    } catch (err) {
+      console.warn('Gagal mengubah status auto ping:', err.message);
+    } finally {
+      setIsTogglingAutoPing(false);
+    }
+  };
+
+  const handlePingNow = async () => {
+    if (!selectedPodId || isPingingNow) return;
+    setIsPingingNow(true);
+    try {
+      const res = await pingPodNowApi(selectedPodId);
+      if (res) {
+        setLatencyStats({
+          currentPingMs: res.currentPingMs,
+          avgPingMs: res.avgPingMs,
+          minPingMs: res.minPingMs,
+          maxPingMs: res.maxPingMs,
+          jitterMs: res.jitterMs,
+          packetLossPct: res.packetLossPct,
+          quality: res.quality,
+          isOnline: res.isOnline,
+          port: res.port,
+          host: res.host,
+          podName: res.podName,
+          podCode: res.podCode
+        });
+      }
+    } catch (err) {
+      console.warn('Gagal melakukan ping on-demand:', err.message);
+    } finally {
+      setIsPingingNow(false);
+    }
+  };
+
   // Load Servers and Modules on mount (Strictly POD V3)
   useEffect(() => {
     let mounted = true;
@@ -1773,7 +1906,7 @@ export default function PodHbPatternAnalyzerPage({
                         className="w-full text-left p-3 hover:bg-slate-800/70 transition flex items-start justify-between gap-2 group"
                       >
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${inc.alertType === 'DEAD' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
                               }`}>
                               {inc.alertType}
@@ -1784,17 +1917,37 @@ export default function PodHbPatternAnalyzerPage({
                             <span className="text-[11px] text-slate-400">
                               Mod {inc.moduleId} ({inc.moduleName})
                             </span>
+                            {/* Root Cause Chip */}
+                            {inc.rootCauseCategory === 'HOST_NETWORK_OFFLINE' || inc.moduleId === 0 ? (
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                Jaringan Offline
+                              </span>
+                            ) : (
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                                Modul USB
+                              </span>
+                            )}
                           </div>
-                          <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-2">
+                          <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-2 flex-wrap">
                             <Clock size={11} className="text-slate-500" />
                             <span>{inc.timeFormatted}</span>
                             {inc.lastHb !== null && inc.lastHb !== undefined && (
                               <span className="text-cyan-400 font-mono">#{inc.lastHb}</span>
                             )}
+                            {inc.pingMs !== null && inc.pingMs !== undefined && (
+                              <span className="text-[10px] font-mono text-cyan-400 bg-slate-950/60 px-1 rounded border border-slate-800">
+                                RTT {inc.pingMs}ms
+                              </span>
+                            )}
                           </div>
+                          {inc.diagnosticHint && (
+                            <div className="text-[10px] text-slate-400 italic mt-0.5 line-clamp-1">
+                              {inc.diagnosticHint}
+                            </div>
+                          )}
                         </div>
                         {inc.downtimeSeconds > 0 && (
-                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-amber-400 whitespace-nowrap">
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-amber-400 whitespace-nowrap shrink-0">
                             {inc.downtimeSeconds}s
                           </span>
                         )}
@@ -1935,6 +2088,137 @@ export default function PodHbPatternAnalyzerPage({
                 ±{win}m
               </button>
             ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Realtime Network Health & Latency Card (Backend -> POD v3) */}
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900/90 via-slate-900/70 to-slate-950/80 border border-slate-800/90 shadow-xl backdrop-blur-md">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          {/* Left: Info & Target */}
+          <div className="flex items-start sm:items-center gap-3">
+            <div className={`p-2.5 rounded-xl border flex items-center justify-center shrink-0 ${
+              latencyStats?.isOnline !== false && latencyStats?.currentPingMs !== null
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-lg shadow-emerald-500/10'
+                : 'bg-rose-500/10 border-rose-500/30 text-rose-400 shadow-lg shadow-rose-500/10'
+            }`}>
+              {latencyStats?.isOnline !== false && latencyStats?.currentPingMs !== null ? (
+                <Wifi size={20} className="animate-pulse" />
+              ) : (
+                <WifiOff size={20} />
+              )}
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-bold text-white tracking-wide">
+                  Latensi Jaringan Riil (Backend ➔ POD v3)
+                </span>
+                {latencyStats?.quality && (
+                  <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                    latencyStats.quality === 'EXCELLENT'
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                      : latencyStats.quality === 'GOOD'
+                      ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                      : latencyStats.quality === 'FAIR'
+                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                      : latencyStats.quality === 'POOR'
+                      ? 'bg-orange-500/20 text-orange-300 border-orange-500/40'
+                      : 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                  }`}>
+                    {latencyStats.quality}
+                  </span>
+                )}
+              </div>
+              <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2 flex-wrap">
+                <span className="font-mono text-slate-300">
+                  Target: {latencyStats?.host || servers.find(s => Number(s.id) === Number(selectedPodId))?.ip_address || '182.161.0.31'}:{latencyStats?.port || 1883}
+                </span>
+                <span className="text-slate-600">•</span>
+                <span className="text-slate-400">Probing TCP Socket RTT presisi tinggi</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Center: Live Metric Stats */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-1 max-w-xl">
+            {/* 1. RTT Saat Ini */}
+            <div className="px-3 py-2 rounded-xl bg-slate-950/70 border border-slate-800/80">
+              <span className="block text-[10px] uppercase font-bold text-slate-400">RTT Saat Ini</span>
+              <span className="text-sm font-black font-mono text-white">
+                {latencyStats?.currentPingMs !== null && latencyStats?.currentPingMs !== undefined
+                  ? `${latencyStats.currentPingMs} ms`
+                  : '—'}
+              </span>
+            </div>
+
+            {/* 2. Rata-rata */}
+            <div className="px-3 py-2 rounded-xl bg-slate-950/70 border border-slate-800/80">
+              <span className="block text-[10px] uppercase font-bold text-slate-400">Rata-rata</span>
+              <span className="text-sm font-black font-mono text-cyan-400">
+                {latencyStats?.avgPingMs !== null && latencyStats?.avgPingMs !== undefined
+                  ? `${latencyStats.avgPingMs} ms`
+                  : '—'}
+              </span>
+            </div>
+
+            {/* 3. Jitter */}
+            <div className="px-3 py-2 rounded-xl bg-slate-950/70 border border-slate-800/80">
+              <span className="block text-[10px] uppercase font-bold text-slate-400">Jitter (Variasi)</span>
+              <span className="text-sm font-black font-mono text-amber-400">
+                {latencyStats?.jitterMs !== null && latencyStats?.jitterMs !== undefined
+                  ? `±${latencyStats.jitterMs} ms`
+                  : '—'}
+              </span>
+            </div>
+
+            {/* 4. Packet Loss */}
+            <div className="px-3 py-2 rounded-xl bg-slate-950/70 border border-slate-800/80">
+              <span className="block text-[10px] uppercase font-bold text-slate-400">Loss Paket</span>
+              <span className={`text-sm font-black font-mono ${
+                (latencyStats?.packetLossPct || 0) > 0 ? 'text-rose-400' : 'text-emerald-400'
+              }`}>
+                {latencyStats?.packetLossPct !== null && latencyStats?.packetLossPct !== undefined
+                  ? `${latencyStats.packetLossPct}%`
+                  : '0%'}
+              </span>
+            </div>
+          </div>
+
+          {/* Right: Auto Ping Toggle & Manual Ping Button */}
+          <div className="flex flex-col items-end shrink-0 gap-1.5">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleToggleAutoPing}
+                disabled={isTogglingAutoPing}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition active:scale-95 cursor-pointer disabled:opacity-50 ${
+                  autoPingEnabled
+                    ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 hover:bg-cyan-500/30 shadow-sm shadow-cyan-500/10'
+                    : 'bg-slate-800/90 text-slate-400 border-slate-700/60 hover:text-slate-200'
+                }`}
+                title={autoPingEnabled ? 'Auto Ping POD v3 Aktif (Tiap 5 Detik) - Klik untuk Matikan' : 'Auto Ping POD v3 Mati - Klik untuk Aktifkan'}
+              >
+                {autoPingEnabled ? (
+                  <Wifi size={13} className="text-cyan-400 animate-pulse" />
+                ) : (
+                  <WifiOff size={13} className="text-slate-500" />
+                )}
+                <span>{autoPingEnabled ? 'Auto Ping ON' : 'Auto Ping OFF'}</span>
+              </button>
+
+              <button
+                onClick={handlePingNow}
+                disabled={isPingingNow || !selectedPodId}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold transition shadow-lg shadow-cyan-600/20 disabled:opacity-50 cursor-pointer active:scale-95"
+                title="Kirim probe TCP sekarang untuk menguji respons RTT instan"
+              >
+                <Zap size={14} className={isPingingNow ? 'animate-bounce text-yellow-300' : 'text-cyan-200'} />
+                <span>{isPingingNow ? 'Memeriksa...' : 'Ping Sekarang'}</span>
+              </button>
+            </div>
+            <span className="text-[10px] text-slate-400">
+              {autoPingEnabled ? 'Auto-probe tiap 5s via Socket.IO' : 'Auto-probe sedang dijeda (Mati)'}
+            </span>
           </div>
         </div>
       </div>
