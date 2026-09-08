@@ -28,6 +28,7 @@ import PodActivityPage from './pages/PodActivityPage';
 import SettingsPage from './pages/SettingsPage';
 import UserActivityLogsPage from './pages/UserActivityLogsPage';
 import PodHeartbeatRecordsPage from './pages/PodHeartbeatRecordsPage';
+import PodHbPatternAnalyzerPage from './pages/PodHbPatternAnalyzerPage';
 import PodReportsPage from './pages/PodReportsPage';
 import { useServers } from './hooks/useServers';
 
@@ -43,6 +44,11 @@ export default function App() {
   const { isAuthenticated, loading } = useAuth();
   const [currentView, setCurrentView] = useState(() => {
     try {
+      const url = new URL(window.location.href);
+      const viewParam = url.searchParams.get('view');
+      if (viewParam && (viewParam === 'pod-hb-analyzer' || viewParam === 'hb-analyzer' || viewParam === 'heartbeat-analyzer')) {
+        return 'pod-hb-analyzer';
+      }
       const saved = localStorage.getItem('vps_monitoring_current_view');
       return saved || 'dashboard';
     } catch (e) {
@@ -77,6 +83,19 @@ export default function App() {
     return localStorage.getItem('storageManagerReturnView') || null;
   });
   const [heartbeatInitialPodId, setHeartbeatInitialPodId] = useState(null);
+  const [analyzerParams, setAnalyzerParams] = useState(() => {
+    try {
+      const url = new URL(window.location.href);
+      const podId = url.searchParams.get('podId');
+      const moduleId = url.searchParams.get('moduleId');
+      const time = url.searchParams.get('time') || url.searchParams.get('ts');
+      const date = url.searchParams.get('date');
+      if (podId || moduleId || time || date) {
+        return { podId, moduleId, time, date };
+      }
+    } catch (_) {}
+    return null;
+  });
 
   const handleNavigateView = (view, extraParams = null) => {
     if (extraParams?.code) {
@@ -93,6 +112,16 @@ export default function App() {
     }
     if (extraParams?.podId !== undefined) {
       setHeartbeatInitialPodId(extraParams.podId);
+    }
+    if (extraParams?.analyzerParams) {
+      setAnalyzerParams(extraParams.analyzerParams);
+    } else if (extraParams?.moduleId || extraParams?.targetTime || extraParams?.time) {
+      setAnalyzerParams({
+        podId: extraParams.podId || heartbeatInitialPodId,
+        moduleId: extraParams.moduleId,
+        time: extraParams.targetTime || extraParams.time,
+        date: extraParams.date
+      });
     }
     setCurrentView(view);
   };
@@ -223,7 +252,11 @@ export default function App() {
     'pod-heartbeat-records',
     'heartbeat-records',
     'pod-records',
-    'pod-storage-viewer'
+    'pod-storage-viewer',
+    'pod-hb-analyzer',
+    'hb-analyzer',
+    'heartbeat-analyzer',
+    'pod-pattern-analyzer'
   ].includes(currentView);
 
   return (
@@ -273,6 +306,14 @@ export default function App() {
           onBack={() => handleNavigateView('dashboard')}
           initialPodId={heartbeatInitialPodId}
           onNavigateView={handleNavigateView}
+        />
+      ) : currentView === 'pod-hb-analyzer' || currentView === 'hb-analyzer' || currentView === 'heartbeat-analyzer' || currentView === 'pod-pattern-analyzer' ? (
+        <PodHbPatternAnalyzerPage
+          onBack={() => handleNavigateView('dashboard')}
+          initialPodId={analyzerParams?.podId || heartbeatInitialPodId}
+          initialModuleId={analyzerParams?.moduleId}
+          initialTime={analyzerParams?.time || analyzerParams?.targetTime}
+          initialDate={analyzerParams?.date}
         />
       ) : currentView === 'pod-reports' || currentView === 'fleet-reports' || currentView === 'reports' || currentView === 'pdf-reports' ? (
         <PodReportsPage

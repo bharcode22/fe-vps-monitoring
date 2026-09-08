@@ -501,6 +501,7 @@ export default function PodActivityPage({ onBack, onNavigateView = null }) {
           heartbeatSnapshot={data.heartbeatSnapshot || {}}
           onSelectPod={setSelectedPodForTopicModal}
           onPublish={handlePublish}
+          onNavigateView={onNavigateView}
         />
       )}
     </div>

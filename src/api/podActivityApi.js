@@ -386,3 +386,34 @@ export async function fetchPodLiveBackfillApi(podId, { moduleId, windowSeconds =
   if (!data.success) throw new Error(data.error || 'Gagal memuat riwayat live telemetri');
   return data;
 }
+
+/**
+ * Fetch heartbeat interval pattern analysis, counter continuity, and diagnostic heuristics
+ */
+export async function fetchPodHeartbeatAnalysisApi(podId, { moduleId = 507, targetTime = null, date = null, windowMinutes = 5 } = {}) {
+  const params = new URLSearchParams();
+  if (moduleId) params.append('moduleId', String(moduleId));
+  if (targetTime) params.append('targetTime', String(targetTime));
+  if (date) params.append('date', String(date));
+  if (windowMinutes) params.append('windowMinutes', String(windowMinutes));
+
+  const res = await fetch(`${BACKEND_URL}/api/pod-activity/pods/${podId}/hb-analysis?${params.toString()}`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memuat analisis pola heartbeat');
+  return data;
+}
+
+/**
+ * Fetch recent fleet heartbeat incidents / alerts across all pods
+ */
+export async function fetchRecentFleetIncidentsApi(limit = 40) {
+  const params = new URLSearchParams({ limit: String(limit) });
+  const res = await fetch(`${BACKEND_URL}/api/pod-activity/incidents/recent?${params.toString()}`, {
+    headers: getAuthHeaders()
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'Gagal memuat daftar insiden terbaru');
+  return data.data || [];
+}

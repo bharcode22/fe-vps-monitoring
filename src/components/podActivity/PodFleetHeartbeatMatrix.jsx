@@ -102,7 +102,8 @@ export default function PodFleetHeartbeatMatrix({
   batchedHeartbeat = null,
   heartbeatSnapshot = {},
   onSelectPod,
-  onPublish
+  onPublish,
+  onNavigateView = null
 }) {
   // Configured server modules (dynamically synchronized)
   const [serverModules, setServerModules] = useState(getStoredHbModules);
@@ -814,6 +815,17 @@ export default function PodFleetHeartbeatMatrix({
             </button>
 
             <PodTelegramAlertToggle />
+
+            {onNavigateView && (
+              <button
+                onClick={() => onNavigateView('pod-hb-analyzer')}
+                className="px-3 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap active:scale-95 shadow-sm shadow-amber-500/10"
+                title="Buka Halaman Analisa Pola Heartbeat (Incident Diagnostic)"
+              >
+                <Activity size={13} className="text-amber-400" />
+                <span>Analisa Pola HB</span>
+              </button>
+            )}
           </div>
         </div>
       </div>

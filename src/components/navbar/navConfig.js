@@ -13,7 +13,8 @@ import {
   Users,
   UserCheck,
   ShieldCheck,
-  FileCheck
+  FileCheck,
+  Activity
 } from 'lucide-react';
 
 
@@ -145,6 +146,16 @@ export const NAV_DROPDOWN_GROUPS = [
         badge: 'BETA',
         colorClass: 'text-cyan-400',
         bgActiveClass: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
+      },
+      {
+        id: 'pod-hb-analyzer',
+        aliases: ['hb-analyzer', 'heartbeat-analyzer', 'pod-pattern-analyzer'],
+        label: 'Analisa Pola HB',
+        desc: 'Investigasi Jeda, Spike, & Anomali Detak Modul',
+        icon: Activity,
+        badge: 'BETA',
+        colorClass: 'text-amber-400',
+        bgActiveClass: 'bg-amber-500/15 text-amber-300 border-amber-500/30'
       },
       {
         id: 'storage-manager',
