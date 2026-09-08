@@ -1162,7 +1162,7 @@ export default function PodHbPatternAnalyzerPage({
       <VisualChartsSection analysisData={analysisData} />
 
       {/* Raw Tick High-Precision Timeline Table & JSON Viewer */}
-      <div id="tick-table-card" className="p-5 rounded-3xl bg-slate-900/60 border border-slate-800 shadow-2xl space-y-4" style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 400px' }}>
+      <div id="tick-table-card" className="p-5 rounded-3xl bg-slate-900/60 border border-slate-800 shadow-2xl space-y-4" style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 750px' }}>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
           <div className="flex items-center gap-3">
             {/* View Mode Tabs: Tabel vs JSON */}
@@ -1298,7 +1298,7 @@ export default function PodHbPatternAnalyzerPage({
         {tableTab === 'table' ? (
           <>
             {/* Table View Container */}
-            <div ref={tableRef} className="overflow-x-auto max-h-96 overflow-y-auto custom-scrollbar rounded-2xl border border-slate-800/80">
+            <div ref={tableRef} className="overflow-x-auto max-h-[650px] lg:max-h-[750px] overflow-y-auto custom-scrollbar rounded-2xl border border-slate-800/80">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-950/90 text-slate-400 font-semibold sticky top-0 z-10 backdrop-blur-md border-b border-slate-800">
                   <tr>
@@ -1363,7 +1363,7 @@ export default function PodHbPatternAnalyzerPage({
             </div>
 
             <div className="relative rounded-2xl border border-slate-800/80 overflow-hidden bg-slate-950/90 shadow-inner">
-              <pre className="p-4 max-h-[500px] overflow-auto custom-scrollbar font-mono text-[11px] text-emerald-400 leading-relaxed select-all">
+              <pre className="p-4 max-h-[650px] lg:max-h-[750px] overflow-auto custom-scrollbar font-mono text-[11px] text-emerald-400 leading-relaxed select-all">
                 {jsonFormattedTicks}
               </pre>
             </div>
