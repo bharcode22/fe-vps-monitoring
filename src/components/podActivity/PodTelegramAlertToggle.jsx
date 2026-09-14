@@ -68,14 +68,13 @@ export default function PodTelegramAlertToggle({ compact = false, className = ''
       <button
         onClick={handleToggle}
         disabled={isUpdating}
-        className={`p-2 rounded-xl border transition cursor-pointer flex items-center justify-center ${
-          isEnabled
-            ? 'bg-sky-500/20 text-sky-300 border-sky-500/40 hover:bg-sky-500/30'
-            : 'bg-slate-800/80 text-slate-400 border-slate-700 hover:text-slate-200'
-        } ${className}`}
+        className={`p-2 rounded-xl border transition cursor-pointer flex items-center justify-center ${isEnabled
+          ? 'bg-sky-500/20 text-sky-300 border-sky-500/40 hover:bg-sky-500/30'
+          : 'bg-slate-800/80 text-slate-400 border-slate-700 hover:text-slate-200'
+          } ${className}`}
         title={
           isEnabled
-            ? "Notifikasi Telegram ke grup 'HB monitor' AKTIF (Khusus status DEAD). Klik untuk MATIKAN selama develop di local."
+            ? "Notifikasi Telegram ke grup 'HB monitor' AKTIF (Status DEAD, serta pemulihan BERLANJUT & RESTART). Klik untuk MATIKAN."
             : "Notifikasi Telegram MATI (tidak ada pesan yang dikirim ke grup). Klik untuk AKTIFKAN."
         }
       >
@@ -94,14 +93,13 @@ export default function PodTelegramAlertToggle({ compact = false, className = ''
     <button
       onClick={handleToggle}
       disabled={isUpdating}
-      className={`px-2.5 py-1.5 rounded-xl border flex items-center gap-1.5 text-xs font-bold transition cursor-pointer select-none active:scale-95 ${
-        isEnabled
-          ? 'bg-sky-500/20 text-sky-200 border-sky-500/40 hover:bg-sky-500/30 shadow-sm shadow-sky-500/10'
-          : 'bg-slate-800/80 text-slate-400 border-slate-700 hover:text-slate-200 hover:bg-slate-800'
-      } ${className}`}
+      className={`px-2.5 py-1.5 rounded-xl border flex items-center gap-1.5 text-xs font-bold transition cursor-pointer select-none active:scale-95 ${isEnabled
+        ? 'bg-sky-500/20 text-sky-200 border-sky-500/40 hover:bg-sky-500/30 shadow-sm shadow-sky-500/10'
+        : 'bg-slate-800/80 text-slate-400 border-slate-700 hover:text-slate-200 hover:bg-slate-800'
+        } ${className}`}
       title={
         isEnabled
-          ? "Notifikasi Telegram ke grup 'HB monitor' AKTIF (Khusus status DEAD). Klik untuk MATIKAN selama develop di local."
+          ? "Notifikasi Telegram ke grup 'HB monitor' AKTIF (Status DEAD, serta pemulihan BERLANJUT & RESTART). Klik untuk MATIKAN."
           : "Notifikasi Telegram MATI (tidak ada pesan yang dikirim ke grup). Klik untuk AKTIFKAN."
       }
     >
