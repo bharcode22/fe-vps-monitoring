@@ -1122,7 +1122,7 @@ export default function PodHbPatternAnalyzerPage({
           setAutoPingEnabled(Boolean(res.autoPingEnabled));
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     if (!selectedPodId) return;
 
@@ -2097,11 +2097,10 @@ export default function PodHbPatternAnalyzerPage({
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           {/* Left: Info & Target */}
           <div className="flex items-start sm:items-center gap-3">
-            <div className={`p-2.5 rounded-xl border flex items-center justify-center shrink-0 ${
-              latencyStats?.isOnline !== false && latencyStats?.currentPingMs !== null
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-lg shadow-emerald-500/10'
-                : 'bg-rose-500/10 border-rose-500/30 text-rose-400 shadow-lg shadow-rose-500/10'
-            }`}>
+            <div className={`p-2.5 rounded-xl border flex items-center justify-center shrink-0 ${latencyStats?.isOnline !== false && latencyStats?.currentPingMs !== null
+              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-lg shadow-emerald-500/10'
+              : 'bg-rose-500/10 border-rose-500/30 text-rose-400 shadow-lg shadow-rose-500/10'
+              }`}>
               {latencyStats?.isOnline !== false && latencyStats?.currentPingMs !== null ? (
                 <Wifi size={20} className="animate-pulse" />
               ) : (
@@ -2115,17 +2114,16 @@ export default function PodHbPatternAnalyzerPage({
                   Latensi Jaringan Riil (Backend ➔ POD v3)
                 </span>
                 {latencyStats?.quality && (
-                  <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${
-                    latencyStats.quality === 'EXCELLENT'
-                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                      : latencyStats.quality === 'GOOD'
+                  <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${latencyStats.quality === 'EXCELLENT'
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                    : latencyStats.quality === 'GOOD'
                       ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
                       : latencyStats.quality === 'FAIR'
-                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                      : latencyStats.quality === 'POOR'
-                      ? 'bg-orange-500/20 text-orange-300 border-orange-500/40'
-                      : 'bg-rose-500/20 text-rose-300 border-rose-500/40'
-                  }`}>
+                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                        : latencyStats.quality === 'POOR'
+                          ? 'bg-orange-500/20 text-orange-300 border-orange-500/40'
+                          : 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                    }`}>
                     {latencyStats.quality}
                   </span>
                 )}
@@ -2175,9 +2173,8 @@ export default function PodHbPatternAnalyzerPage({
             {/* 4. Packet Loss */}
             <div className="px-3 py-2 rounded-xl bg-slate-950/70 border border-slate-800/80">
               <span className="block text-[10px] uppercase font-bold text-slate-400">Loss Paket</span>
-              <span className={`text-sm font-black font-mono ${
-                (latencyStats?.packetLossPct || 0) > 0 ? 'text-rose-400' : 'text-emerald-400'
-              }`}>
+              <span className={`text-sm font-black font-mono ${(latencyStats?.packetLossPct || 0) > 0 ? 'text-rose-400' : 'text-emerald-400'
+                }`}>
                 {latencyStats?.packetLossPct !== null && latencyStats?.packetLossPct !== undefined
                   ? `${latencyStats.packetLossPct}%`
                   : '0%'}
@@ -2191,11 +2188,10 @@ export default function PodHbPatternAnalyzerPage({
               <button
                 onClick={handleToggleAutoPing}
                 disabled={isTogglingAutoPing}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition active:scale-95 cursor-pointer disabled:opacity-50 ${
-                  autoPingEnabled
-                    ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 hover:bg-cyan-500/30 shadow-sm shadow-cyan-500/10'
-                    : 'bg-slate-800/90 text-slate-400 border-slate-700/60 hover:text-slate-200'
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition active:scale-95 cursor-pointer disabled:opacity-50 ${autoPingEnabled
+                  ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 hover:bg-cyan-500/30 shadow-sm shadow-cyan-500/10'
+                  : 'bg-slate-800/90 text-slate-400 border-slate-700/60 hover:text-slate-200'
+                  }`}
                 title={autoPingEnabled ? 'Auto Ping POD v3 Aktif (Tiap 5 Detik) - Klik untuk Matikan' : 'Auto Ping POD v3 Mati - Klik untuk Aktifkan'}
               >
                 {autoPingEnabled ? (

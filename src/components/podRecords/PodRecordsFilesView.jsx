@@ -198,10 +198,10 @@ export default function PodRecordsFilesView({
                                 file.type === 'current'
                                   ? 'text-amber-400 shrink-0'
                                   : file.type === 'heartbeats'
-                                  ? 'text-cyan-400 shrink-0'
-                                  : file.type === 'events'
-                                  ? 'text-rose-400 shrink-0'
-                                  : 'text-emerald-400 shrink-0'
+                                    ? 'text-cyan-400 shrink-0'
+                                    : file.type === 'events'
+                                      ? 'text-rose-400 shrink-0'
+                                      : 'text-emerald-400 shrink-0'
                               }
                             />
                             <span className="text-cyan-100 group-hover:text-cyan-300 transition-colors font-mono">{file.name}</span>
@@ -212,11 +212,10 @@ export default function PodRecordsFilesView({
                         <td className="py-3 px-4 whitespace-nowrap font-sans">
                           {file.moduleId ? (
                             <div className="flex items-center gap-1.5">
-                              <span className={`px-1.5 py-0.5 rounded font-mono text-[10px] font-bold border ${
-                                file.type === 'current'
-                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                                  : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
-                              }`}>
+                              <span className={`px-1.5 py-0.5 rounded font-mono text-[10px] font-bold border ${file.type === 'current'
+                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                                }`}>
                                 Mod {file.moduleId}
                               </span>
                               {modFullName && (
