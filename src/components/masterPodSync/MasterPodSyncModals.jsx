@@ -5,38 +5,37 @@ import DeleteRowConfirmationModal from './DeleteRowConfirmationModal';
 import SyncProgressReportModal from './SyncProgressReportModal';
 
 /**
- * Modular wrapper bundling the 4 standard Master-to-POD sync and delete modals.
+ * Unified container component bundling all 4 Master-to-POD sync and delete dialogs.
  */
 export default function MasterPodSyncModals({
   tableName,
   selectedMasterId,
   masterInfo,
   pods = [],
-  modals
+  bulkSync,
+  singleRowSync,
+  deleteRow,
+  progress
 }) {
-  if (!modals) return null;
-
-  const { sync, deleteRow, singleRowSync, progress } = modals;
-
   return (
     <>
       {/* 1. Bulk Sync Confirmation Modal */}
-      {sync?.isOpen && (
+      {bulkSync?.isOpen && (
         <MasterPodSyncModal
-          isOpen={sync.isOpen}
-          onClose={sync.onClose}
+          isOpen={bulkSync.isOpen}
+          onClose={bulkSync.onClose}
           masterId={selectedMasterId}
           tableName={tableName}
           masterInfo={masterInfo}
-          targetPodIds={sync.targetPodIds}
-          setTargetPodIds={sync.setTargetPodIds}
+          targetPodIds={bulkSync.targetPodIds}
+          setTargetPodIds={bulkSync.setTargetPodIds}
           pods={pods}
-          dryRun={sync.dryRun}
-          setDryRun={sync.setDryRun}
-          syncColumns={sync.syncColumns}
-          setSyncColumns={sync.setSyncColumns}
-          isSyncing={sync.isSyncing}
-          onPerformSync={sync.onPerformSync}
+          dryRun={bulkSync.dryRun}
+          setDryRun={bulkSync.setDryRun}
+          syncColumns={bulkSync.syncColumns}
+          setSyncColumns={bulkSync.setSyncColumns}
+          isSyncing={bulkSync.isSyncing}
+          onPerformSync={bulkSync.onPerformSync}
         />
       )}
 
@@ -45,7 +44,7 @@ export default function MasterPodSyncModals({
         <SingleRowSyncModal
           isOpen={singleRowSync.isOpen}
           onClose={singleRowSync.onClose}
-          tableName={tableName}
+          masterInfo={masterInfo}
           pkColumn={singleRowSync.pkColumn}
           pkValue={singleRowSync.pkValue}
           rowData={singleRowSync.rowData}
@@ -53,7 +52,7 @@ export default function MasterPodSyncModals({
           setTargetPodIds={singleRowSync.setTargetPodIds}
           pods={pods}
           isSyncing={singleRowSync.isSyncing}
-          onPerformSync={singleRowSync.onPerformSync}
+          onConfirmSync={singleRowSync.onConfirmSync}
         />
       )}
 
@@ -65,20 +64,29 @@ export default function MasterPodSyncModals({
           targetType={deleteRow.targetType}
           targetName={deleteRow.targetName}
           serverHost={deleteRow.serverHost}
-          tableName={deleteRow.tableName}
+          tableName={deleteRow.tableName || tableName}
           pkColumn={deleteRow.pkColumn}
           pkValue={deleteRow.pkValue}
           pkValues={deleteRow.pkValues}
           isDeleting={deleteRow.isDeleting}
-          onConfirm={deleteRow.onConfirm}
+          onConfirmDelete={deleteRow.onConfirmDelete}
         />
       )}
 
       {/* 4. Sync Progress Report Modal */}
-      {progress?.modalState?.isOpen && (
+      {progress?.isOpen && (
         <SyncProgressReportModal
-          modalState={progress.modalState}
+          isOpen={progress.isOpen}
           onClose={progress.onClose}
+          direction={progress.direction}
+          isProcessing={progress.isProcessing}
+          title={progress.title}
+          tableName={progress.tableName || tableName}
+          sourceName={progress.sourceName}
+          targetName={progress.targetName}
+          progressPercent={progress.progressPercent}
+          currentStatusText={progress.currentStatusText}
+          report={progress.report}
         />
       )}
     </>
