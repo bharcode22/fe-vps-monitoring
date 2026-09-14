@@ -23,6 +23,7 @@ export default function PodRecordsFilesView({
   selectedDate,
   availableDates = [],
   activeCategory = 'all',
+  selectedModuleFilter = 'ALL',
   onSelectCategory,
   onSelectDate,
   onSelectModule,
@@ -54,6 +55,15 @@ export default function PodRecordsFilesView({
       }
     }
 
+    if (selectedModuleFilter && selectedModuleFilter !== 'ALL') {
+      list = list.filter((f) => {
+        if (f.moduleId !== undefined && f.moduleId !== null) {
+          return String(f.moduleId) === String(selectedModuleFilter);
+        }
+        return true;
+      });
+    }
+
     if (!fileSearch.trim()) return list;
     const q = fileSearch.toLowerCase().trim();
     return list.filter((f) => {
@@ -63,7 +73,7 @@ export default function PodRecordsFilesView({
       const modMatch = String(f.moduleId || '').includes(q);
       return nameMatch || (modName && modName.includes(q)) || catMatch || modMatch;
     });
-  }, [storageFilesData?.files, fileSearch, activeCategory]);
+  }, [storageFilesData?.files, fileSearch, activeCategory, selectedModuleFilter]);
 
   // Current folder stats
   const activeFolderMeta = useMemo(() => {
@@ -101,9 +111,10 @@ export default function PodRecordsFilesView({
       {/* 1. DIRECTORY BREADCRUMB & SEARCH BAR */}
       <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
         <div className="flex items-center gap-2 flex-wrap text-xs font-mono">
-          <span className="text-slate-500">Lokasi:</span>
-          <span className="px-2 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-800">
-            pods
+          <span className="text-slate-500">Sumber Data:</span>
+          <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 font-bold flex items-center gap-1">
+            <Layers size={12} className="text-emerald-400" />
+            InfluxDB
           </span>
           <span className="text-slate-600">/</span>
           <span className="px-2 py-0.5 rounded bg-slate-900 text-cyan-300 border border-slate-800 font-bold">
@@ -111,13 +122,12 @@ export default function PodRecordsFilesView({
           </span>
           <span className="text-slate-600">/</span>
           <span className="px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-bold flex items-center gap-1">
-            <FolderOpen size={12} className="text-cyan-400" />
-            {selectedDate === 'ALL' ? 'semua_folder' : selectedDate}
+            <Calendar size={12} className="text-cyan-400" />
+            {selectedDate === 'ALL' ? 'Semua Tanggal' : selectedDate}
           </span>
-          <span className="text-slate-600">/</span>
         </div>
 
-        {/* Search input inside folder */}
+        {/* Search input inside streams */}
         <div className="flex items-center gap-2">
           <div className="relative">
             <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -125,14 +135,14 @@ export default function PodRecordsFilesView({
               type="text"
               value={fileSearch}
               onChange={(e) => setFileSearch(e.target.value)}
-              placeholder="Cari nama berkas / modul..."
+              placeholder="Cari aliran data / modul..."
               className="bg-slate-900 border border-slate-800 rounded-xl pl-7 pr-3 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 w-52 sm:w-60"
             />
           </div>
 
           <div className="text-right shrink-0 px-2">
             <span className="text-xs font-mono font-bold text-cyan-400">
-              {filteredFiles.length} berkas
+              {filteredFiles.length} aliran data
             </span>
           </div>
         </div>
@@ -150,11 +160,11 @@ export default function PodRecordsFilesView({
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-950/80 border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
-                  <th className="py-3 px-4">Nama Berkas</th>
-                  <th className="py-3 px-4">Modul / Konten</th>
-                  <th className="py-3 px-4">Kategori Log</th>
-                  <th className="py-3 px-4 text-right">Ukuran</th>
-                  <th className="py-3 px-4">Waktu Modifikasi Terakhir</th>
+                  <th className="py-3 px-4">Aliran Data Telemetri (InfluxDB)</th>
+                  <th className="py-3 px-4">Modul / Pengukuran</th>
+                  <th className="py-3 px-4">Bucket Sumber</th>
+                  <th className="py-3 px-4 text-right">Total Data</th>
+                  <th className="py-3 px-4">Pembaruan Terakhir</th>
                   <th className="py-3 px-4 text-center">Aksi Akses Cepat</th>
                 </tr>
               </thead>
@@ -226,21 +236,11 @@ export default function PodRecordsFilesView({
                           )}
                         </td>
 
-                        {/* Category Badge */}
+                        {/* Bucket / Source Badge */}
                         <td className="py-3 px-4 whitespace-nowrap font-sans">
-                          <span
-                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-1 w-fit ${
-                              file.type === 'current'
-                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm'
-                                : file.type === 'heartbeats'
-                                ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
-                                : file.type === 'events'
-                                ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
-                                : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-                            }`}
-                          >
-                            {file.type === 'current' && <Zap size={10} className="fill-amber-400" />}
-                            <span>{file.category}</span>
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-1 w-fit bg-purple-500/20 text-purple-300 border-purple-500/40 shadow-sm">
+                            <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                            <span className="font-mono">{file.sourceBucket || 'pod_logs_bhar'}</span>
                           </span>
                         </td>
 

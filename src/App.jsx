@@ -30,6 +30,8 @@ import UserActivityLogsPage from './pages/UserActivityLogsPage';
 import PodHeartbeatRecordsPage from './pages/PodHeartbeatRecordsPage';
 import PodHbPatternAnalyzerPage from './pages/PodHbPatternAnalyzerPage';
 import PodReportsPage from './pages/PodReportsPage';
+import InfluxDataManagerPage from './pages/InfluxDataManagerPage';
+import PodInfluxDataManagerPage from './pages/PodInfluxDataManagerPage';
 import { useServers } from './hooks/useServers';
 
 import { useSocket } from './hooks/useSocket';
@@ -46,8 +48,11 @@ export default function App() {
     try {
       const url = new URL(window.location.href);
       const viewParam = url.searchParams.get('view');
-      if (viewParam && (viewParam === 'pod-hb-analyzer' || viewParam === 'hb-analyzer' || viewParam === 'heartbeat-analyzer')) {
-        return 'pod-hb-analyzer';
+      if (viewParam) {
+        if (viewParam === 'pod-hb-analyzer' || viewParam === 'hb-analyzer' || viewParam === 'heartbeat-analyzer') {
+          return 'pod-hb-analyzer';
+        }
+        return viewParam;
       }
       const saved = localStorage.getItem('vps_monitoring_current_view');
       return saved || 'dashboard';
@@ -93,7 +98,7 @@ export default function App() {
       if (podId || moduleId || time || date) {
         return { podId, moduleId, time, date };
       }
-    } catch (_) {}
+    } catch (_) { }
     return null;
   });
 
@@ -260,14 +265,13 @@ export default function App() {
   ].includes(currentView);
 
   return (
-    <div className={`mx-auto transition-all duration-300 ${
-      isTvMode
-        ? 'w-full max-w-none px-2 sm:px-4 lg:px-6 xl:px-8 pb-4'
-        : isMultimediaSyncView
-          ? 'w-full max-w-none px-2 sm:px-4 lg:px-6 pb-2'
-          : isFullWidthView
-            ? 'w-full max-w-[1920px] px-2 sm:px-4 lg:px-6 pb-2'
-            : 'max-w-7xl px-4 sm:px-6 pb-10'
+    <div className={`mx-auto transition-all duration-300 ${isTvMode
+      ? 'w-full max-w-none px-2 sm:px-4 lg:px-6 xl:px-8 pb-4'
+      : isMultimediaSyncView
+        ? 'w-full max-w-none px-2 sm:px-4 lg:px-6 pb-2'
+        : isFullWidthView
+          ? 'w-full max-w-[1920px] px-2 sm:px-4 lg:px-6 pb-2'
+          : 'max-w-7xl px-4 sm:px-6 pb-10'
       }`}>
 
       {/* Header Top Navbar */}
@@ -288,303 +292,307 @@ export default function App() {
 
       {/* Render View: Dashboard, Server List, Installation, or Tools */}
       <ErrorBoundary title="Gagal Memuat Tampilan Halaman">
-      {currentView === 'settings' ? (
-        <SettingsPage
-          onBack={() => handleNavigateView('dashboard')}
-          onOpenUserModal={() => setIsUserModalOpen(true)}
-          isTvMode={isTvMode}
-          onToggleTvMode={handleToggleTvMode}
-        />
-      ) : currentView === 'user-activity' || currentView === 'audit-logs' || currentView === 'activity-logs' || currentView === 'user-logs' ? (
-        <UserActivityLogsPage onBack={() => handleNavigateView('dashboard')} />
-      ) : currentView === 'database-users' || currentView === 'db-users' || currentView === 'user-manager' ? (
-        <UserManagerPage onBack={() => handleNavigateView('dashboard')} />
-      ) : currentView === 'pod-activity' || currentView === 'pod-occupancy' || currentView === 'pod-heartbeat' || currentView === 'heartbeat-monitoring' || currentView === 'fleet-heartbeat' ? (
-        <PodActivityPage onBack={() => handleNavigateView('dashboard')} onNavigateView={handleNavigateView} />
-      ) : currentView === 'pod-heartbeat-records' || currentView === 'heartbeat-records' || currentView === 'pod-records' || currentView === 'pod-storage-viewer' ? (
-        <PodHeartbeatRecordsPage
-          onBack={() => handleNavigateView('dashboard')}
-          initialPodId={heartbeatInitialPodId}
-          onNavigateView={handleNavigateView}
-        />
-      ) : currentView === 'pod-hb-analyzer' || currentView === 'hb-analyzer' || currentView === 'heartbeat-analyzer' || currentView === 'pod-pattern-analyzer' ? (
-        <PodHbPatternAnalyzerPage
-          onBack={() => handleNavigateView('dashboard')}
-          initialPodId={analyzerParams?.podId || heartbeatInitialPodId}
-          initialModuleId={analyzerParams?.moduleId}
-          initialTime={analyzerParams?.time || analyzerParams?.targetTime}
-          initialDate={analyzerParams?.date}
-        />
-      ) : currentView === 'pod-reports' || currentView === 'fleet-reports' || currentView === 'reports' || currentView === 'pdf-reports' ? (
-        <PodReportsPage
-          onBack={() => handleNavigateView('dashboard')}
-          onNavigateView={handleNavigateView}
-        />
-      ) : currentView === 'pod-logs-sync' || currentView === 'pod-logs' ? (
+        {currentView === 'settings' ? (
+          <SettingsPage
+            onBack={() => handleNavigateView('dashboard')}
+            onOpenUserModal={() => setIsUserModalOpen(true)}
+            isTvMode={isTvMode}
+            onToggleTvMode={handleToggleTvMode}
+          />
+        ) : currentView === 'user-activity' || currentView === 'audit-logs' || currentView === 'activity-logs' || currentView === 'user-logs' ? (
+          <UserActivityLogsPage onBack={() => handleNavigateView('dashboard')} />
+        ) : currentView === 'influx-manager' || currentView === 'influx-data' || currentView === 'influx-explorer' ? (
+          <InfluxDataManagerPage onBack={() => handleNavigateView('dashboard')} />
+        ) : currentView === 'pod-influx-manager' || currentView === 'pod-influx' || currentView === 'pod-influx-data' || currentView === 'pod-influx-explorer' ? (
+          <PodInfluxDataManagerPage onBack={() => handleNavigateView('dashboard')} />
+        ) : currentView === 'database-users' || currentView === 'db-users' || currentView === 'user-manager' ? (
+          <UserManagerPage onBack={() => handleNavigateView('dashboard')} />
+        ) : currentView === 'pod-activity' || currentView === 'pod-occupancy' || currentView === 'pod-heartbeat' || currentView === 'heartbeat-monitoring' || currentView === 'fleet-heartbeat' ? (
+          <PodActivityPage onBack={() => handleNavigateView('dashboard')} onNavigateView={handleNavigateView} />
+        ) : currentView === 'pod-heartbeat-records' || currentView === 'heartbeat-records' || currentView === 'pod-records' || currentView === 'pod-storage-viewer' ? (
+          <PodHeartbeatRecordsPage
+            onBack={() => handleNavigateView('dashboard')}
+            initialPodId={heartbeatInitialPodId}
+            onNavigateView={handleNavigateView}
+          />
+        ) : currentView === 'pod-hb-analyzer' || currentView === 'hb-analyzer' || currentView === 'heartbeat-analyzer' || currentView === 'pod-pattern-analyzer' ? (
+          <PodHbPatternAnalyzerPage
+            onBack={() => handleNavigateView('dashboard')}
+            initialPodId={analyzerParams?.podId || heartbeatInitialPodId}
+            initialModuleId={analyzerParams?.moduleId}
+            initialTime={analyzerParams?.time || analyzerParams?.targetTime}
+            initialDate={analyzerParams?.date}
+          />
+        ) : currentView === 'pod-reports' || currentView === 'fleet-reports' || currentView === 'reports' || currentView === 'pdf-reports' ? (
+          <PodReportsPage
+            onBack={() => handleNavigateView('dashboard')}
+            onNavigateView={handleNavigateView}
+          />
+        ) : currentView === 'pod-logs-sync' || currentView === 'pod-logs' ? (
 
-        <PodLogsSyncPage onBack={() => handleNavigateView('dashboard')} />
-      ) : currentView === 'tnc-sync-manager' || currentView === 'tnc-sync' ? (
-        <TncManagerPage onBack={() => handleNavigateView('dashboard')} />
-      ) : currentView === 'master-pod-sync' || currentView === 'master-sync' ? (
-        <MasterPodSyncMatrixPage onBack={() => handleNavigateView('dashboard')} />
-      ) : currentView === 'pod-topic-debugger' || currentView === 'pod-topics' ? (
-        <PodTopicDebuggerPage onBack={() => handleNavigateView('dashboard')} />
-      ) : currentView === 'storage-manager' || currentView === 'storage' || currentView === 'content-manager' || currentView === 'content' ? (
-        <StorageManagerPage
-          onBack={() => handleNavigateView('dashboard')}
-          onNavigateView={handleNavigateView}
-          initialActiveCode={storageInitialCode}
-          onClearInitialActiveCode={() => setStorageInitialCode(null)}
-          returnView={storageReturnView}
-          onClearReturnView={() => setStorageReturnView(null)}
-        />
-      ) : currentView === 'env-manager' ? (
-        <EnvManagerPage onBack={() => handleNavigateView('dashboard')} />
-      ) : currentView === 'installation' || currentView === 'instalation' ? (
-        <InstallationPage onBack={() => handleNavigateView('dashboard')} />
-      ) : currentView === 'metadata-comparison' ? (
-        <MetadataComparisonPage onBack={() => handleNavigateView('dashboard')} />
-      ) : currentView === 'sounds-comparison' ? (
-        <SoundsComparisonPage onBack={() => handleNavigateView('dashboard')} />
-      ) : currentView === 'multimedia-sync' || currentView === 'rabbitmq-pod-sync' || currentView === 're-save-sync' ? (
-        <MultimediaRabbitMqSyncPage
-          onBack={() => handleNavigateView('dashboard')}
-          onNavigateView={handleNavigateView}
-        />
-      ) : currentView === 'rabbitmq' ? (
-        <RabbitMqMonitorPage onBack={() => handleNavigateView('dashboard')} />
-      ) : currentView === 'sync' ? (
-        <DatabaseSyncPage
-          servers={servers}
-          onBack={() => handleNavigateView('dashboard')}
-        />
-      ) : currentView === 'dashboard' ? (
-        <DashboardPage
-          servers={allServers && allServers.length > 0 ? allServers : servers}
-          onRefreshServers={fetchServers}
-          onSelectServer={(srv) => setSelectedDetailServerId(srv.id)}
-          onNavigateView={setCurrentView}
-        />
-      ) : (
-        /* Server List & Infrastructure Monitoring View */
-        <>
-          {/* Global Performance Summary Bar */}
-          {isLoading ? (
-            <SkeletonPerformanceSummary />
-          ) : (
-            <PerformanceSummary servers={servers} />
-          )}
-
-          {/* Main Server Cards Section */}
-          <main className="flex flex-col gap-6">
-
-            {/* Type & Version Filter Tabs + Search Input */}
-            <FilterTabs
-              filterType={filterType}
-              setFilterType={setFilterType}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              totalCount={servers.length}
-              vpsCount={vpsCount}
-              podV3Count={podV3Count}
-              podV2Count={podV2Count}
-              postgresCount={postgresCount}
-              storageCount={storageCount}
-            />
-
-            {/* Server Cards Display Grid */}
+          <PodLogsSyncPage onBack={() => handleNavigateView('dashboard')} />
+        ) : currentView === 'tnc-sync-manager' || currentView === 'tnc-sync' ? (
+          <TncManagerPage onBack={() => handleNavigateView('dashboard')} />
+        ) : currentView === 'master-pod-sync' || currentView === 'master-sync' ? (
+          <MasterPodSyncMatrixPage onBack={() => handleNavigateView('dashboard')} />
+        ) : currentView === 'pod-topic-debugger' || currentView === 'pod-topics' ? (
+          <PodTopicDebuggerPage onBack={() => handleNavigateView('dashboard')} />
+        ) : currentView === 'storage-manager' || currentView === 'storage' || currentView === 'content-manager' || currentView === 'content' ? (
+          <StorageManagerPage
+            onBack={() => handleNavigateView('dashboard')}
+            onNavigateView={handleNavigateView}
+            initialActiveCode={storageInitialCode}
+            onClearInitialActiveCode={() => setStorageInitialCode(null)}
+            returnView={storageReturnView}
+            onClearReturnView={() => setStorageReturnView(null)}
+          />
+        ) : currentView === 'env-manager' ? (
+          <EnvManagerPage onBack={() => handleNavigateView('dashboard')} />
+        ) : currentView === 'installation' || currentView === 'instalation' ? (
+          <InstallationPage onBack={() => handleNavigateView('dashboard')} />
+        ) : currentView === 'metadata-comparison' ? (
+          <MetadataComparisonPage onBack={() => handleNavigateView('dashboard')} />
+        ) : currentView === 'sounds-comparison' ? (
+          <SoundsComparisonPage onBack={() => handleNavigateView('dashboard')} />
+        ) : currentView === 'multimedia-sync' || currentView === 'rabbitmq-pod-sync' || currentView === 're-save-sync' ? (
+          <MultimediaRabbitMqSyncPage
+            onBack={() => handleNavigateView('dashboard')}
+            onNavigateView={handleNavigateView}
+          />
+        ) : currentView === 'rabbitmq' ? (
+          <RabbitMqMonitorPage onBack={() => handleNavigateView('dashboard')} />
+        ) : currentView === 'sync' ? (
+          <DatabaseSyncPage
+            servers={servers}
+            onBack={() => handleNavigateView('dashboard')}
+          />
+        ) : currentView === 'dashboard' ? (
+          <DashboardPage
+            servers={allServers && allServers.length > 0 ? allServers : servers}
+            onRefreshServers={fetchServers}
+            onSelectServer={(srv) => setSelectedDetailServerId(srv.id)}
+            onNavigateView={setCurrentView}
+          />
+        ) : (
+          /* Server List & Infrastructure Monitoring View */
+          <>
+            {/* Global Performance Summary Bar */}
             {isLoading ? (
-              <div className={gridClassName}>
-                <SkeletonCard />
-                <SkeletonCard />
-                <SkeletonCard />
-                <SkeletonCard />
-              </div>
-            ) : displayedServers.length === 0 ? (
-              <div className="glass-card p-12 text-center flex flex-col items-center justify-center">
-                <Server size={48} className="text-slate-500 mb-4" />
-                <h3 className="text-lg font-bold text-white mb-2">Belum Ada Server / Layanan Ditemukan</h3>
-                <p className="text-slate-400 text-sm mb-5">
-                  {searchQuery ? `Tidak ada layanan yang cocok dengan kata kunci "${searchQuery}"` : 'Belum ada target VPS / POD / PostgreSQL / Storage yang ditambahkan'}
-                </p>
-              </div>
-            ) : filterType !== 'all' || searchQuery ? (
-              /* Filtered Single Grid View */
-              <div className={gridClassName}>
-                {displayedServers.map((server, idx) => (
-                  <ServerCard
-                    key={server.id}
-                    server={server}
-                    index={idx}
-                    onDelete={handleDeleteServer}
-                    onEdit={handleStartEdit}
-                    onSelectServer={(srv) => setSelectedDetailServerId(srv.id)}
-                    onMoveUp={() => handleMoveUp(idx, displayedServers)}
-                    onMoveDown={() => handleMoveDown(idx, displayedServers)}
-                    onDragStart={handleDragStart}
-                    onDragOver={handleDragOver}
-                    onDrop={handleDrop}
-                    onDragEnd={handleDragEnd}
-                    isDragging={draggedIndex === idx}
-                    isFirst={idx === 0}
-                    isLast={idx === displayedServers.length - 1}
-                  />
-                ))}
-              </div>
+              <SkeletonPerformanceSummary />
             ) : (
-              /* Grouped Categorized View (All Mode) */
-              <div className="flex flex-col gap-8">
-
-                {/* Group 1: VPS & POD SSH Servers */}
-                {vpsPodGroup.length > 0 && (
-                  <section className="flex flex-col gap-3.5">
-                    <div className="flex items-center gap-2.5 pb-2 border-b border-cyan-500/20">
-                      <Server size={20} className="text-cyan-400" />
-                      <h3 className="text-base font-extrabold text-white tracking-tight">
-                        Server VPS & POD (SSH)
-                      </h3>
-                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
-                        {vpsPodGroup.length} Server
-                      </span>
-                    </div>
-                    <div className={gridClassName}>
-                      {vpsPodGroup.map((server, idx) => (
-                        <ServerCard
-                          key={server.id}
-                          server={server}
-                          index={idx}
-                          onDelete={handleDeleteServer}
-                          onEdit={handleStartEdit}
-                          onSelectServer={(srv) => setSelectedDetailServerId(srv.id)}
-                          onMoveUp={() => handleMoveUp(idx, vpsPodGroup)}
-                          onMoveDown={() => handleMoveDown(idx, vpsPodGroup)}
-                          onDragStart={handleDragStart}
-                          onDragOver={handleDragOver}
-                          onDrop={handleDrop}
-                          onDragEnd={handleDragEnd}
-                          isDragging={draggedIndex === idx}
-                          isFirst={idx === 0}
-                          isLast={idx === vpsPodGroup.length - 1}
-                        />
-                      ))}
-                    </div>
-                  </section>
-                )}
-
-                {/* Group 2: PostgreSQL Databases */}
-                {postgresGroup.length > 0 && (
-                  <section className="flex flex-col gap-3.5">
-                    <div className="flex items-center gap-2.5 pb-2 border-b border-sky-500/20">
-                      <Database size={20} className="text-sky-400" />
-                      <h3 className="text-base font-extrabold text-white tracking-tight">
-                        Database PostgreSQL
-                      </h3>
-                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-sky-500/15 text-sky-400 border border-sky-500/30">
-                        {postgresGroup.length} Database
-                      </span>
-                    </div>
-                    <div className={gridClassName}>
-                      {postgresGroup.map((server, idx) => (
-                        <ServerCard
-                          key={server.id}
-                          server={server}
-                          index={idx}
-                          onDelete={handleDeleteServer}
-                          onEdit={handleStartEdit}
-                          onSelectServer={(srv) => setSelectedDetailServerId(srv.id)}
-                          onMoveUp={() => handleMoveUp(idx, postgresGroup)}
-                          onMoveDown={() => handleMoveDown(idx, postgresGroup)}
-                          onDragStart={handleDragStart}
-                          onDragOver={handleDragOver}
-                          onDrop={handleDrop}
-                          onDragEnd={handleDragEnd}
-                          isDragging={draggedIndex === idx}
-                          isFirst={idx === 0}
-                          isLast={idx === postgresGroup.length - 1}
-                        />
-                      ))}
-                    </div>
-                  </section>
-                )}
-
-                {/* Group 3: MinIO Object Storage */}
-                {minioGroup.length > 0 && (
-                  <section className="flex flex-col gap-3.5">
-                    <div className="flex items-center gap-2.5 pb-2 border-b border-amber-500/20">
-                      <HardDrive size={20} className="text-amber-400" />
-                      <h3 className="text-base font-extrabold text-white tracking-tight">
-                        MinIO Object Storage
-                      </h3>
-                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">
-                        {minioGroup.length} Service
-                      </span>
-                    </div>
-                    <div className={gridClassName}>
-                      {minioGroup.map((server, idx) => (
-                        <ServerCard
-                          key={server.id}
-                          server={server}
-                          index={idx}
-                          onDelete={handleDeleteServer}
-                          onEdit={handleStartEdit}
-                          onSelectServer={(srv) => setSelectedDetailServerId(srv.id)}
-                          onMoveUp={() => handleMoveUp(idx, minioGroup)}
-                          onMoveDown={() => handleMoveDown(idx, minioGroup)}
-                          onDragStart={handleDragStart}
-                          onDragOver={handleDragOver}
-                          onDrop={handleDrop}
-                          onDragEnd={handleDragEnd}
-                          isDragging={draggedIndex === idx}
-                          isFirst={idx === 0}
-                          isLast={idx === minioGroup.length - 1}
-                        />
-                      ))}
-                    </div>
-                  </section>
-                )}
-
-                {/* Group 4: AWS S3 Storage */}
-                {s3Group.length > 0 && (
-                  <section className="flex flex-col gap-3.5">
-                    <div className="flex items-center gap-2.5 pb-2 border-b border-pink-500/20">
-                      <HardDrive size={20} className="text-pink-400" />
-                      <h3 className="text-base font-extrabold text-white tracking-tight">
-                        AWS S3 Object Storage
-                      </h3>
-                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-pink-500/15 text-pink-400 border border-pink-400/30">
-                        {s3Group.length} Service
-                      </span>
-                    </div>
-                    <div className={gridClassName}>
-                      {s3Group.map((server, idx) => (
-                        <ServerCard
-                          key={server.id}
-                          server={server}
-                          index={idx}
-                          onDelete={handleDeleteServer}
-                          onEdit={handleStartEdit}
-                          onSelectServer={(srv) => setSelectedDetailServerId(srv.id)}
-                          onMoveUp={() => handleMoveUp(idx, s3Group)}
-                          onMoveDown={() => handleMoveDown(idx, s3Group)}
-                          onDragStart={handleDragStart}
-                          onDragOver={handleDragOver}
-                          onDrop={handleDrop}
-                          onDragEnd={handleDragEnd}
-                          isDragging={draggedIndex === idx}
-                          isFirst={idx === 0}
-                          isLast={idx === s3Group.length - 1}
-                        />
-                      ))}
-                    </div>
-                  </section>
-                )}
-
-              </div>
+              <PerformanceSummary servers={servers} />
             )}
 
-          </main>
-        </>
-      )}
+            {/* Main Server Cards Section */}
+            <main className="flex flex-col gap-6">
+
+              {/* Type & Version Filter Tabs + Search Input */}
+              <FilterTabs
+                filterType={filterType}
+                setFilterType={setFilterType}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                totalCount={servers.length}
+                vpsCount={vpsCount}
+                podV3Count={podV3Count}
+                podV2Count={podV2Count}
+                postgresCount={postgresCount}
+                storageCount={storageCount}
+              />
+
+              {/* Server Cards Display Grid */}
+              {isLoading ? (
+                <div className={gridClassName}>
+                  <SkeletonCard />
+                  <SkeletonCard />
+                  <SkeletonCard />
+                  <SkeletonCard />
+                </div>
+              ) : displayedServers.length === 0 ? (
+                <div className="glass-card p-12 text-center flex flex-col items-center justify-center">
+                  <Server size={48} className="text-slate-500 mb-4" />
+                  <h3 className="text-lg font-bold text-white mb-2">Belum Ada Server / Layanan Ditemukan</h3>
+                  <p className="text-slate-400 text-sm mb-5">
+                    {searchQuery ? `Tidak ada layanan yang cocok dengan kata kunci "${searchQuery}"` : 'Belum ada target VPS / POD / PostgreSQL / Storage yang ditambahkan'}
+                  </p>
+                </div>
+              ) : filterType !== 'all' || searchQuery ? (
+                /* Filtered Single Grid View */
+                <div className={gridClassName}>
+                  {displayedServers.map((server, idx) => (
+                    <ServerCard
+                      key={server.id}
+                      server={server}
+                      index={idx}
+                      onDelete={handleDeleteServer}
+                      onEdit={handleStartEdit}
+                      onSelectServer={(srv) => setSelectedDetailServerId(srv.id)}
+                      onMoveUp={() => handleMoveUp(idx, displayedServers)}
+                      onMoveDown={() => handleMoveDown(idx, displayedServers)}
+                      onDragStart={handleDragStart}
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
+                      onDragEnd={handleDragEnd}
+                      isDragging={draggedIndex === idx}
+                      isFirst={idx === 0}
+                      isLast={idx === displayedServers.length - 1}
+                    />
+                  ))}
+                </div>
+              ) : (
+                /* Grouped Categorized View (All Mode) */
+                <div className="flex flex-col gap-8">
+
+                  {/* Group 1: VPS & POD SSH Servers */}
+                  {vpsPodGroup.length > 0 && (
+                    <section className="flex flex-col gap-3.5">
+                      <div className="flex items-center gap-2.5 pb-2 border-b border-cyan-500/20">
+                        <Server size={20} className="text-cyan-400" />
+                        <h3 className="text-base font-extrabold text-white tracking-tight">
+                          Server VPS & POD (SSH)
+                        </h3>
+                        <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
+                          {vpsPodGroup.length} Server
+                        </span>
+                      </div>
+                      <div className={gridClassName}>
+                        {vpsPodGroup.map((server, idx) => (
+                          <ServerCard
+                            key={server.id}
+                            server={server}
+                            index={idx}
+                            onDelete={handleDeleteServer}
+                            onEdit={handleStartEdit}
+                            onSelectServer={(srv) => setSelectedDetailServerId(srv.id)}
+                            onMoveUp={() => handleMoveUp(idx, vpsPodGroup)}
+                            onMoveDown={() => handleMoveDown(idx, vpsPodGroup)}
+                            onDragStart={handleDragStart}
+                            onDragOver={handleDragOver}
+                            onDrop={handleDrop}
+                            onDragEnd={handleDragEnd}
+                            isDragging={draggedIndex === idx}
+                            isFirst={idx === 0}
+                            isLast={idx === vpsPodGroup.length - 1}
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Group 2: PostgreSQL Databases */}
+                  {postgresGroup.length > 0 && (
+                    <section className="flex flex-col gap-3.5">
+                      <div className="flex items-center gap-2.5 pb-2 border-b border-sky-500/20">
+                        <Database size={20} className="text-sky-400" />
+                        <h3 className="text-base font-extrabold text-white tracking-tight">
+                          Database PostgreSQL
+                        </h3>
+                        <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                          {postgresGroup.length} Database
+                        </span>
+                      </div>
+                      <div className={gridClassName}>
+                        {postgresGroup.map((server, idx) => (
+                          <ServerCard
+                            key={server.id}
+                            server={server}
+                            index={idx}
+                            onDelete={handleDeleteServer}
+                            onEdit={handleStartEdit}
+                            onSelectServer={(srv) => setSelectedDetailServerId(srv.id)}
+                            onMoveUp={() => handleMoveUp(idx, postgresGroup)}
+                            onMoveDown={() => handleMoveDown(idx, postgresGroup)}
+                            onDragStart={handleDragStart}
+                            onDragOver={handleDragOver}
+                            onDrop={handleDrop}
+                            onDragEnd={handleDragEnd}
+                            isDragging={draggedIndex === idx}
+                            isFirst={idx === 0}
+                            isLast={idx === postgresGroup.length - 1}
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Group 3: MinIO Object Storage */}
+                  {minioGroup.length > 0 && (
+                    <section className="flex flex-col gap-3.5">
+                      <div className="flex items-center gap-2.5 pb-2 border-b border-amber-500/20">
+                        <HardDrive size={20} className="text-amber-400" />
+                        <h3 className="text-base font-extrabold text-white tracking-tight">
+                          MinIO Object Storage
+                        </h3>
+                        <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                          {minioGroup.length} Service
+                        </span>
+                      </div>
+                      <div className={gridClassName}>
+                        {minioGroup.map((server, idx) => (
+                          <ServerCard
+                            key={server.id}
+                            server={server}
+                            index={idx}
+                            onDelete={handleDeleteServer}
+                            onEdit={handleStartEdit}
+                            onSelectServer={(srv) => setSelectedDetailServerId(srv.id)}
+                            onMoveUp={() => handleMoveUp(idx, minioGroup)}
+                            onMoveDown={() => handleMoveDown(idx, minioGroup)}
+                            onDragStart={handleDragStart}
+                            onDragOver={handleDragOver}
+                            onDrop={handleDrop}
+                            onDragEnd={handleDragEnd}
+                            isDragging={draggedIndex === idx}
+                            isFirst={idx === 0}
+                            isLast={idx === minioGroup.length - 1}
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Group 4: AWS S3 Storage */}
+                  {s3Group.length > 0 && (
+                    <section className="flex flex-col gap-3.5">
+                      <div className="flex items-center gap-2.5 pb-2 border-b border-pink-500/20">
+                        <HardDrive size={20} className="text-pink-400" />
+                        <h3 className="text-base font-extrabold text-white tracking-tight">
+                          AWS S3 Object Storage
+                        </h3>
+                        <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-pink-500/15 text-pink-400 border border-pink-400/30">
+                          {s3Group.length} Service
+                        </span>
+                      </div>
+                      <div className={gridClassName}>
+                        {s3Group.map((server, idx) => (
+                          <ServerCard
+                            key={server.id}
+                            server={server}
+                            index={idx}
+                            onDelete={handleDeleteServer}
+                            onEdit={handleStartEdit}
+                            onSelectServer={(srv) => setSelectedDetailServerId(srv.id)}
+                            onMoveUp={() => handleMoveUp(idx, s3Group)}
+                            onMoveDown={() => handleMoveDown(idx, s3Group)}
+                            onDragStart={handleDragStart}
+                            onDragOver={handleDragOver}
+                            onDrop={handleDrop}
+                            onDragEnd={handleDragEnd}
+                            isDragging={draggedIndex === idx}
+                            isFirst={idx === 0}
+                            isLast={idx === s3Group.length - 1}
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                </div>
+              )}
+
+            </main>
+          </>
+        )}
       </ErrorBoundary>
 
       {/* Global Footer displayed on all pages except full-screen single-screen tools */}

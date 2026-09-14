@@ -18,18 +18,18 @@ export default function PodRecordsSubHeader({
   viewMode = 'files',
   onToggleLiveStream
 }) {
-  const displayFolder = selectedDate === 'ALL' ? 'semua_folder' : (selectedDate || 'today');
+  const displayDate = selectedDate === 'ALL' ? 'Semua Tanggal' : (selectedDate || 'Hari Ini');
   const pathSuffix = activeFileName
     ? activeFileName
     : activeCategory === 'state'
-    ? 'state.json'
+    ? 'Snapshot Status Terkini'
     : activeCategory === 'events'
-    ? `events_${displayFolder}.jsonl`
+    ? `Peristiwa Insiden (${displayDate})`
     : activeCategory === 'current'
-    ? `current_*_${displayFolder}.jsonl`
+    ? `Log Arus & Daya (${displayDate})`
     : activeCategory === 'heartbeats'
-    ? `hb_*_${displayFolder}.jsonl`
-    : `*_${displayFolder}.jsonl`;
+    ? `Log Detak Modul (${displayDate})`
+    : `Semua Aliran Telemetri (${displayDate})`;
 
   return (
     <div className="p-3 sm:p-4 bg-slate-900/40 border-b border-slate-800/80 flex flex-col md:flex-row md:items-center justify-between gap-3 shrink-0">
@@ -38,14 +38,12 @@ export default function PodRecordsSubHeader({
           <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">
             {serverDisplayName}
           </h2>
-          <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-md bg-slate-800 text-cyan-300 border border-slate-700 flex items-center gap-1">
-            <HardDrive size={12} className="text-cyan-400" />
-            <span>
-              pods/{safeFolderName}/{displayFolder}/{pathSuffix}
-            </span>
+          <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span>InfluxDB: pod_logs_bhar &bull; {pathSuffix}</span>
           </span>
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
-            Retensi 14 Hari
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 font-mono">
+            Retensi Influx: Infinite
           </span>
         </div>
         <p className="text-xs text-slate-400 mt-1">
@@ -56,13 +54,13 @@ export default function PodRecordsSubHeader({
             </span>
           ) : activeFileName ? (
             <>
-              Berkas aktif: <span className="text-cyan-300 font-bold font-mono">{activeFileName}</span> &bull; Data dimuat:{' '}
+              Aliran data aktif: <span className="text-cyan-300 font-bold font-mono">{activeFileName}</span> &bull; Data dimuat:{' '}
               <span className="text-white font-bold font-mono">{recordsCount} baris</span>
             </>
           ) : (
             <>
-              Folder: <span className="text-cyan-300 font-bold font-mono">{selectedDate}</span> &bull; Total berkas di folder:{' '}
-              <span className="text-white font-bold font-mono">{recordsCount} berkas</span>
+              Tanggal Data: <span className="text-cyan-300 font-bold font-mono">{selectedDate}</span> &bull; Total Aliran Influx:{' '}
+              <span className="text-white font-bold font-mono">{recordsCount} aliran</span>
             </>
           )}
         </p>

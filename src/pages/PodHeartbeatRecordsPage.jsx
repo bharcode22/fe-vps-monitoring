@@ -20,9 +20,10 @@ import PodRecordsMetricChartView from '../components/podRecords/PodRecordsMetric
 import PodRecordsLiveStreamView from '../components/podRecords/PodRecordsLiveStreamView';
 import { getSharedSocket } from '../utils/socketService';
 
-export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack }) {
+export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack, onNavigateView }) {
   // 1. Server / POD Selection States with localStorage persistence
   const [podServers, setPodServers] = useState([]);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState(() => Date.now());
   const [selectedPodId, setSelectedPodId] = useState(() => {
     if (initialPodId) return Number(initialPodId);
     const saved = localStorage.getItem('vps_pod_records_selected_pod_id');
@@ -81,7 +82,6 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
   const [timePreset, setTimePreset] = useState('all'); // 'all' | '1h' | 'morning' | 'afternoon' | 'work' | 'custom'
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
-  const [sourceMode, setSourceMode] = useState('auto'); // 'auto' | 'file' | 'live'
   const [fetchLimit, setFetchLimit] = useState(500);
 
   // 4. Data States
@@ -190,7 +190,7 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
 
   // 3. On-Demand file content loader: ONLY loads when a file is clicked or refreshed
   const loadFileContent = useCallback(
-    async (fileName, customLimit = null, isBackground = false) => {
+    async (fileName, customLimit = null, isBackground = false, customModuleId = undefined) => {
       if (!selectedPodId || !fileName) return;
 
       if (!isBackground) {
@@ -200,7 +200,8 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
 
       try {
         const limitToUse = customLimit || fetchLimit;
-        const res = await fetchPodFileContentApi(selectedPodId, fileName, selectedDate, limitToUse);
+        const modToUse = customModuleId !== undefined ? customModuleId : selectedModuleFilter;
+        const res = await fetchPodFileContentApi(selectedPodId, fileName, selectedDate, limitToUse, modToUse);
         if (res && res.success) {
           let contentStr = res.content || '';
           if (fileName.endsWith('.json')) {
@@ -211,6 +212,7 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
           }
           setRawJsonString(contentStr);
           setActiveFileMeta(res);
+          setLastRefreshedAt(Date.now());
         } else {
           if (!isBackground) {
             setError(res?.error || `Gagal membaca berkas ${fileName}`);
@@ -228,12 +230,12 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
         if (!isBackground) setIsLoadingFile(false);
       }
     },
-    [selectedPodId, selectedDate, fetchLimit]
+    [selectedPodId, selectedDate, fetchLimit, selectedModuleFilter]
   );
 
   // 4. Time-series chart metric loader (downsampled buckets)
   const loadChartMetrics = useCallback(
-    async (fileName, customInterval = null, isBackground = false) => {
+    async (fileName, customInterval = null, isBackground = false, customModuleId = undefined) => {
       if (!selectedPodId || !fileName) return;
 
       const intervalToUse = customInterval || chartInterval;
@@ -243,9 +245,11 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
       }
 
       try {
-        const res = await fetchPodFileMetricsApi(selectedPodId, fileName, selectedDate, intervalToUse);
+        const modToUse = customModuleId !== undefined ? customModuleId : selectedModuleFilter;
+        const res = await fetchPodFileMetricsApi(selectedPodId, fileName, selectedDate, intervalToUse, modToUse);
         if (res && res.success) {
           setMetricsData(res);
+          setLastRefreshedAt(Date.now());
         } else {
           if (!isBackground) {
             setMetricsError(res?.error || 'Gagal memuat metrik grafik');
@@ -261,10 +265,36 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
         if (!isBackground) setIsLoadingMetrics(false);
       }
     },
-    [selectedPodId, selectedDate, chartInterval]
+    [selectedPodId, selectedDate, chartInterval, selectedModuleFilter]
   );
 
-  // 5. Handle clicking a file in the files view
+  // 5. Handle changing module filter from dropdown with auto-loading data
+  const handleSelectModuleFilter = useCallback((modId) => {
+    setSelectedModuleFilter(modId);
+
+    // Target stream: pick heartbeat logs or current logs based on active category
+    let targetFile = activeFileName;
+    if (!targetFile || targetFile.startsWith('events_') || targetFile === 'state.json') {
+      targetFile = activeCategory === 'current'
+        ? `current_logs_${selectedDate}.jsonl`
+        : `heartbeat_logs_${selectedDate}.jsonl`;
+      setActiveFileName(targetFile);
+    }
+
+    // Auto-load data for this module!
+    if (viewMode === 'files') {
+      setViewMode('chart');
+      loadChartMetrics(targetFile, chartInterval, false, modId);
+      loadFileContent(targetFile, fetchLimit, true, modId);
+    } else if (viewMode === 'chart') {
+      loadChartMetrics(targetFile, chartInterval, false, modId);
+      loadFileContent(targetFile, fetchLimit, true, modId);
+    } else if (viewMode === 'json') {
+      loadFileContent(targetFile, fetchLimit, false, modId);
+    }
+  }, [activeFileName, activeCategory, selectedDate, viewMode, chartInterval, fetchLimit, loadChartMetrics, loadFileContent]);
+
+  // 6. Handle clicking a file in the files view
   const handleOpenFile = useCallback(
     async (file, preferredMode = null) => {
       if (!selectedPodId || !file?.name) return;
@@ -388,6 +418,7 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
       } else {
         await loadStorageFiles(false);
       }
+      setLastRefreshedAt(Date.now());
     } finally {
       setIsRefreshing(false);
     }
@@ -449,6 +480,10 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
         isLoading={isLoading || isLoadingFiles || isLoadingFile}
         isRefreshing={isRefreshing}
         onTriggerDownload={handleTriggerDownload}
+        onNavigateView={onNavigateView}
+        lastRefreshedAt={lastRefreshedAt}
+        selectedModuleFilter={selectedModuleFilter}
+        activeCategory={activeCategory}
       />
 
       {/* 2. MASTER-DETAIL BODY: SIDEBAR + MAIN VIEWER */}
@@ -503,15 +538,13 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
               dateFolders={storageFilesData?.dateFolders || []}
               activeCategory={activeCategory}
               selectedModuleFilter={selectedModuleFilter}
-              onSelectModuleFilter={setSelectedModuleFilter}
+              onSelectModuleFilter={handleSelectModuleFilter}
               timePreset={timePreset}
               onApplyPreset={handleApplyPreset}
               startTime={startTime}
               onStartTimeChange={setStartTime}
               endTime={endTime}
               onEndTimeChange={setEndTime}
-              sourceMode={sourceMode}
-              onSourceModeChange={setSourceMode}
               fetchLimit={fetchLimit}
               onFetchLimitChange={(newLimit) => {
                 setFetchLimit(newLimit);
@@ -547,12 +580,13 @@ export default function PodHeartbeatRecordsPage({ initialPodId = null, onBack })
                 selectedDate={selectedDate}
                 availableDates={availableDates}
                 activeCategory={activeCategory}
+                selectedModuleFilter={selectedModuleFilter}
                 onSelectCategory={setActiveCategory}
                 onSelectDate={(d) => {
                   setActiveFileName(null);
                   setSelectedDate(d);
                 }}
-                onSelectModule={setSelectedModuleFilter}
+                onSelectModule={handleSelectModuleFilter}
                 onViewModeChange={(mode, fileName = null) => {
                   if (fileName) setActiveFileName(fileName);
                   setViewMode(mode);

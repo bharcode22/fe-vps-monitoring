@@ -50,6 +50,26 @@ export const NAV_DROPDOWN_GROUPS = [
     color: 'amber',
     items: [
       {
+        id: 'influx-manager',
+        aliases: ['influx-data', 'influx-explorer'],
+        label: 'Influx Data (Pusat)',
+        desc: 'Read, Filter & Download Data InfluxDB VPS Contabo (CSV/JSON)',
+        icon: Database,
+        badge: 'BETA',
+        colorClass: 'text-cyan-400',
+        bgActiveClass: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
+      },
+      {
+        id: 'pod-influx-manager',
+        aliases: ['pod-influx', 'pod-influx-data', 'pod-influx-explorer'],
+        label: 'Influx POD V3 (Edge)',
+        desc: 'Read, Filter & Download Metrik InfluxDB di Seluruh Unit POD V3',
+        icon: Activity,
+        badge: 'BETA',
+        colorClass: 'text-emerald-400',
+        bgActiveClass: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+      },
+      {
         id: 'sync',
         label: 'Database Sync',
         desc: 'Sinkronisasi Tabel & Data PostgreSQL',

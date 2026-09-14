@@ -22,8 +22,8 @@ export const BACKEND_PRESETS = [
     badge: 'Server AWS',
     isDefault: false
   },
-  // Only include Localhost preset when running in DEV mode (npm run dev)
-  ...(import.meta.env.DEV
+  // Include Localhost preset in DEV mode OR when the user is previewing/testing the build locally on localhost
+  ...(import.meta.env.DEV || (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
     ? [
       {
         id: 'local',
@@ -45,11 +45,12 @@ export const DEFAULT_BACKEND_URL = (
 function resolveBackendUrl() {
   if (typeof window !== 'undefined') {
     try {
+      const isLocalHostOrigin = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
       const saved = localStorage.getItem('vps_active_backend_url');
       if (saved && saved.trim()) {
         const cleanSaved = saved.trim().replace(/\/+$/, '');
-        // In production build, purge and ignore any leftover localhost URL
-        if (import.meta.env.PROD && (cleanSaved.includes('localhost') || cleanSaved.includes('127.0.0.1'))) {
+        // In production build, purge and ignore localhost URL ONLY if deployed to public internet (not localhost origin)
+        if (import.meta.env.PROD && (cleanSaved.includes('localhost') || cleanSaved.includes('127.0.0.1')) && !isLocalHostOrigin) {
           localStorage.removeItem('vps_active_backend_url');
         } else {
           return cleanSaved;

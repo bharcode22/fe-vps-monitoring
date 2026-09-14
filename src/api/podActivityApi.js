@@ -341,9 +341,10 @@ export async function setStreamFrequencyApi(intervalMs) {
 /**
  * Fetch raw content of a specific physical file in pod_storage on-demand
  */
-export async function fetchPodFileContentApi(podId, fileName, date = null, limit = 500) {
+export async function fetchPodFileContentApi(podId, fileName, date = null, limit = 500, moduleId = null) {
   const params = new URLSearchParams({ file: fileName, limit: String(limit) });
   if (date && date !== 'ALL') params.append('date', date);
+  if (moduleId && moduleId !== 'ALL') params.append('moduleId', String(moduleId));
 
   const res = await fetch(`${BACKEND_URL}/api/pod-activity/pods/${podId}/file-content?${params.toString()}`, {
     headers: getAuthHeaders()
@@ -356,9 +357,10 @@ export async function fetchPodFileContentApi(podId, fileName, date = null, limit
 /**
  * Fetch downsampled time-series metrics from a physical file for charting
  */
-export async function fetchPodFileMetricsApi(podId, fileName, date = null, interval = '5m') {
+export async function fetchPodFileMetricsApi(podId, fileName, date = null, interval = '5m', moduleId = null) {
   const params = new URLSearchParams({ file: fileName, interval });
   if (date && date !== 'ALL') params.append('date', date);
+  if (moduleId && moduleId !== 'ALL') params.append('moduleId', String(moduleId));
 
   const res = await fetch(`${BACKEND_URL}/api/pod-activity/pods/${podId}/file-metrics?${params.toString()}`, {
     headers: getAuthHeaders()
