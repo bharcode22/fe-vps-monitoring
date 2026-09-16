@@ -26,3 +26,6 @@ export * from './modules/storageApi';
 
 // 7. Master Multimedia Catalog, Chunk Upload, Fleet Inspect, & RabbitMQ Sync
 export * from './modules/multimediaSyncApi';
+
+// 8. POD Sessions Management & JSON Template System
+export * from './modules/podSessionApi';

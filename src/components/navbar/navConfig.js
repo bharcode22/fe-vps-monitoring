@@ -14,7 +14,8 @@ import {
   UserCheck,
   ShieldCheck,
   FileCheck,
-  Activity
+  Activity,
+  Sparkles
 } from 'lucide-react';
 
 
@@ -201,6 +202,16 @@ export const NAV_DROPDOWN_GROUPS = [
         icon: Shuffle,
         colorClass: 'text-purple-400',
         bgActiveClass: 'bg-purple-500/15 text-purple-300 border-purple-500/30'
+      },
+      {
+        id: 'pod-sessions',
+        aliases: ['pod-setting', 'signature-sessions', 'signature-manager', 'pod-experiences'],
+        label: 'POD Sessions & Signature',
+        desc: 'Kelola Sesi Signature, Modulasi Terapi & Template JSON',
+        icon: Sparkles,
+        badge: 'BETA',
+        colorClass: 'text-amber-400',
+        bgActiveClass: 'bg-amber-500/15 text-amber-300 border-amber-500/30'
       },
       {
         id: 'multimedia-sync',

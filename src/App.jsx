@@ -18,6 +18,7 @@ import InstallationPage from './pages/InstallationPage';
 import EnvManagerPage from './pages/EnvManagerPage';
 import StorageManagerPage from './pages/StorageManagerPage';
 import MultimediaRabbitMqSyncPage from './pages/MultimediaRabbitMqSyncPage';
+import PodSessionsPage from './pages/PodSessionsPage';
 import DashboardPage from './pages/DashboardPage';
 import PodTopicDebuggerPage from './pages/PodTopicDebuggerPage';
 import MasterPodSyncMatrixPage from './pages/MasterPodSyncMatrixPage';
@@ -68,7 +69,7 @@ export default function App() {
 
   // Auto switch back to dashboard when user logs out (wait until auth initialization completes)
   useEffect(() => {
-    const protectedViews = ['sync', 'sounds-comparison', 'metadata-comparison', 'rabbitmq', 'installation', 'instalation', 'content-manager', 'content', 'pod-topic-debugger', 'pod-topics', 'settings'];
+    const protectedViews = ['sync', 'sounds-comparison', 'metadata-comparison', 'rabbitmq', 'installation', 'instalation', 'content-manager', 'content', 'pod-topic-debugger', 'pod-topics', 'settings', 'pod-sessions'];
     if (!loading && !isAuthenticated && protectedViews.includes(currentView)) {
       setCurrentView('dashboard');
     }
@@ -354,6 +355,11 @@ export default function App() {
           <MetadataComparisonPage onBack={() => handleNavigateView('dashboard')} />
         ) : currentView === 'sounds-comparison' ? (
           <SoundsComparisonPage onBack={() => handleNavigateView('dashboard')} />
+        ) : currentView === 'pod-sessions' || currentView === 'pod-setting' || currentView === 'signature-sessions' || currentView === 'signature-manager' ? (
+          <PodSessionsPage
+            onBack={() => handleNavigateView('dashboard')}
+            onNavigateView={handleNavigateView}
+          />
         ) : currentView === 'multimedia-sync' || currentView === 'rabbitmq-pod-sync' || currentView === 're-save-sync' ? (
           <MultimediaRabbitMqSyncPage
             onBack={() => handleNavigateView('dashboard')}

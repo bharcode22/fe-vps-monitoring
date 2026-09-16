@@ -1,0 +1,22 @@
+[
+    {
+        "id": 1,
+        "scent": "Lavender"
+    },
+    {
+        "id": 2,
+        "scent": "Eucalyptus"
+    },
+    {
+        "id": 3,
+        "scent": "Pappermint"
+    },
+    {
+        "id": 4,
+        "scent": "Frankenscent"
+    },
+    {
+        "id": 5,
+        "scent": "Tangerine"
+    }
+]
