@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layers, X, Music, Play, FileVideo, Film, Zap, Eye } from 'lucide-react';
+import { Layers, X, Music, Play, FileVideo, Film, Zap, Eye, Edit3 } from 'lucide-react';
 import DownloadUrlCopyButton from '../../content/DownloadUrlCopyButton';
 
 export default function TrackInfoModal({
@@ -7,7 +7,8 @@ export default function TrackInfoModal({
   onClose,
   onNavigateView,
   onToast,
-  onOpenMediaPreview
+  onOpenMediaPreview,
+  onEditTrack
 }) {
   if (!track) return null;
 
@@ -258,13 +259,29 @@ export default function TrackInfoModal({
               <span>Buka di Storage Manager</span>
             </button>
           )}
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-all cursor-pointer ml-auto"
-          >
-            Tutup
-          </button>
+          <div className="flex items-center gap-2 ml-auto">
+            {onEditTrack && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onEditTrack(track);
+                }}
+                className="px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
+                title="Buka dialog edit / update berkas & metadata"
+              >
+                <Edit3 size={13} className="text-amber-400" />
+                <span>Edit Konten</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-all cursor-pointer"
+            >
+              Tutup
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -81,7 +81,7 @@ export function uploadDirectToMasterApi(
             if (onServerProgress) {
               onServerProgress(eventData);
             }
-          } catch (_) {}
+          } catch (_) { }
         }
       }
     };
@@ -127,6 +127,133 @@ export function uploadDirectToMasterApi(
 
     xhr.ontimeout = () => {
       reject(new Error('Timeout koneksi (15 menit) saat mengunggah langsung ke Master API'));
+    };
+
+    // 15 menit timeout untuk file berukuran besar hingga 10 GB
+    xhr.timeout = 900000;
+
+    xhr.send(formData);
+  });
+}
+
+/**
+ * Direct High-Speed Multipart Update with SSE Progress Tracking from Browser to Master API (/multimedia/update-with-progress/:id)
+ */
+export function updateDirectToMasterApi(
+  id,
+  formData,
+  masterToken,
+  masterApiBase = 'https://be-api.regenesispod.com/admin-api',
+  onClientProgress = null,
+  onServerProgress = null,
+  onXhrCreated = null
+) {
+  return new Promise((resolve, reject) => {
+    if (!id) {
+      reject(new Error('ID multimedia wajib ditentukan untuk proses update'));
+      return;
+    }
+
+    const xhr = new XMLHttpRequest();
+    const cleanBase = (masterApiBase || 'https://be-api.regenesispod.com/admin-api').replace(/\/+$/, '');
+    const updateUrl = `${cleanBase}/multimedia/update-with-progress/${encodeURIComponent(id)}`;
+
+    xhr.open('PUT', updateUrl, true);
+    const authHeader = masterToken?.startsWith('Bearer ') ? masterToken : masterToken;
+    xhr.setRequestHeader('Authorization', authHeader);
+
+    if (onXhrCreated) {
+      onXhrCreated(xhr);
+    }
+
+    // Phase 1: Client Upload Stream to Master API Server
+    if (onClientProgress && xhr.upload) {
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          onClientProgress(e.loaded, e.total);
+        }
+      };
+    }
+
+    let seenIndex = 0;
+    let finalCompletedData = null;
+    let hasError = null;
+
+    const parseSseChunk = () => {
+      const text = xhr.responseText || '';
+      if (text.length <= seenIndex) return;
+
+      const newChunk = text.substring(seenIndex);
+      seenIndex = text.length;
+
+      const lines = newChunk.split('\n');
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('data:')) {
+          try {
+            const jsonStr = trimmed.replace(/^data:\s*/, '');
+            const eventData = JSON.parse(jsonStr);
+
+            if (eventData.status === 'heartbeat') {
+              continue;
+            }
+
+            if (eventData.status === 'completed') {
+              finalCompletedData = eventData;
+            }
+
+            if (eventData.status === 'error') {
+              hasError = eventData.error || 'Terjadi kesalahan pada backend Master API';
+            }
+
+            if (onServerProgress) {
+              onServerProgress(eventData);
+            }
+          } catch (_) {}
+        }
+      }
+    };
+
+    // Phase 2: Listen to SSE stream chunks pushed from Master API Server as it updates AWS S3
+    xhr.onprogress = () => {
+      parseSseChunk();
+    };
+
+    xhr.onload = () => {
+      parseSseChunk();
+
+      if (hasError) {
+        reject(new Error(hasError));
+        return;
+      }
+
+      if (xhr.status >= 200 && xhr.status < 300) {
+        if (finalCompletedData) {
+          resolve(finalCompletedData.data || finalCompletedData);
+        } else {
+          try {
+            const parsed = JSON.parse(xhr.responseText);
+            resolve(parsed?.data || parsed);
+          } catch (_) {
+            resolve({ message: 'Update multimedia berhasil diproses' });
+          }
+        }
+      } else {
+        const errorMsg = hasError || xhr.responseText || `HTTP ${xhr.status}`;
+        reject(new Error(errorMsg));
+      }
+    };
+
+    xhr.onerror = () => {
+      reject(new Error('Koneksi jaringan terputus saat memperbarui data di Master API'));
+    };
+
+    xhr.onabort = () => {
+      reject(new Error('Update dibatalkan oleh pengguna'));
+    };
+
+    xhr.ontimeout = () => {
+      reject(new Error('Timeout koneksi (15 menit) saat memperbarui data di Master API'));
     };
 
     // 15 menit timeout untuk file berukuran besar hingga 10 GB

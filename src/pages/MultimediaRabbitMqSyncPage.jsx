@@ -15,6 +15,7 @@ import DeleteMasterTrackModal from '../components/multimediaSync/modals/DeleteMa
 import TrackInfoModal from '../components/multimediaSync/modals/TrackInfoModal';
 import DockerLogModal from '../components/server/DockerLogModal';
 import MultimediaUploadModal from '../components/content/MultimediaUploadModal';
+import MultimediaUpdateModal from '../components/content/MultimediaUpdateModal';
 import FileIntegrityModal from '../components/content/FileIntegrityModal';
 import MediaPreviewModal from '../components/content/MediaPreviewModal';
 
@@ -82,6 +83,13 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
     handleConfirmDelete,
     trackInfoModalItem,
     setTrackInfoModalItem,
+    editTargetItem,
+    setEditTargetItem,
+    isEditModalOpen,
+    setIsEditModalOpen,
+    handleOpenEditModal,
+    handleCloseEditModal,
+    handleUpdateSuccess,
     logModalPod,
     setLogModalPod,
     isUploadModalOpen,
@@ -139,6 +147,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
           onSelectTrack={handleSelectTrack}
           onPageChange={handlePageChange}
           onOpenTrackInfo={setTrackInfoModalItem}
+          onEditTrack={handleOpenEditModal}
           onDeleteTrack={setDeleteTargetItem}
           onToast={setSuccessToast}
         />
@@ -232,6 +241,16 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
         }}
       />
 
+      {/* Multimedia Edit / Update Modal */}
+      {isEditModalOpen && editTargetItem && (
+        <MultimediaUpdateModal
+          isOpen={isEditModalOpen}
+          track={editTargetItem}
+          onClose={handleCloseEditModal}
+          onSuccess={handleUpdateSuccess}
+        />
+      )}
+
       {/* Delete Confirmation Modal for Master Track */}
       <DeleteMasterTrackModal
         item={deleteTargetItem}
@@ -273,6 +292,7 @@ export default function MultimediaRabbitMqSyncPage({ onBack, onNavigateView }) {
         onNavigateView={onNavigateView}
         onToast={setSuccessToast}
         onOpenMediaPreview={handleOpenMediaPreview}
+        onEditTrack={handleOpenEditModal}
       />
 
       {/* Media Player / Preview Modal */}

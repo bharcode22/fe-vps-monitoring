@@ -1,5 +1,5 @@
 import React from 'react';
-import { Music, Check, Info, Trash2, FileVideo, Zap, Image as ImageIcon, Layers } from 'lucide-react';
+import { Music, Check, Info, Trash2, Edit3, FileVideo, Zap, Image as ImageIcon, Layers } from 'lucide-react';
 import DownloadUrlCopyButton from '../content/DownloadUrlCopyButton';
 
 export default function TrackCatalogCard({
@@ -7,6 +7,7 @@ export default function TrackCatalogCard({
   isSelected,
   onSelectTrack,
   onOpenTrackInfo,
+  onEditTrack,
   onDeleteTrack,
   onToast
 }) {
@@ -78,6 +79,22 @@ export default function TrackCatalogCard({
             <Info size={12} className="text-purple-400" />
             <span>Detail</span>
           </button>
+
+          {/* Edit / Update Modal Button */}
+          {onEditTrack && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditTrack(item);
+              }}
+              className="px-2 py-1 rounded-xl bg-amber-500/15 hover:bg-amber-500/30 text-amber-200 hover:text-amber-100 border border-amber-500/40 hover:border-amber-400 text-[10.5px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm active:scale-95"
+              title={`Edit / Perbarui Berkas & Metadata #${item.sound_scape} di Master API`}
+            >
+              <Edit3 size={12} className="text-amber-400" />
+              <span>Edit</span>
+            </button>
+          )}
 
           {/* Delete from Master API Button */}
           <button

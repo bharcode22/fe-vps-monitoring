@@ -15,6 +15,7 @@ export default function MasterCatalogPanel({
   onSelectTrack,
   onPageChange,
   onOpenTrackInfo,
+  onEditTrack,
   onDeleteTrack,
   onToast
 }) {
@@ -91,6 +92,7 @@ export default function MasterCatalogPanel({
               isSelected={String(selectedItem?.sound_scape) === String(item.sound_scape)}
               onSelectTrack={onSelectTrack}
               onOpenTrackInfo={onOpenTrackInfo}
+              onEditTrack={onEditTrack}
               onDeleteTrack={onDeleteTrack}
               onToast={onToast}
             />

@@ -44,6 +44,8 @@ export function useMultimediaSyncData() {
   const [logModalPod, setLogModalPod] = useState(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [trackInfoModalItem, setTrackInfoModalItem] = useState(null);
+  const [editTargetItem, setEditTargetItem] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // 5. On-Demand POD Physical Files Matrix State
   const [podFilesMatrix, setPodFilesMatrix] = useState({});
@@ -548,6 +550,32 @@ export function useMultimediaSyncData() {
     }
   };
 
+  // Edit Track Handlers
+  const handleOpenEditModal = (item) => {
+    setEditTargetItem(item);
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditTargetItem(null);
+  };
+
+  const handleUpdateSuccess = (updatedData) => {
+    setIsEditModalOpen(false);
+    setEditTargetItem(null);
+    setSuccessToast('Konten multimedia berhasil diperbarui!');
+    loadMasterMultimedia(pagination.page, searchQuery);
+    if (
+      selectedItem &&
+      editTargetItem &&
+      (selectedItem.id === editTargetItem.id ||
+        String(selectedItem.sound_scape) === String(editTargetItem.sound_scape))
+    ) {
+      setSelectedItem(prev => ({ ...prev, ...(updatedData || {}) }));
+    }
+  };
+
   // Fleet Stats
   const onlinePodsCount = fleetPods.filter(p => p.isOnline).length;
   const runningContainersCount = fleetPods.filter(p => p.isOnline && p.containerState === 'running').length;
@@ -619,6 +647,13 @@ export function useMultimediaSyncData() {
     handleConfirmDelete,
     trackInfoModalItem,
     setTrackInfoModalItem,
+    editTargetItem,
+    setEditTargetItem,
+    isEditModalOpen,
+    setIsEditModalOpen,
+    handleOpenEditModal,
+    handleCloseEditModal,
+    handleUpdateSuccess,
     logModalPod,
     setLogModalPod,
     isUploadModalOpen,
