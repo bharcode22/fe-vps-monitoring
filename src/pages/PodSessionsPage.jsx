@@ -22,11 +22,13 @@ import {
   Radio,
   FileText,
   ChevronDown,
-  Globe
+  Globe,
+  Trash2
 } from 'lucide-react';
 import {
   fetchMasterPodsApi,
   fetchPodSignatureListApi,
+  deleteDetailExperienceApi
 } from '../api/vpsApi';
 
 import DetailExperienceModal from '../components/podSessions/DetailExperienceModal';
@@ -134,6 +136,36 @@ export default function PodSessionsPage({ onBack, onNavigateView }) {
   const totalDurationMinutes = detailExperiencesList.reduce((acc, curr) => {
     return acc + (Number(curr.duration) || 0);
   }, 0).toFixed(1);
+
+  // Deleting State
+  const [deletingDetailId, setDeletingDetailId] = useState(null);
+
+  // Delete Detail Experience Track directly from Master API
+  const handleDeleteDetail = async (item) => {
+    if (!item?.id) {
+      setError('ID track detail experience tidak ditemukan');
+      return;
+    }
+
+    const trackName = item.title || item.song || `Track #${item.order || item.sound_scape || ''}`;
+    const confirmed = window.confirm(`Apakah Anda yakin ingin menghapus "${trackName}" dari Master API?`);
+    if (!confirmed) return;
+
+    setDeletingDetailId(item.id);
+    setError(null);
+    try {
+      await deleteDetailExperienceApi(item.id);
+      showNotification(`Track "${trackName}" berhasil dihapus dari POD!`);
+      if (selectedPodId) {
+        await loadPodExperiences(selectedPodId);
+      }
+    } catch (err) {
+      console.error('Failed to delete detail experience:', err);
+      setError(`Gagal menghapus detail experience: ${err.message}`);
+    } finally {
+      setDeletingDetailId(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-6 lg:p-8 space-y-6">
@@ -450,6 +482,20 @@ export default function PodSessionsPage({ onBack, onNavigateView }) {
                     >
                       <Edit size={13} />
                       Edit
+                    </button>
+
+                    <button
+                      onClick={() => handleDeleteDetail(item)}
+                      disabled={deletingDetailId === item.id}
+                      className="px-3 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 hover:border-rose-500/50 text-xs font-bold flex items-center gap-1 transition disabled:opacity-50"
+                      title="Hapus track ini dari Master API"
+                    >
+                      {deletingDetailId === item.id ? (
+                        <div className="w-3 h-3 border-2 border-rose-400 border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <Trash2 size={13} />
+                      )}
+                      Hapus
                     </button>
                   </div>
                 </div>

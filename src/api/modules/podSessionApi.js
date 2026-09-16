@@ -442,3 +442,40 @@ export async function batchApplyTemplateApi({
 
   return results;
 }
+
+/**
+ * Delete Detail Experience Track directly from Master API
+ * DELETE /admin-api/pod-setting/detail/:detailId
+ * Note: Master API controller requires `group_ids` in request body even on DELETE.
+ */
+export async function deleteDetailExperienceApi(
+  detailId,
+  groupIds = [],
+  masterToken = null,
+  masterApiBase = DEFAULT_MASTER_API_BASE
+) {
+  let token = masterToken;
+  if (!token) {
+    const authData = await fetchMasterTokenApi();
+    token = authData.token;
+  }
+
+  const cleanBase = (masterApiBase || DEFAULT_MASTER_API_BASE).replace(/\/+$/, '');
+  const res = await fetch(`${cleanBase}/pod-setting/detail/${detailId}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: formatMasterAuthHeader(token)
+    },
+    body: JSON.stringify({
+      group_ids: Array.isArray(groupIds) ? groupIds : []
+    })
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.message || `Gagal menghapus detail experience (HTTP ${res.status})`);
+  }
+  return data;
+}
+
