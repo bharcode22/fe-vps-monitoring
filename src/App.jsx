@@ -33,6 +33,7 @@ import PodHbPatternAnalyzerPage from './pages/PodHbPatternAnalyzerPage';
 import PodReportsPage from './pages/PodReportsPage';
 import InfluxDataManagerPage from './pages/InfluxDataManagerPage';
 import PodInfluxDataManagerPage from './pages/PodInfluxDataManagerPage';
+import TemplateGeneratorPage from './pages/TemplateGeneratorPage';
 import { useServers } from './hooks/useServers';
 
 import { useSocket } from './hooks/useSocket';
@@ -103,6 +104,8 @@ export default function App() {
     return null;
   });
 
+  const [templateStudioContext, setTemplateStudioContext] = useState(null);
+
   const handleNavigateView = (view, extraParams = null) => {
     if (extraParams?.code) {
       setStorageInitialCode(extraParams.code);
@@ -118,6 +121,11 @@ export default function App() {
     }
     if (extraParams?.podId !== undefined) {
       setHeartbeatInitialPodId(extraParams.podId);
+    }
+    if (extraParams?.detailItem || extraParams?.podSettingId || extraParams?.signatureId || extraParams?.templateContext) {
+      setTemplateStudioContext(extraParams);
+    } else if (['template-generator', 'pod-simulator', 'template-studio', 'session-simulator'].includes(view) && !extraParams) {
+      setTemplateStudioContext(null);
     }
     if (extraParams?.analyzerParams) {
       setAnalyzerParams(extraParams.analyzerParams);
@@ -232,9 +240,17 @@ export default function App() {
     : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4'
     }`;
 
-  const isMultimediaSyncView = ['multimedia-sync', 'rabbitmq-pod-sync', 're-save-sync'].includes(currentView);
+  const isTemplateGeneratorView = [
+    'template-generator',
+    'pod-simulator',
+    'template-studio',
+    'session-simulator'
+  ].includes(currentView);
 
-  const isFullWidthView = isTvMode || isMultimediaSyncView || [
+  const isMultimediaSyncView = ['multimedia-sync', 'rabbitmq-pod-sync', 're-save-sync'].includes(currentView);
+  const isSingleScreenStudio = isTemplateGeneratorView || isMultimediaSyncView;
+
+  const isFullWidthView = isTvMode || isSingleScreenStudio || [
     'pod-activity',
     'pod-occupancy',
     'pod-heartbeat',
@@ -266,13 +282,15 @@ export default function App() {
   ].includes(currentView);
 
   return (
-    <div className={`mx-auto transition-all duration-300 ${isTvMode
-      ? 'w-full max-w-none px-2 sm:px-4 lg:px-6 xl:px-8 pb-4'
-      : isMultimediaSyncView
-        ? 'w-full max-w-none px-2 sm:px-4 lg:px-6 pb-2'
-        : isFullWidthView
-          ? 'w-full max-w-[1920px] px-2 sm:px-4 lg:px-6 pb-2'
-          : 'max-w-7xl px-4 sm:px-6 pb-10'
+    <div className={`mx-auto transition-all duration-300 ${isTemplateGeneratorView
+      ? 'h-screen max-h-screen overflow-hidden flex flex-col w-full max-w-none px-2 sm:px-3 pb-1'
+      : isTvMode
+        ? 'w-full max-w-none px-2 sm:px-4 lg:px-6 xl:px-8 pb-4'
+        : isMultimediaSyncView
+          ? 'w-full max-w-none px-2 sm:px-4 lg:px-6 pb-2'
+          : isFullWidthView
+            ? 'w-full max-w-[1920px] px-2 sm:px-4 lg:px-6 pb-2'
+            : 'max-w-7xl px-4 sm:px-6 pb-10'
       }`}>
 
       {/* Header Top Navbar */}
@@ -292,7 +310,8 @@ export default function App() {
       />
 
       {/* Render View: Dashboard, Server List, Installation, or Tools */}
-      <ErrorBoundary title="Gagal Memuat Tampilan Halaman">
+      <div className={isTemplateGeneratorView ? "flex-1 min-h-0 overflow-hidden flex flex-col" : "w-full"}>
+        <ErrorBoundary title="Gagal Memuat Tampilan Halaman">
         {currentView === 'settings' ? (
           <SettingsPage
             onBack={() => handleNavigateView('dashboard')}
@@ -359,6 +378,12 @@ export default function App() {
           <PodSessionsPage
             onBack={() => handleNavigateView('dashboard')}
             onNavigateView={handleNavigateView}
+          />
+        ) : currentView === 'template-generator' || currentView === 'pod-simulator' || currentView === 'template-studio' || currentView === 'session-simulator' ? (
+          <TemplateGeneratorPage
+            onBack={() => handleNavigateView(templateStudioContext?.returnView || 'pod-sessions')}
+            onNavigateView={handleNavigateView}
+            initialContext={templateStudioContext}
           />
         ) : currentView === 'multimedia-sync' || currentView === 'rabbitmq-pod-sync' || currentView === 're-save-sync' ? (
           <MultimediaRabbitMqSyncPage
@@ -600,9 +625,10 @@ export default function App() {
           </>
         )}
       </ErrorBoundary>
+      </div>
 
       {/* Global Footer displayed on all pages except full-screen single-screen tools */}
-      {!isMultimediaSyncView && <Footer isTvMode={isTvMode} />}
+      {!isSingleScreenStudio && <Footer isTvMode={isTvMode} />}
 
       {/* Add / Edit VPS / POD SSH Modal */}
       <AddServerModal

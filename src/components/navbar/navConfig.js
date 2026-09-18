@@ -15,7 +15,8 @@ import {
   ShieldCheck,
   FileCheck,
   Activity,
-  Sparkles
+  Sparkles,
+  Sliders
 } from 'lucide-react';
 
 
@@ -212,6 +213,16 @@ export const NAV_DROPDOWN_GROUPS = [
         badge: 'BETA',
         colorClass: 'text-amber-400',
         bgActiveClass: 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+      },
+      {
+        id: 'template-generator',
+        aliases: ['pod-simulator', 'template-studio', 'session-simulator'],
+        label: 'Template Studio & Simulator',
+        desc: 'Studio Pembuat Template JSON & Simulator Virtual POD V3',
+        icon: Sliders,
+        badge: 'STUDIO',
+        colorClass: 'text-fuchsia-400',
+        bgActiveClass: 'bg-fuchsia-500/15 text-fuchsia-300 border-fuchsia-500/30'
       },
       {
         id: 'multimedia-sync',

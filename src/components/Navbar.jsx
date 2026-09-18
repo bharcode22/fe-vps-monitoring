@@ -51,8 +51,17 @@ export default function Navbar({
     setIsAddMenuOpen(false);
   };
 
+  const isCompactNavbar = [
+    'template-generator',
+    'pod-simulator',
+    'template-studio',
+    'session-simulator'
+  ].includes(currentView);
+
   return (
-    <header className="sticky top-0 z-50 rounded-b-2xl px-3 sm:px-4 lg:px-5 py-2.5 mb-6 backdrop-blur-xl bg-slate-900/90 border-b border-cyan-500/20 shadow-2xl transition-all duration-300">
+    <header className={`sticky top-0 z-50 rounded-b-2xl px-3 sm:px-4 lg:px-5 backdrop-blur-xl bg-slate-900/90 border-b border-cyan-500/20 shadow-2xl transition-all duration-300 shrink-0 ${
+      isCompactNavbar ? 'py-1.5 mb-1.5' : 'py-2.5 mb-6'
+    }`}>
       <div className="flex items-center justify-between gap-2 md:gap-3">
 
         {/* ========================================================================= */}

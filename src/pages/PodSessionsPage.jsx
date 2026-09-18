@@ -167,6 +167,22 @@ export default function PodSessionsPage({ onBack, onNavigateView }) {
     }
   };
 
+  const handleOpenInTemplateStudio = (item = null) => {
+    if (!onNavigateView) return;
+    const targetItem = item || (detailExperiencesList.length > 0 ? detailExperiencesList[0] : null);
+    onNavigateView('template-generator', {
+      mode: targetItem ? 'edit-signature' : 'new-signature',
+      podSettingId: selectedPodId,
+      signatureId: activeExperience?.id || selectedExperienceId,
+      signatureName: activeExperience?.menu_name || 'RECHARGE',
+      podName: activePod?.name || activePod?.code || `POD #${selectedPodId}`,
+      podCode: activePod?.code || '',
+      detailItem: targetItem,
+      tracks: detailExperiencesList,
+      returnView: 'pod-sessions'
+    });
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-6 lg:p-8 space-y-6">
       {/* Top Header & Navigation */}
@@ -200,6 +216,23 @@ export default function PodSessionsPage({ onBack, onNavigateView }) {
 
         {/* Action Buttons Toolbar */}
         <div className="flex flex-wrap items-center gap-2">
+          {onNavigateView && (
+            <button
+              onClick={() => {
+                if (selectedExperienceId || (detailExperiencesList && detailExperiencesList.length > 0)) {
+                  handleOpenInTemplateStudio(null);
+                } else {
+                  onNavigateView('template-generator');
+                }
+              }}
+              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-fuchsia-600 via-purple-600 to-indigo-600 hover:from-fuchsia-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md shadow-fuchsia-500/20 flex items-center gap-1.5 transition active:scale-95"
+              title="Buka Template Generator & Simulator Virtual POD V3"
+            >
+              <Sliders size={14} className="text-fuchsia-200" />
+              Template Studio & Simulator
+            </button>
+          )}
+
           <button
             onClick={() => setIsImportModalOpen(true)}
             className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-semibold flex items-center gap-1.5 transition"
@@ -215,6 +248,18 @@ export default function PodSessionsPage({ onBack, onNavigateView }) {
             <BookOpen size={14} className="text-indigo-400" />
             Template Library
           </button>
+
+          {onNavigateView && (
+            <button
+              onClick={() => handleOpenInTemplateStudio(null)}
+              disabled={!selectedExperienceId}
+              className="px-3 py-1.5 rounded-xl bg-purple-950/70 hover:bg-purple-900 text-purple-300 hover:text-white border border-purple-800/80 text-xs font-bold flex items-center gap-1.5 transition disabled:opacity-50 shadow-sm"
+              title="Buat track pengalaman baru langsung di Template Studio Visual Sequencer"
+            >
+              <Sparkles size={14} className="text-purple-400" />
+              <span>Studio Visual</span>
+            </button>
+          )}
 
           <button
             onClick={() => {
@@ -424,15 +469,24 @@ export default function PodSessionsPage({ onBack, onNavigateView }) {
               Tambahkan track pertama dari katalog multimedia SoundScape atau import konfigurasi dari template JSON.
             </p>
             <div className="flex items-center gap-2 pt-2">
+              {onNavigateView && (
+                <button
+                  onClick={() => handleOpenInTemplateStudio(null)}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 transition flex items-center gap-1.5"
+                >
+                  <Sparkles size={14} />
+                  Buka di Template Studio
+                </button>
+              )}
               <button
                 onClick={() => {
                   setEditingDetailItem(null);
                   setIsDetailModalOpen(true);
                 }}
-                className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md transition flex items-center gap-1.5"
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition flex items-center gap-1.5"
               >
                 <Plus size={14} />
-                Tambah Track Manual / SoundScape
+                Tambah Manual
               </button>
               <button
                 onClick={() => setIsImportModalOpen(true)}
@@ -473,21 +527,33 @@ export default function PodSessionsPage({ onBack, onNavigateView }) {
 
                   {/* Actions for this Track */}
                   <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                    {onNavigateView && (
+                      <button
+                        onClick={() => handleOpenInTemplateStudio(item)}
+                        className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/25 to-amber-600/25 hover:from-amber-500/40 hover:to-amber-600/40 text-amber-300 border border-amber-500/50 hover:border-amber-400 text-xs font-bold flex items-center gap-1.5 transition shadow-sm"
+                        title="Buka dan aransemen di Template Studio (DAW Multi-Track Sequencer)"
+                      >
+                        <Sparkles size={13} className="text-amber-400" />
+                        <span>Edit di Studio</span>
+                      </button>
+                    )}
+
                     <button
                       onClick={() => {
                         setEditingDetailItem(item);
                         setIsDetailModalOpen(true);
                       }}
-                      className="px-3 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold flex items-center gap-1 transition"
+                      className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-medium flex items-center gap-1 transition"
+                      title="Buka form modal ringkas"
                     >
-                      <Edit size={13} />
-                      Edit
+                      <Edit size={12} className="text-cyan-400" />
+                      <span className="hidden sm:inline">Form</span>
                     </button>
 
                     <button
                       onClick={() => handleDeleteDetail(item)}
                       disabled={deletingDetailId === item.id}
-                      className="px-3 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 hover:border-rose-500/50 text-xs font-bold flex items-center gap-1 transition disabled:opacity-50"
+                      className="px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 hover:border-rose-500/50 text-xs font-bold flex items-center gap-1 transition disabled:opacity-50"
                       title="Hapus track ini dari Master API"
                     >
                       {deletingDetailId === item.id ? (
@@ -495,7 +561,7 @@ export default function PodSessionsPage({ onBack, onNavigateView }) {
                       ) : (
                         <Trash2 size={13} />
                       )}
-                      Hapus
+                      <span className="hidden sm:inline">Hapus</span>
                     </button>
                   </div>
                 </div>
