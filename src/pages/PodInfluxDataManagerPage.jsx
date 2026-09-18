@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import {
   fetchPodInfluxListApi,
@@ -8,6 +8,7 @@ import {
   fetchPodSchemaApi,
   queryPodInfluxDataApi,
   downloadPodInfluxExport,
+  downloadPodInfluxExportStreaming,
   fetchPodQueryTemplatesApi,
   savePodQueryTemplateApi,
   updatePodQueryTemplateApi,
@@ -36,6 +37,7 @@ import PodInfluxTemplateExplorerModal from '../components/podInflux/modals/PodIn
 import PodInfluxSaveTemplateModal from '../components/podInflux/modals/PodInfluxSaveTemplateModal';
 import PodInfluxDeleteTemplateModal from '../components/podInflux/modals/PodInfluxDeleteTemplateModal';
 import PodInfluxCliExportModal from '../components/podInflux/modals/PodInfluxCliExportModal';
+import PodInfluxExportProgressModal from '../components/podInflux/modals/PodInfluxExportProgressModal';
 
 export default function PodInfluxDataManagerPage({ onBack }) {
   // POD List & Active Selection
@@ -50,6 +52,33 @@ export default function PodInfluxDataManagerPage({ onBack }) {
   const [overrideTokenInput, setOverrideTokenInput] = useState('');
   const [tokenRefreshing, setTokenRefreshing] = useState(false);
   const [tokenRefreshResult, setTokenRefreshResult] = useState(null);
+
+  // Realtime Streaming Export Progress State
+  const [isExportProgressOpen, setIsExportProgressOpen] = useState(false);
+  const [exportProgressState, setExportProgressState] = useState({
+    format: 'csv',
+    stage: 'connecting',
+    percent: 10,
+    receivedMb: '0.00',
+    rowCount: 0,
+    elapsedSeconds: 0,
+    filename: '',
+    error: null
+  });
+  const exportAbortControllerRef = useRef(null);
+  const exportTimerRef = useRef(null);
+
+  // Cleanup abort controller and timer on unmount
+  useEffect(() => {
+    return () => {
+      if (exportAbortControllerRef.current) {
+        exportAbortControllerRef.current.abort();
+      }
+      if (exportTimerRef.current) {
+        clearInterval(exportTimerRef.current);
+      }
+    };
+  }, []);
 
   // Schema & Auto-Discovery for selected POD
   const [buckets, setBuckets] = useState([]);
@@ -888,10 +917,79 @@ export default function PodInfluxDataManagerPage({ onBack }) {
     }
   }
 
-  // Export Data (Full Dump: Mengunduh semua baris tanpa batas limit)
+  // Handle cancelling export
+  function handleCancelExport() {
+    if (exportAbortControllerRef.current) {
+      exportAbortControllerRef.current.abort();
+    }
+    if (exportTimerRef.current) {
+      clearInterval(exportTimerRef.current);
+      exportTimerRef.current = null;
+    }
+    setExportProgressState(prev => ({
+      ...prev,
+      stage: 'cancelled',
+      percent: 100
+    }));
+    setExportingFormat(null);
+  }
+
+  // Handle closing export modal
+  function handleCloseExportModal() {
+    if (exportTimerRef.current) {
+      clearInterval(exportTimerRef.current);
+      exportTimerRef.current = null;
+    }
+    setIsExportProgressOpen(false);
+    setExportingFormat(null);
+  }
+
+  // Export Data (Full Dump: Mengunduh semua baris tanpa batas limit dengan realtime streaming progress)
   async function handleExport(format = 'csv') {
     if (!selectedPodId) return;
+
+    // Reset previous controller & timer
+    if (exportAbortControllerRef.current) {
+      exportAbortControllerRef.current.abort();
+    }
+    if (exportTimerRef.current) {
+      clearInterval(exportTimerRef.current);
+      exportTimerRef.current = null;
+    }
+
+    const abortController = new AbortController();
+    exportAbortControllerRef.current = abortController;
+
     setExportingFormat(format);
+    setIsExportProgressOpen(true);
+    setExportProgressState({
+      format,
+      stage: 'connecting',
+      percent: 15,
+      receivedMb: '0.00',
+      rowCount: 0,
+      elapsedSeconds: 0,
+      filename: '',
+      error: null
+    });
+
+    const startTime = Date.now();
+    exportTimerRef.current = setInterval(() => {
+      setExportProgressState(prev => {
+        if (prev.stage === 'done' || prev.stage === 'error' || prev.stage === 'cancelled') {
+          return prev;
+        }
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        return {
+          ...prev,
+          elapsedSeconds: elapsed,
+          percent: prev.stage === 'connecting'
+            ? Math.min(38, 15 + Math.floor(elapsed * 4))
+            : prev.percent
+        };
+      });
+    }, 500);
+
     try {
       const payload = {
         bucket: selectedBuckets[0] || 'pod_monitoring',
@@ -915,9 +1013,52 @@ export default function PodInfluxDataManagerPage({ onBack }) {
         rawFluxQuery: isManualFluxMode ? manualFluxQuery : undefined
       };
 
-      await downloadPodInfluxExport(selectedPodId, payload, format);
+      const result = await downloadPodInfluxExportStreaming(selectedPodId, payload, format, {
+        signal: abortController.signal,
+        podName: activePod?.name || `POD ${selectedPodId}`,
+        onProgress: (prog) => {
+          setExportProgressState(prev => ({
+            ...prev,
+            ...prog,
+            stage: prog.stage || prev.stage,
+            percent: prog.percent !== undefined ? prog.percent : prev.percent
+          }));
+        }
+      });
+
+      if (exportTimerRef.current) {
+        clearInterval(exportTimerRef.current);
+        exportTimerRef.current = null;
+      }
+
+      setExportProgressState(prev => ({
+        ...prev,
+        stage: 'done',
+        percent: 100,
+        filename: result.filename,
+        rowCount: result.rowCount || prev.rowCount,
+        receivedMb: result.receivedBytes ? (result.receivedBytes / (1024 * 1024)).toFixed(2) : prev.receivedMb
+      }));
+
     } catch (err) {
-      alert(`Gagal download ${format.toUpperCase()}: ${err.message}`);
+      if (exportTimerRef.current) {
+        clearInterval(exportTimerRef.current);
+        exportTimerRef.current = null;
+      }
+
+      if (err.name === 'AbortError' || err.message?.includes('dibatalkan')) {
+        setExportProgressState(prev => ({
+          ...prev,
+          stage: 'cancelled',
+          percent: 100
+        }));
+      } else {
+        setExportProgressState(prev => ({
+          ...prev,
+          stage: 'error',
+          error: err.message
+        }));
+      }
     } finally {
       setExportingFormat(null);
     }
@@ -1664,6 +1805,15 @@ export default function PodInfluxDataManagerPage({ onBack }) {
         handleRunCliExportOnPod={handleRunCliExportOnPod}
         cliExecuting={cliExecuting}
         cliExecutionResult={cliExecutionResult}
+      />
+
+      <PodInfluxExportProgressModal
+        isOpen={isExportProgressOpen}
+        onClose={handleCloseExportModal}
+        onCancel={handleCancelExport}
+        podName={activePod?.name || `POD ${selectedPodId}`}
+        format={exportProgressState.format}
+        progress={exportProgressState}
       />
     </div>
   );

@@ -148,6 +148,10 @@ export default function TimelineVisualizerLanes({
 
   const handleMouseMove = (e) => {
     if (!lanesScrollRef.current) return;
+    if (dragState || trimState) {
+      if (hoverTime !== null) setHoverTime(null);
+      return;
+    }
     const clickX = getContentX(e);
     const pct = Math.max(0, Math.min(1, clickX / effectiveWidth));
     setHoverTime(pct * winSize);
@@ -735,11 +739,10 @@ export default function TimelineVisualizerLanes({
               <button
                 type="button"
                 onClick={onPlayPause}
-                className={`w-6 h-6 flex items-center justify-center rounded transition cursor-pointer ${
-                  isPlaying
-                    ? 'bg-amber-500 text-slate-950 hover:bg-amber-400 shadow-sm shadow-amber-500/30'
-                    : 'bg-slate-800 hover:bg-slate-700 text-slate-200'
-                }`}
+                className={`w-6 h-6 flex items-center justify-center rounded transition cursor-pointer ${isPlaying
+                  ? 'bg-amber-500 text-slate-950 hover:bg-amber-400 shadow-sm shadow-amber-500/30'
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200'
+                  }`}
                 title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
               >
                 {isPlaying ? <Pause size={12} /> : <Play size={12} className="ml-0.5" />}
@@ -761,11 +764,10 @@ export default function TimelineVisualizerLanes({
               <button
                 type="button"
                 onClick={onToggleRepeat}
-                className={`w-6 h-6 flex items-center justify-center rounded transition cursor-pointer ${
-                  isRepeat
-                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                    : 'bg-slate-800 hover:bg-slate-700 text-slate-400'
-                }`}
+                className={`w-6 h-6 flex items-center justify-center rounded transition cursor-pointer ${isRepeat
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-400'
+                  }`}
                 title="Toggle Repeat"
               >
                 <Repeat size={11} />
@@ -788,11 +790,10 @@ export default function TimelineVisualizerLanes({
           <button
             type="button"
             onClick={() => setIsSnapping(!isSnapping)}
-            className={`px-2 py-0.5 rounded-lg border text-[10px] font-bold flex items-center gap-1 transition cursor-pointer ${
-              isSnapping
-                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm shadow-amber-500/20'
-                : 'bg-slate-800 text-slate-400 border-slate-700'
-            }`}
+            className={`px-2 py-0.5 rounded-lg border text-[10px] font-bold flex items-center gap-1 transition cursor-pointer ${isSnapping
+              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm shadow-amber-500/20'
+              : 'bg-slate-800 text-slate-400 border-slate-700'
+              }`}
             title="Toggle Magnetic Snapping (Shortcut: S)"
           >
             <Magnet size={11} className={isSnapping ? 'text-amber-400' : 'text-slate-500'} />
@@ -857,11 +858,10 @@ export default function TimelineVisualizerLanes({
               <button
                 type="button"
                 onClick={() => setTimelineHeight(185)}
-                className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold transition cursor-pointer ${
-                  timelineHeight <= 200
-                    ? 'bg-purple-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
+                className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold transition cursor-pointer ${timelineHeight <= 200
+                  ? 'bg-purple-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+                  }`}
                 title="Tinggi Compact (185px)"
               >
                 Compact
@@ -869,11 +869,10 @@ export default function TimelineVisualizerLanes({
               <button
                 type="button"
                 onClick={() => setTimelineHeight(285)}
-                className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold transition cursor-pointer ${
-                  timelineHeight > 200 && timelineHeight <= 350
-                    ? 'bg-purple-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
+                className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold transition cursor-pointer ${timelineHeight > 200 && timelineHeight <= 350
+                  ? 'bg-purple-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+                  }`}
                 title="Tinggi Normal (285px)"
               >
                 Normal
@@ -881,11 +880,10 @@ export default function TimelineVisualizerLanes({
               <button
                 type="button"
                 onClick={() => setTimelineHeight(440)}
-                className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold transition cursor-pointer ${
-                  timelineHeight > 350
-                    ? 'bg-purple-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
+                className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold transition cursor-pointer ${timelineHeight > 350
+                  ? 'bg-purple-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+                  }`}
                 title="Tinggi Expanded (440px)"
               >
                 Expand
@@ -1084,6 +1082,35 @@ export default function TimelineVisualizerLanes({
                 <div className="w-3 h-3 bg-amber-400 rotate-45 -translate-x-1.5 -translate-y-1.5 shadow" />
               </div>
 
+              {/* Interactive Hover Guide Line (Shows prospective seek position on click) */}
+              {hoverTime !== null && !dragState && !trimState && (
+                <div
+                  className="absolute top-0 bottom-0 w-px z-25 pointer-events-none transition-opacity duration-75"
+                  style={{ left: `${(hoverTime / winSize) * effectiveWidth}px` }}
+                >
+                  {/* Glowing Vertical Line */}
+                  <div className="w-full h-full bg-cyan-400/80 shadow-[0_0_8px_rgba(34,211,238,0.8)] border-r border-dashed border-cyan-300/90" />
+
+                  {/* Top Diamond Indicator Cap */}
+                  <div className="w-2.5 h-2.5 bg-cyan-400 rotate-45 -translate-x-[4.5px] -translate-y-1 shadow-[0_0_6px_rgba(34,211,238,0.9)]" />
+
+                  {/* Floating Time Badge with Ping dot and helpful guide text */}
+                  <div
+                    className="absolute top-0.5 px-2 py-0.5 rounded-md bg-slate-950/95 border border-cyan-400/80 text-cyan-300 font-mono text-[9px] font-black shadow-xl shadow-black/80 whitespace-nowrap flex items-center gap-1.5 backdrop-blur-md"
+                    style={{
+                      left: (hoverTime / winSize) * effectiveWidth > effectiveWidth - 110 ? 'auto' : '6px',
+                      right: (hoverTime / winSize) * effectiveWidth > effectiveWidth - 110 ? '6px' : 'auto'
+                    }}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping shrink-0" />
+                    <span>{formatAccurateTime(hoverTime)}</span>
+                    <span className="text-[8px] font-sans font-semibold text-slate-400 border-l border-slate-700 pl-1.5">
+                      Klik untuk pindah
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Magnetic Snap Guide Line (Visible when snapped) */}
               {activeSnapTime !== null && (
                 <div
@@ -1130,9 +1157,8 @@ export default function TimelineVisualizerLanes({
 
               {/* O1 Olfactory Lane (Interactive Draggable & Edge-Trimmable Clips) */}
               <div
-                className={`h-8 border-b border-slate-800/80 relative overflow-hidden bg-slate-950/40 select-none group ${
-                  trackLocks.olf ? 'opacity-70 bg-[radial-gradient(#1e293b_1px,transparent_1px)]' : ''
-                }`}
+                className={`h-8 border-b border-slate-800/80 relative overflow-hidden bg-slate-950/40 select-none group ${trackLocks.olf ? 'opacity-70 bg-[radial-gradient(#1e293b_1px,transparent_1px)]' : ''
+                  }`}
                 onDoubleClick={(e) => handleLaneDoubleClick('olf', e)}
                 title="Klik ganda di area kosong untuk menambah aroma"
               >
@@ -1156,17 +1182,15 @@ export default function TimelineVisualizerLanes({
                           e.stopPropagation();
                           setSelectedClip({ type: 'olf', index: idx });
                         }}
-                        className={`absolute top-1 bottom-1 rounded-md flex items-center px-1.5 gap-1 select-none transition-all group/clip ${
-                          trackLocks.olf ? 'cursor-not-allowed' : 'cursor-grab active:cursor-grabbing'
-                        } border shadow-sm ${
-                          isSelected
+                        className={`absolute top-1 bottom-1 rounded-md flex items-center px-1.5 gap-1 select-none transition-all group/clip ${trackLocks.olf ? 'cursor-not-allowed' : 'cursor-grab active:cursor-grabbing'
+                          } border shadow-sm ${isSelected
                             ? 'bg-purple-600 border-white ring-2 ring-purple-300 shadow-lg shadow-purple-500/50 z-20 scale-[1.02]'
                             : isDragging
-                            ? 'bg-purple-500 border-white shadow-xl z-30 opacity-90'
-                            : isTrimming
-                            ? 'bg-purple-600 border-amber-300 shadow-lg z-30'
-                            : 'bg-gradient-to-r from-purple-700 to-purple-800 hover:from-purple-600 hover:to-purple-700 border-purple-500/80 text-white z-10'
-                        }`}
+                              ? 'bg-purple-500 border-white shadow-xl z-30 opacity-90'
+                              : isTrimming
+                                ? 'bg-purple-600 border-amber-300 shadow-lg z-30'
+                                : 'bg-gradient-to-r from-purple-700 to-purple-800 hover:from-purple-600 hover:to-purple-700 border-purple-500/80 text-white z-10'
+                          }`}
                         style={{
                           left: `${leftPx}px`,
                           width: `${widthPx}px`
@@ -1199,9 +1223,8 @@ export default function TimelineVisualizerLanes({
 
               {/* P1 PEMF Lane (Interactive Draggable Clips) */}
               <div
-                className={`h-8 border-b border-slate-800/80 relative overflow-hidden bg-slate-950/40 select-none group ${
-                  trackLocks.pemf ? 'opacity-70 bg-[radial-gradient(#1e293b_1px,transparent_1px)]' : ''
-                }`}
+                className={`h-8 border-b border-slate-800/80 relative overflow-hidden bg-slate-950/40 select-none group ${trackLocks.pemf ? 'opacity-70 bg-[radial-gradient(#1e293b_1px,transparent_1px)]' : ''
+                  }`}
                 onDoubleClick={(e) => handleLaneDoubleClick('pemf', e)}
                 title="Klik ganda di area kosong untuk menambah PEMF"
               >
@@ -1224,15 +1247,13 @@ export default function TimelineVisualizerLanes({
                           e.stopPropagation();
                           setSelectedClip({ type: 'pemf', index: idx });
                         }}
-                        className={`absolute top-1 bottom-1 rounded-md flex items-center px-1.5 gap-1 select-none transition-all ${
-                          trackLocks.pemf ? 'cursor-not-allowed' : 'cursor-grab active:cursor-grabbing'
-                        } border shadow-sm ${
-                          isSelected
+                        className={`absolute top-1 bottom-1 rounded-md flex items-center px-1.5 gap-1 select-none transition-all ${trackLocks.pemf ? 'cursor-not-allowed' : 'cursor-grab active:cursor-grabbing'
+                          } border shadow-sm ${isSelected
                             ? 'bg-sky-600 border-white ring-2 ring-sky-300 shadow-lg shadow-sky-500/50 z-20 scale-[1.02]'
                             : isDragging
-                            ? 'bg-sky-500 border-white shadow-xl z-30 opacity-90'
-                            : 'bg-gradient-to-r from-sky-700 to-sky-800 hover:from-sky-600 hover:to-sky-700 border-sky-500/80 text-white z-10'
-                        }`}
+                              ? 'bg-sky-500 border-white shadow-xl z-30 opacity-90'
+                              : 'bg-gradient-to-r from-sky-700 to-sky-800 hover:from-sky-600 hover:to-sky-700 border-sky-500/80 text-white z-10'
+                          }`}
                         style={{
                           left: `${leftPx}px`,
                           width: `${widthPx}px`
@@ -1254,9 +1275,8 @@ export default function TimelineVisualizerLanes({
 
               {/* N1 NIR Lane (Interactive Draggable Clips) */}
               <div
-                className={`h-8 border-b border-slate-800/80 relative overflow-hidden bg-slate-950/40 select-none group ${
-                  trackLocks.nir ? 'opacity-70 bg-[radial-gradient(#1e293b_1px,transparent_1px)]' : ''
-                }`}
+                className={`h-8 border-b border-slate-800/80 relative overflow-hidden bg-slate-950/40 select-none group ${trackLocks.nir ? 'opacity-70 bg-[radial-gradient(#1e293b_1px,transparent_1px)]' : ''
+                  }`}
                 onDoubleClick={(e) => handleLaneDoubleClick('nir', e)}
                 title="Klik ganda di area kosong untuk menambah NIR"
               >
@@ -1279,15 +1299,13 @@ export default function TimelineVisualizerLanes({
                           e.stopPropagation();
                           setSelectedClip({ type: 'nir', index: idx });
                         }}
-                        className={`absolute top-1 bottom-1 rounded-md flex items-center px-1.5 gap-1 select-none transition-all ${
-                          trackLocks.nir ? 'cursor-not-allowed' : 'cursor-grab active:cursor-grabbing'
-                        } border shadow-sm ${
-                          isSelected
+                        className={`absolute top-1 bottom-1 rounded-md flex items-center px-1.5 gap-1 select-none transition-all ${trackLocks.nir ? 'cursor-not-allowed' : 'cursor-grab active:cursor-grabbing'
+                          } border shadow-sm ${isSelected
                             ? 'bg-rose-600 border-white ring-2 ring-rose-300 shadow-lg shadow-rose-500/50 z-20 scale-[1.02]'
                             : isDragging
-                            ? 'bg-rose-500 border-white shadow-xl z-30 opacity-90'
-                            : 'bg-gradient-to-r from-rose-700 to-rose-800 hover:from-rose-600 hover:to-rose-700 border-rose-500/80 text-white z-10'
-                        }`}
+                              ? 'bg-rose-500 border-white shadow-xl z-30 opacity-90'
+                              : 'bg-gradient-to-r from-rose-700 to-rose-800 hover:from-rose-600 hover:to-rose-700 border-rose-500/80 text-white z-10'
+                          }`}
                         style={{
                           left: `${leftPx}px`,
                           width: `${widthPx}px`
@@ -1381,20 +1399,22 @@ export default function TimelineVisualizerLanes({
               <div>
                 <span className="text-[10px] text-slate-400 font-semibold block mb-1">Pilih Aroma (Scent):</span>
                 <div className="grid grid-cols-3 gap-1">
-                  {['Lavender', 'Eucalyptus', 'Pappermint', 'Frankenscent', 'Tangerine', 'Chamomile'].map((scent) => (
-                    <button
-                      key={scent}
-                      type="button"
-                      onClick={() => handleUpdateClipField('olf', selectedClip.index, 1, scent)}
-                      className={`px-1.5 py-1 rounded text-[10px] font-bold truncate transition border cursor-pointer ${
-                        selectedClipData[1] === scent
+                  {(olfactoryList || []).map((item) => {
+                    const scent = item.scent;
+                    return (
+                      <button
+                        key={scent}
+                        type="button"
+                        onClick={() => handleUpdateClipField('olf', selectedClip.index, 1, scent)}
+                        className={`px-1.5 py-1 rounded text-[10px] font-bold truncate transition border cursor-pointer ${selectedClipData[1] === scent
                           ? 'bg-purple-600 text-white border-purple-400 shadow-sm'
                           : 'bg-slate-800/80 hover:bg-slate-800 text-slate-300 border-slate-700'
-                      }`}
-                    >
-                      {scent}
-                    </button>
-                  ))}
+                          }`}
+                      >
+                        {scent}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1411,11 +1431,10 @@ export default function TimelineVisualizerLanes({
                       key={val}
                       type="button"
                       onClick={() => handleUpdateClipField('olf', selectedClip.index, 2, val)}
-                      className={`flex-1 py-1 rounded text-[10px] font-mono font-bold transition border cursor-pointer ${
-                        String(selectedClipData[2] || '3000') === val
-                          ? 'bg-purple-600 text-white border-purple-400'
-                          : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'
-                      }`}
+                      className={`flex-1 py-1 rounded text-[10px] font-mono font-bold transition border cursor-pointer ${String(selectedClipData[2] || '3000') === val
+                        ? 'bg-purple-600 text-white border-purple-400'
+                        : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'
+                        }`}
                     >
                       {label}
                     </button>
@@ -1439,11 +1458,10 @@ export default function TimelineVisualizerLanes({
                     key={item.mode}
                     type="button"
                     onClick={() => handleUpdateClipField('pemf', selectedClip.index, 1, item.mode)}
-                    className={`p-1.5 rounded text-center transition border cursor-pointer ${
-                      String(selectedClipData[1] || '1') === item.mode
-                        ? 'bg-sky-600 text-white border-sky-400 shadow-sm'
-                        : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
-                    }`}
+                    className={`p-1.5 rounded text-center transition border cursor-pointer ${String(selectedClipData[1] || '1') === item.mode
+                      ? 'bg-sky-600 text-white border-sky-400 shadow-sm'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                      }`}
                   >
                     <div className="font-bold text-[10px]">{item.label}</div>
                     <div className="text-[8px] opacity-70">{item.desc}</div>
@@ -1467,11 +1485,10 @@ export default function TimelineVisualizerLanes({
                     key={item.mode}
                     type="button"
                     onClick={() => handleUpdateClipField('nir', selectedClip.index, 1, item.mode)}
-                    className={`p-1.5 rounded text-center transition border cursor-pointer ${
-                      String(selectedClipData[1] || '1') === item.mode
-                        ? 'bg-rose-600 text-white border-rose-400 shadow-sm'
-                        : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
-                    }`}
+                    className={`p-1.5 rounded text-center transition border cursor-pointer ${String(selectedClipData[1] || '1') === item.mode
+                      ? 'bg-rose-600 text-white border-rose-400 shadow-sm'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                      }`}
                   >
                     <div className="font-bold text-[10px]">{item.label}</div>
                     <div className="text-[8px] opacity-70">{item.desc}</div>

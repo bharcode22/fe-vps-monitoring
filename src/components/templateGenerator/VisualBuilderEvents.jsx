@@ -107,15 +107,23 @@ export default function VisualBuilderEvents({
                   title="Waktu mulai (MM:SS)"
                   className="w-16 px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs font-mono text-white"
                 />
-                <input
-                  type="text"
-                  list="generator-scent-presets"
-                  value={ev[1]}
+                <select
+                  value={ev[1] || olfactoryList?.[0]?.scent || 'Lavender'}
                   onChange={(e) => handleUpdateOlf(idx, 1, e.target.value)}
-                  placeholder="Lavender"
-                  title="Nama aroma / Scent"
-                  className="flex-1 px-2 py-1 rounded bg-slate-900 border border-slate-700 text-xs text-white"
-                />
+                  title="Pilih aroma / Scent"
+                  className="flex-1 px-2.5 py-1 rounded bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-purple-500 cursor-pointer"
+                >
+                  {(olfactoryList || []).map((o) => (
+                    <option key={o.id || o.scent} value={o.scent}>
+                      {o.scent}
+                    </option>
+                  ))}
+                  {ev[1] && !olfactoryList?.some((o) => o.scent === ev[1]) && (
+                    <option value={ev[1]}>
+                      {ev[1]}
+                    </option>
+                  )}
+                </select>
                 <input
                   type="text"
                   value={ev[2] || '3000'}
@@ -258,16 +266,6 @@ export default function VisualBuilderEvents({
           </div>
         )}
       </div>
-
-      {/* Datalist for preset scents */}
-      <datalist id="generator-scent-presets">
-        {(olfactoryList || []).map((o) => (
-          <option key={o.id} value={o.scent} />
-        ))}
-        <option value="Minyak Kayu Putih" />
-        <option value="Lemon Grass" />
-        <option value="Peppermint" />
-      </datalist>
     </div>
   );
 }

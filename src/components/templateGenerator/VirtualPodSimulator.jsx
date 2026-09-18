@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   Wind,
   Zap,
@@ -83,6 +83,9 @@ export default function VirtualPodSimulator({
   const speakerCanvasRef = useRef(null);
   const transducerCanvasRef = useRef(null);
   const subwooferCanvasRef = useRef(null);
+
+  const [logicHoverX, setLogicHoverX] = useState(null);
+  const [logicHoverTime, setLogicHoverTime] = useState(null);
 
   // Detect first pulse timestamp for quick jump
   const firstPulseTime = useMemo(() => {
@@ -211,6 +214,22 @@ export default function VirtualPodSimulator({
     // 10s window (-5s to +5s)
     const clickedTime = currentTime - 5 + ratio * 10;
     onSeek(Math.max(0, clickedTime));
+  };
+
+  const handleCanvasMouseMove = (e) => {
+    const canvas = logicCanvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const clickX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+    const ratio = clickX / rect.width;
+    const hoverTime = currentTime - 5 + ratio * 10;
+    setLogicHoverX(clickX);
+    setLogicHoverTime(Math.max(0, hoverTime));
+  };
+
+  const handleCanvasMouseLeave = () => {
+    setLogicHoverX(null);
+    setLogicHoverTime(null);
   };
 
   // Draw mini audio oscilloscope waves
@@ -532,6 +551,8 @@ export default function VirtualPodSimulator({
             <div
               className="w-full h-24 sm:h-28 bg-black rounded-xl border border-slate-800 p-1 relative shadow-inner overflow-hidden flex items-center justify-center cursor-crosshair group"
               onClick={handleCanvasClick}
+              onMouseMove={handleCanvasMouseMove}
+              onMouseLeave={handleCanvasMouseLeave}
               title="Klik di mana saja pada track sinyal untuk scrub / lompat waktu"
             >
               <canvas
@@ -540,6 +561,30 @@ export default function VirtualPodSimulator({
                 height={110}
                 className="w-full h-full object-contain"
               />
+
+              {/* Interactive Hover Guideline */}
+              {logicHoverX !== null && (
+                <div
+                  className="absolute top-0 bottom-0 w-px bg-cyan-400/80 border-r border-dashed border-cyan-300 pointer-events-none shadow-[0_0_8px_rgba(34,211,238,0.8)] z-20"
+                  style={{ left: `${logicHoverX}px` }}
+                >
+                  <div className="w-2.5 h-2.5 bg-cyan-400 rotate-45 -translate-x-[4.5px] -translate-y-1 shadow-[0_0_6px_rgba(34,211,238,0.9)]" />
+                  <div
+                    className="absolute top-1 px-1.5 py-0.5 rounded-md bg-slate-950/95 border border-cyan-400 text-cyan-300 font-mono text-[8.5px] font-extrabold shadow-lg whitespace-nowrap flex items-center gap-1 backdrop-blur-sm"
+                    style={{
+                      left: logicHoverX > 400 ? 'auto' : '6px',
+                      right: logicHoverX > 400 ? '6px' : 'auto'
+                    }}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping shrink-0" />
+                    <span>{formatDuration(logicHoverTime)}</span>
+                    <span className="text-[7.5px] font-sans font-semibold text-slate-400 border-l border-slate-700 pl-1">
+                      Klik untuk pindah
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Scrub Tooltip Overlay */}
               <div className="absolute bottom-1 right-2 opacity-0 group-hover:opacity-90 transition text-[9px] font-mono text-slate-300 bg-slate-900/90 px-2 py-0.5 rounded border border-slate-700 pointer-events-none shadow-md">
                 Klik track untuk scrub playhead
