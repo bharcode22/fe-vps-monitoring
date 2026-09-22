@@ -34,6 +34,7 @@ import PodReportsPage from './pages/PodReportsPage';
 import InfluxDataManagerPage from './pages/InfluxDataManagerPage';
 import PodInfluxDataManagerPage from './pages/PodInfluxDataManagerPage';
 import TemplateGeneratorPage from './pages/TemplateGeneratorPage';
+import PodLogsExtractorPage from './pages/PodLogsExtractorPage';
 import { useServers } from './hooks/useServers';
 
 import { useSocket } from './hooks/useSocket';
@@ -70,7 +71,7 @@ export default function App() {
 
   // Auto switch back to dashboard when user logs out (wait until auth initialization completes)
   useEffect(() => {
-    const protectedViews = ['sync', 'sounds-comparison', 'metadata-comparison', 'rabbitmq', 'installation', 'instalation', 'content-manager', 'content', 'pod-topic-debugger', 'pod-topics', 'settings', 'pod-sessions'];
+    const protectedViews = ['sync', 'sounds-comparison', 'metadata-comparison', 'rabbitmq', 'installation', 'instalation', 'content-manager', 'content', 'pod-topic-debugger', 'pod-topics', 'settings', 'pod-sessions', 'pod-logs-extractor', 'logs-extractor', 'pod-extractor'];
     if (!loading && !isAuthenticated && protectedViews.includes(currentView)) {
       setCurrentView('dashboard');
     }
@@ -271,6 +272,9 @@ export default function App() {
     'content',
     'pod-logs-sync',
     'pod-logs',
+    'pod-logs-extractor',
+    'logs-extractor',
+    'pod-extractor',
     'pod-heartbeat-records',
     'heartbeat-records',
     'pod-records',
@@ -345,6 +349,11 @@ export default function App() {
           />
         ) : currentView === 'pod-reports' || currentView === 'fleet-reports' || currentView === 'reports' || currentView === 'pdf-reports' ? (
           <PodReportsPage
+            onBack={() => handleNavigateView('dashboard')}
+            onNavigateView={handleNavigateView}
+          />
+        ) : currentView === 'pod-logs-extractor' || currentView === 'logs-extractor' || currentView === 'pod-extractor' ? (
+          <PodLogsExtractorPage
             onBack={() => handleNavigateView('dashboard')}
             onNavigateView={handleNavigateView}
           />

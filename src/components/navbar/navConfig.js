@@ -116,6 +116,16 @@ export const NAV_DROPDOWN_GROUPS = [
         bgActiveClass: 'bg-rose-500/15 text-rose-300 border-rose-500/30'
       },
       {
+        id: 'pod-logs-extractor',
+        aliases: ['logs-extractor', 'pod-extractor'],
+        label: 'POD Logs Extractor',
+        desc: 'Ekstrak & Analisis Data JSON pod_logs ke Detail Tabel',
+        icon: Layers,
+        badge: 'NEW',
+        colorClass: 'text-violet-400',
+        bgActiveClass: 'bg-violet-500/15 text-violet-300 border-violet-500/30'
+      },
+      {
         id: 'pod-topic-debugger',
         aliases: ['pod-topics'],
         label: 'POD Topic Matrix',
