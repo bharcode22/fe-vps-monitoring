@@ -57,10 +57,16 @@ export default function PodGeoMap({
         attributionControl: false
       });
 
-      // Add Dark Matter Tile Layer (CartoDB)
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        subdomains: 'abcd',
-        maxZoom: 19
+      // Add ESRI World Dark Gray Canvas (Base + Reference Labels) - Free, No API Key Required
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+        maxNativeZoom: 16,
+        maxZoom: 18,
+        attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ'
+      }).addTo(map);
+
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+        maxNativeZoom: 16,
+        maxZoom: 18
       }).addTo(map);
 
       // Add Zoom Control to bottom-right

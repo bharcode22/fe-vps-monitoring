@@ -9,7 +9,7 @@ export const BACKEND_PRESETS = [
   {
     id: 'server-8',
     name: 'Server #8 (Workstation)',
-    url: 'https://utilities-workstation-hide-economies.trycloudflare.com',
+    url: 'https://published-bucks-handles-realty.trycloudflare.com',
     desc: 'Server Monitoring Utama (Workstation #8)',
     badge: 'Server #8',
     isDefault: true
@@ -39,7 +39,7 @@ export const BACKEND_PRESETS = [
 
 // Fallback to Server #8 if environment variable is not defined
 export const DEFAULT_BACKEND_URL = (
-  import.meta.env.VITE_BACKEND_URL || 'https://utilities-workstation-hide-economies.trycloudflare.com'
+  import.meta.env.VITE_BACKEND_URL || 'https://published-bucks-handles-realty.trycloudflare.com'
 ).replace(/\/+$/, '');
 
 function resolveBackendUrl() {

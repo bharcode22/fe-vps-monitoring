@@ -22,7 +22,7 @@ import { useSocket } from '../hooks/useSocket';
 import ExtractorStatsCards from '../components/podLogsExtractor/ExtractorStatsCards';
 import ExtractorConfigCard from '../components/podLogsExtractor/ExtractorConfigCard';
 import ExtractorProgressConsole from '../components/podLogsExtractor/ExtractorProgressConsole';
-import DataMonitoringPreviewTab from '../components/podLogsExtractor/DataMonitoringPreviewTab';
+import SessionMonitoringTab from '../components/podLogsExtractor/SessionMonitoringTab';
 
 export default function PodLogsExtractorPage({ onBack, onNavigateView }) {
   // Tabs: 'execution' (Eksekusi Ekstraksi Data) | 'monitoring' (Menampilkan Data Monitoring)
@@ -392,11 +392,17 @@ export default function PodLogsExtractorPage({ onBack, onNavigateView }) {
         </>
       )}
 
-      {/* TAB 2: DATA MONITORING (Dikosongkan sementara untuk data baru) */}
+      {/* TAB 2: DATA MONITORING (USER & SESSION PER DATE & POD) */}
       {activeTab === 'monitoring' && (
-        <div className="w-full min-h-[400px]">
-          {/* Siap untuk menampilkan data baru */}
-        </div>
+        <SessionMonitoringTab
+          masters={masters}
+          selectedMasterId={selectedMasterId}
+          onSelectMaster={setSelectedMasterId}
+          registeredPods={stats?.registeredPods || []}
+          onDataCleaned={() => {
+            if (selectedMasterId) loadStats(selectedMasterId);
+          }}
+        />
       )}
     </div>
   );
