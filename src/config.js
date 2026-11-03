@@ -7,12 +7,20 @@
 
 export const BACKEND_PRESETS = [
   {
+    id: 'server-8-lan',
+    name: 'Server #8 (LAN 192.168.199.8)',
+    url: 'http://192.168.199.8:5002',
+    desc: 'Development Server Monitoring (LAN Port 5002)',
+    badge: 'LAN #8',
+    isDefault: !import.meta.env.PROD
+  },
+  {
     id: 'server-8',
-    name: 'Server #8 (Workstation)',
+    name: 'Server #8 (Tunnel Cloudflare)',
     url: 'https://published-bucks-handles-realty.trycloudflare.com',
     desc: 'Server Monitoring Utama (Workstation #8)',
     badge: 'Server #8',
-    isDefault: true
+    isDefault: import.meta.env.PROD
   },
   {
     id: 'server-aws',
@@ -37,9 +45,9 @@ export const BACKEND_PRESETS = [
     : [])
 ];
 
-// Fallback to Server #8 if environment variable is not defined
+// Fallback if environment variable is not defined
 export const DEFAULT_BACKEND_URL = (
-  import.meta.env.VITE_BACKEND_URL || 'https://published-bucks-handles-realty.trycloudflare.com'
+  import.meta.env.VITE_BACKEND_URL || (import.meta.env.PROD ? 'https://published-bucks-handles-realty.trycloudflare.com' : 'http://192.168.199.8:5002')
 ).replace(/\/+$/, '');
 
 function resolveBackendUrl() {
